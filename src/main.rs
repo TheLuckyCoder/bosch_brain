@@ -1,3 +1,4 @@
+mod sensors;
 mod serial;
 
 use crate::serial::Message;
