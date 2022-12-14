@@ -1,6 +1,7 @@
 use std::io::{Read, Write};
 use std::mem::MaybeUninit;
 use std::sync::Once;
+use tokio::task::spawn_blocking;
 
 use tokio_serial::SerialStream;
 
@@ -16,6 +17,10 @@ impl MainSerialPort {
         self.0.write_all(message.get_bytes())?;
         self.0.read_to_string(&mut result)?;
         Ok(result)
+    }
+
+    pub async fn send(&'static mut self, message: Message) -> std::io::Result<String> {
+        spawn_blocking(|| self.send_blocking(message)).await?
     }
 }
 
