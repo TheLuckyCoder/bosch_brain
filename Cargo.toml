@@ -3,6 +3,10 @@ name = "bosch_brain"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+incremental = true
+lto = "thin"
+
 [dependencies]
 tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "time", "net"] }
 tokio-serial = { version = "5.4" }

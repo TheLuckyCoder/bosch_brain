@@ -1,1 +1,1 @@
-mod imu;
+pub mod imu;

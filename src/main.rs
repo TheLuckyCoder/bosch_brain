@@ -3,6 +3,7 @@ mod serial;
 mod server;
 
 use crate::serial::Message;
+use crate::server::run_server_listeners;
 
 #[tokio::main]
 async fn main() {
@@ -16,4 +17,6 @@ async fn main() {
     port.send(Message::speed(0.0_f32))
         .await
         .expect("It should have stopped");
+
+    run_server_listeners().await;
 }
