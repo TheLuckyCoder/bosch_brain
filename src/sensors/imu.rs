@@ -1,12 +1,13 @@
+use bno055::Bno055;
 use linux_embedded_hal::{Delay, I2cdev};
 
-struct Imu {}
+struct Imu(Bno055<I2cdev>);
 
 impl Imu {
-    pub fn init_imu() -> Result<(), String> {
+    pub fn new() -> Result<Self, String> {
         let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| e.to_string())?;
 
-        let mut imu = bno055::Bno055::new(i2c);
+        let mut imu = Bno055::new(i2c);
         let mut delay = Delay {};
         imu.init(&mut delay).map_err(|e| e.to_string())?;
 
@@ -14,6 +15,6 @@ impl Imu {
         imu.set_mode(bno055::BNO055OperationMode::NDOF, &mut delay)
             .map_err(|e| e.to_string())?;
 
-        Ok(())
+        Ok(Self(imu))
     }
 }
