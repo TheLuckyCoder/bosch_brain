@@ -8,10 +8,12 @@ incremental = true
 lto = "thin"
 
 [dependencies]
-tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "time", "net"] }
-tokio-serial = { version = "5.4" }
+tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "time", "net", "mio"] }
 log = "0.4"
+simple_logger = "4"
 linux-embedded-hal = "0.3"
 bno055 = { version = "0.3", features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serialport = { version = "4", default-features = false }
+mio-serial = { version = "5.0.3", default-features = false }

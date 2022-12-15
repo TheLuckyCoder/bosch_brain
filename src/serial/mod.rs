@@ -1,32 +1,40 @@
 use std::io::{Read, Write};
 use std::mem::MaybeUninit;
 use std::sync::Once;
-use tokio::task::spawn_blocking;
 
-use tokio_serial::SerialStream;
+use serialport::TTYPort;
+use tokio::task;
+use tokio::task::JoinHandle;
 
 pub use self::message::*;
 
 mod message;
 
-pub struct MainSerialPort(SerialStream);
+pub struct MainSerialPort(TTYPort);
 
 impl MainSerialPort {
-    pub fn send_blocking(&mut self, message: Message) -> std::io::Result<String> {
+    pub fn send_blocking(&mut self, message: Message) -> std::io::Result<()> {
         let mut result = String::with_capacity(128);
         self.0.write_all(message.get_bytes())?;
-        self.0.read_to_string(&mut result)?;
-        Ok(result)
+
+        match self.0.read_to_string(&mut result) {
+            Ok(_) => log::debug!("Response for \"{}\": {}", message.get_string(), result),
+            Err(e) => log::debug!("No response for \"{}\": {}", message.get_string(), e),
+        }
+
+        Ok(())
     }
 
-    pub async fn send(&'static mut self, message: Message) -> std::io::Result<String> {
-        spawn_blocking(|| self.send_blocking(message)).await?
+    pub fn send(&'static mut self, message: Message) -> JoinHandle<()> {
+        task::spawn_blocking(|| self.send_blocking(message).unwrap())
     }
 }
 
 fn init_serial() -> MainSerialPort {
     MainSerialPort(
-        SerialStream::open(&tokio_serial::new("/dev/ttyACM0", 19200)).expect("Failed to open port"),
+        mio_serial::new("/dev/ttyACM0", 19200)
+            .open_native()
+            .expect("Failed to open port"),
     )
 }
 
