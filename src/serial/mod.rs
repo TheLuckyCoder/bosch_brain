@@ -35,11 +35,13 @@ impl MainSerialPort {
 }
 
 fn init_serial() -> MainSerialPort {
-    MainSerialPort(
+    let serial = MainSerialPort(
         mio_serial::new("/dev/ttyACM0", 19200)
             .open_native()
             .expect("Failed to open port"),
-    )
+    );
+    log::info!("Serial port initialized");
+    serial
 }
 
 pub fn get_serial() -> &'static mut MainSerialPort {

@@ -23,9 +23,9 @@ struct CarParams {
     pub k_i: f32,
     pub k_d: f32,
     pub k_f: f32,
-    pub k_p_step: f32,
-    pub k_i_step: f32,
-    pub k_d_step: f32,
+    // pub k_p_step: f32,
+    // pub k_i_step: f32,
+    // pub k_d_step: f32,
 }
 
 impl Display for CarParams {
@@ -55,9 +55,9 @@ async fn print_events() {
         k_i: 0.81000,
         k_d: 0.00022,
         k_f: 0.04000,
-        k_p_step: 0.001,
-        k_i_step: 0.001,
-        k_d_step: 0.000001,
+        // k_p_step: 0.001,
+        // k_i_step: 0.001,
+        // k_d_step: 0.000001,
     };
 
     loop {
@@ -65,8 +65,6 @@ async fn print_events() {
 
         match event.await {
             Some(Ok(event)) => {
-                log::debug!("Event::{:?}", event); // TODO Remove
-
                 if let Event::Key(key_event) = event {
                     if react_to_keys(key_event.code, &mut params).unwrap() {
                         break;
@@ -86,11 +84,11 @@ fn react_to_keys(key: KeyCode, params: &mut CarParams) -> std::io::Result<bool> 
     match key {
         KeyCode::Char('w') => {
             params.speed += params.speed_step;
-            serial.send_blocking(Message::speed(params.speed))?;
+            serial.send_blocking(Message::speed(params.speed / 100_f32))?;
         }
         KeyCode::Char('s') => {
             params.speed -= params.speed_step;
-            serial.send_blocking(Message::speed(params.speed))?;
+            serial.send_blocking(Message::speed(params.speed / 100_f32))?;
         }
         KeyCode::Char('a') => {
             params.angle -= params.angle_step;
@@ -107,7 +105,7 @@ fn react_to_keys(key: KeyCode, params: &mut CarParams) -> std::io::Result<bool> 
             params.pid_enabled = !params.pid_enabled;
             serial.send_blocking(Message::enable_pid(params.pid_enabled))?;
             serial.send_blocking(Message::pid_constants(
-                params.k_d, params.k_i, params.k_d, params.k_f,
+                params.k_p, params.k_i, params.k_d, params.k_f,
             ))?;
         }
         KeyCode::Char('q') => {
