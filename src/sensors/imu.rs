@@ -1,7 +1,7 @@
 use bno055::Bno055;
 use linux_embedded_hal::{Delay, I2cdev};
 
-struct Imu(Bno055<I2cdev>);
+pub struct Imu(pub Bno055<I2cdev>);
 
 impl Imu {
     pub fn new() -> Result<Self, String> {

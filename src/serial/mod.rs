@@ -18,8 +18,12 @@ impl MainSerialPort {
         self.0.write_all(message.get_bytes())?;
 
         match self.0.read_to_string(&mut result) {
-            Ok(_) => log::debug!("Response for \"{}\": {}", message.get_string(), result),
-            Err(e) => log::debug!("No response for \"{}\": {}", message.get_string(), e),
+            Ok(_) => log::debug!(
+                "Response for \"{}\": {}",
+                message.get_string().trim(),
+                result
+            ),
+            Err(e) => log::debug!("No response for \"{}\": {}", message.get_string().trim(), e),
         }
 
         Ok(())
