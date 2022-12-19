@@ -8,6 +8,7 @@ use crate::server::run_server_listeners;
 mod sensors;
 mod serial;
 mod server;
+mod track;
 mod tui;
 
 struct Cleanup;

@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct VehicleToVehicle {
+pub struct MovingObstacle {
     id: i32,
     timestamp: i64,
     #[serde(rename = "coor")]
@@ -11,11 +11,11 @@ pub struct VehicleToVehicle {
     angle: (f32, f32),
 }
 
-impl Display for VehicleToVehicle {
+impl Display for MovingObstacle {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "VehicleToVehicle {{ id: {}, timestamp: {}, position: {:?}, angle: {:?} }}",
+            "MovingObstacle {{ id: {}, timestamp: {}, position: {:?}, angle: {:?} }}",
             self.id, self.timestamp, self.position, self.angle
         )
     }

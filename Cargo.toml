@@ -14,7 +14,7 @@ futures = "0.3"
 
 # Logging
 log = { version = "0.4", features = ["std", "serde", "max_level_debug", "release_max_level_warn"] }
-env_logger = "0.10"
+env_logger = "0.9"
 
 # IMU
 linux-embedded-hal = "0.3"

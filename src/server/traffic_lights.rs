@@ -41,9 +41,7 @@ pub async fn run_listener(on_receive_data: fn(Vec<TrafficLight>)) -> std::io::Re
             Ok(traffic_light) => {
                 traffic_lights[traffic_light.id as usize - 1] = traffic_light;
             }
-            Err(e) => {
-                log::error!("Error occurred while receiving/parsing data: {}", e);
-            }
+            Err(e) => log::error!("Error occurred while receiving/parsing data: {}", e),
         }
 
         on_receive_data(traffic_lights.to_vec());

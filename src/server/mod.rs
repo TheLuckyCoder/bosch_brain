@@ -1,27 +1,20 @@
 use tokio::task;
 
 pub mod data;
+mod moving_obstacle;
 mod traffic_lights;
-mod vehicle_to_vehicle;
 
-pub async fn run_server_listeners() {
-    let f = task::spawn(async move {
-        traffic_lights::run_listener(|traffic_lights| {
-            log::info!("Traffic Lights: {:?}", traffic_lights)
-        })
-        .await
-        .expect("")
-    });
+pub async fn run_server_listeners() -> std::io::Result<()> {
+    let traffic = task::spawn(traffic_lights::run_listener(|traffic_lights| {
+        log::info!("Traffic Lights: {:?}", traffic_lights)
+    }));
 
-    task::spawn(async move {
-        vehicle_to_vehicle::run_listener(|vehicle_to_vehicle| {
-            log::info!("Vehicle to vehicle: {}", vehicle_to_vehicle)
-        })
-        .await
-        .expect("TODO");
-    })
-    .await
-    .unwrap();
+    task::spawn(moving_obstacle::run_listener(|moving_obstacle| {
+        log::info!("MovingObstacle: {}", moving_obstacle)
+    }))
+    .await??;
 
-    f.await.unwrap();
+    traffic.await??;
+
+    Ok(())
 }
