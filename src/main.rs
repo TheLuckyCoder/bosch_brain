@@ -1,8 +1,8 @@
-use crate::sensors::imu;
 use env_logger::Env;
 use std::env;
 use tokio::task;
 
+use crate::sensors::imu;
 use crate::serial::Message;
 use crate::server::run_server_listeners;
 
@@ -70,6 +70,13 @@ async fn main() -> std::io::Result<()> {
 
     println!("\nStart node: {:?}\n", start_node);
 
+    port.send_blocking(Message::speed(0.1_f32))?;
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    port.send(Message::speed(0.0_f32)).await?;
+
+    match imu::get_imu() {
+        Ok(mut imu) => log::info!("Gyro: {:?}", imu.get_gyro().unwrap()),
+        Err(e) => log::error!("Failed to initialize IMU: {}", e),
     if let Some(path) = path {
         path.iter().for_each(|node| println!("{:?}", node));
     }
