@@ -35,6 +35,7 @@ async fn main() -> std::io::Result<()> {
     let port = serial::get_serial();
 
     let track = track::get_track();
+    println!("{}", track.0.len());
 
     port.send_blocking(Message::speed(0.1_f32))?;
     std::thread::sleep(std::time::Duration::from_secs(2));
@@ -44,9 +45,7 @@ async fn main() -> std::io::Result<()> {
         Ok(mut imu) => {
             log::info!("Gyro: {:?}", imu.get_gyro().unwrap());
         }
-        Err(e) => {
-            log::error!("Failed to initialize IMU: {}", e);
-        }
+        Err(e) => log::error!("Failed to initialize IMU: {}", e),
     }
 
     task::spawn(run_server_listeners());

@@ -118,7 +118,9 @@ fn react_to_keys(key: KeyCode, params: &mut CarParams) -> std::io::Result<bool> 
 }
 
 pub async fn run() -> Result<()> {
-    enable_raw_mode()?;
+    if enable_raw_mode().is_err() {
+        log::error!("Failed to find keyboard/terminal")
+    }
 
     print_events().await;
 

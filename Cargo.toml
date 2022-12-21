@@ -3,6 +3,9 @@ name = "bosch_brain"
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev.package.num-bigint-dig] # Fast RSA in debug mode
+opt-level = 3
+
 [profile.release]
 incremental = true
 lto = "thin"
@@ -30,3 +33,7 @@ mio-serial = { version = "5", default-features = false }
 
 # TUI/keycapture
 crossterm = { version = "0.25", features = ["event-stream"] }
+
+rsa = "0.7"
+digest = "0.10"
+md-5 = "0.10"
