@@ -26,10 +26,16 @@ pub fn parse_track(path: &str) -> std::io::Result<Track> {
     let nodes_and_edges: NodesAndEdges = serde_json::from_str(&file)?;
 
     let mut no = nodes_and_edges.nodes;
+    no.insert(0,ParsingNode {
+        id: 0,
+        x: 0.0,
+        y: 0.0,
+    });
     no.sort_by(|a, b| a.id.cmp(&b.id));
     let nodes = no
         .iter()
         .map(|node| TrackNode {
+            id: node.id,
             x: node.x,
             y: node.y,
             edges: nodes_and_edges

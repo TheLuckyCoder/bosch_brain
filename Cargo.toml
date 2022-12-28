@@ -37,3 +37,4 @@ crossterm = { version = "0.25", features = ["event-stream"] }
 rsa = "0.7"
 digest = "0.10"
 md-5 = "0.10"
+priority-queue = "1.3.0"
