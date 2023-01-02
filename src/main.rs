@@ -1,6 +1,6 @@
-use std::env;
 use crate::sensors::imu;
 use env_logger::Env;
+use std::env;
 use tokio::task;
 
 use crate::serial::Message;
@@ -52,9 +52,29 @@ async fn main() -> std::io::Result<()> {
     //
     // task::spawn(run_server_listeners());
     // tui.await??; // if the TUI task is finished, the program should exit
-    let start_node = track.get_node_by_id(24).unwrap();
-    let end_node = track.get_node_by_id(60).unwrap();
+    let start_node = match track.get_node_by_id(24) {
+        Some(node) => node,
+        None => panic!("start node not found"),
+    };
 
-    track::find_path(track,(start_node.x,start_node.y),(end_node.x,end_node.y));
+    let end_node = match track.get_node_by_id(60) {
+        Some(node) => node,
+        None => panic!("end node not found"),
+    };
+
+    let path = track::find_path(
+        track,
+        (start_node.x, start_node.y),
+        (end_node.x, end_node.y),
+    );
+
+    println!("\nStart node: {:?}\n", start_node);
+
+    if let Some(path) = path {
+        path.iter().for_each(|node| println!("{:?}", node));
+    }
+
+    println!("\nEnd node: {:?}\n", end_node);
+
     Ok(())
 }

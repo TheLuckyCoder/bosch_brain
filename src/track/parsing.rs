@@ -26,27 +26,33 @@ pub fn parse_track(path: &str) -> std::io::Result<Track> {
     let nodes_and_edges: NodesAndEdges = serde_json::from_str(&file)?;
 
     let mut no = nodes_and_edges.nodes;
-    no.insert(0,ParsingNode {
-        id: 0,
-        x: 0.0,
-        y: 0.0,
-    });
+    no.insert(
+        0,
+        ParsingNode {
+            id: 0,
+            x: 0.0,
+            y: 0.0,
+        },
+    );
     no.sort_by(|a, b| a.id.cmp(&b.id));
     let nodes = no
         .iter()
-        .map(|node| TrackNode {
-            id: node.id,
-            x: node.x,
-            y: node.y,
-            edges: nodes_and_edges
-                .edges
-                .iter()
-                .filter(|edge| edge.source == node.id)
-                .map(|edge| TrackEdge {
-                    target: edge.target,
-                    dotted: edge.dotted,
-                })
-                .collect(),
+        .map(|node| {
+            TrackNode::new(
+                node.id,
+                node.x,
+                node.y,
+                nodes_and_edges
+                    .edges
+                    .iter()
+                    .filter(|edge| edge.source == node.id)
+                    .map(|edge| TrackEdge {
+                        target: edge.target,
+                        dotted: edge.dotted,
+                    })
+                    .collect(),
+            )
+            .unwrap() //TODO  idk how to check here but prog should prob crash if json has nans
         })
         .collect();
 
