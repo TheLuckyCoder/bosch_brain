@@ -35,6 +35,7 @@ pub fn parse_track(path: &str) -> std::io::Result<Track> {
         },
     );
     no.sort_by(|a, b| a.id.cmp(&b.id));
+    
     let nodes = no
         .iter()
         .map(|node| {
@@ -52,7 +53,6 @@ pub fn parse_track(path: &str) -> std::io::Result<Track> {
                     })
                     .collect(),
             )
-            .unwrap() //TODO  idk how to check here but prog should prob crash if json has nans
         })
         .collect();
 
