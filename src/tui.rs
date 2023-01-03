@@ -79,34 +79,32 @@ async fn print_events() {
 }
 
 fn react_to_keys(key: KeyCode, params: &mut CarParams) -> std::io::Result<bool> {
-    let serial = serial::get_serial();
-
     match key {
         KeyCode::Char('w') => {
             params.speed += params.speed_step;
-            serial.send_blocking(Message::speed(params.speed / 100_f32))?;
+            serial::send_blocking(Message::Speed(params.speed / 100_f32))?;
         }
         KeyCode::Char('s') => {
             params.speed -= params.speed_step;
-            serial.send_blocking(Message::speed(params.speed / 100_f32))?;
+            serial::send_blocking(Message::Speed(params.speed / 100_f32))?;
         }
         KeyCode::Char('a') => {
             params.angle -= params.angle_step;
-            serial.send_blocking(Message::steer(params.angle))?;
+            serial::send_blocking(Message::Steer(params.angle))?;
         }
         KeyCode::Char('d') => {
             params.angle += params.angle_step;
-            serial.send_blocking(Message::steer(params.angle))?;
-        }
-        KeyCode::Char('b') => {
-            serial.send_blocking(Message::brake(params.angle))?;
+            serial::send_blocking(Message::Steer(params.angle))?;
         }
         KeyCode::Char('p') => {
             params.pid_enabled = !params.pid_enabled;
-            serial.send_blocking(Message::enable_pid(params.pid_enabled))?;
-            serial.send_blocking(Message::pid_constants(
-                params.k_p, params.k_i, params.k_d, params.k_f,
-            ))?;
+            serial::send_blocking(Message::EnablePid(params.pid_enabled))?;
+            serial::send_blocking(Message::PidParams {
+                k_p: params.k_p,
+                k_i: params.k_i,
+                k_d: params.k_d,
+                k_f: params.k_f,
+            })?;
         }
         KeyCode::Char('q') => {
             return Ok(true); // Exit
@@ -118,11 +116,12 @@ fn react_to_keys(key: KeyCode, params: &mut CarParams) -> std::io::Result<bool> 
 }
 
 pub async fn run() -> Result<()> {
-    if enable_raw_mode().is_err() {
-        log::error!("Failed to find keyboard/terminal")
-    }
+    // if enable_raw_mode().is_err() {
+    //     log::error!("Failed to find keyboard/terminal")
+    // }
 
     print_events().await;
 
-    disable_raw_mode()
+    // disable_raw_mode()
+    Ok(())
 }

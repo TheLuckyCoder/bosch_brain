@@ -1,7 +1,7 @@
 use tokio::task;
 
 pub mod data;
-mod enviornment;
+mod environment;
 mod localisation;
 mod moving_obstacle;
 mod traffic_lights;

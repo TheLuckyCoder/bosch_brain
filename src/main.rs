@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use env_logger::Env;
 use std::env;
+
+use env_logger::Env;
 use tokio::task;
 
 use crate::sensors::imu;
@@ -18,9 +19,7 @@ struct Cleanup;
 
 impl Drop for Cleanup {
     fn drop(&mut self) {
-        serial::get_serial()
-            .send_blocking(Message::speed(0_f32))
-            .expect("Failed to force stop car");
+        serial::send_blocking(Message::Speed(0_f32)).expect("Failed to force stop car");
         println!("Car stopped");
     }
 }
@@ -36,8 +35,7 @@ async fn main() -> std::io::Result<()> {
         .init();
 
     // let tui = task::spawn(tui::run());
-    // let port = serial::get_serial();
-    //
+
     let track = track::get_track();
     // port.send_blocking(Message::speed(0.1_f32))?;
     // std::thread::sleep(std::time::Duration::from_secs(2));

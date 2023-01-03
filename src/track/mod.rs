@@ -103,6 +103,7 @@ fn fast_euclidean_distance(node1: &TrackNode, node2: &TrackNode) -> f32 {
     (node1.x - node2.x).powf(2_f32) + (node1.y - node2.y).powf(2_f32)
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
