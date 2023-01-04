@@ -5,10 +5,10 @@ use std::env;
 use env_logger::Env;
 use tokio::task;
 
-use crate::sensors::imu;
 use crate::serial::Message;
 use crate::server::run_server_listeners;
 
+mod math;
 mod sensors;
 mod serial;
 mod server;
@@ -16,7 +16,6 @@ mod server;
 mod tests;
 mod track;
 mod tui;
-mod math;
 
 struct Cleanup;
 

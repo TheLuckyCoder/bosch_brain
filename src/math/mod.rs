@@ -1,12 +1,23 @@
-use serde::Deserialize;
-use std::fmt::{Display, Formatter};
+use std::ops::Add;
 
 pub mod kinematics;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Point {
     x: f64,
     y: f64,
+}
+
+impl Point {
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+
+    pub fn distance_to(&self, other: Point) -> f64 {
+        let x = self.x - other.x;
+        let y = self.y - other.y;
+        x.hypot(y)
+    }
 }
 
 impl From<CarPosition> for Point {
@@ -18,26 +29,54 @@ impl From<CarPosition> for Point {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct CarPosition {
-    x: f64,
-    y: f64,
-    angle: f64, // radians
+    pub x: f64,
+    pub y: f64,
+    pub angle: f64, // radians
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+impl CarPosition {
+    pub fn new(x: f64, y: f64, angle: f64) -> Self {
+        Self { x, y, angle }
+    }
+}
+
+impl Add<CarTwist> for CarPosition {
+    type Output = CarPosition;
+
+    fn add(self, rhs: CarTwist) -> Self::Output {
+        Self::Output {
+            x: self.x + rhs.delta_x,
+            y: self.y + rhs.delta_y,
+            angle: self.angle + rhs.delta_theta,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct CarTwist {
-    delta_x: f64,
-    delta_y: f64,
-    delta_theta: f64,
+    pub delta_x: f64,
+    pub delta_y: f64,
+    pub delta_theta: f64,
+}
+
+impl CarTwist {
+    pub fn new(delta_x: f64, delta_y: f64, delta_theta: f64) -> Self {
+        Self {
+            delta_x,
+            delta_y,
+            delta_theta,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Segment(pub Point, pub Point);
 
 impl Segment {
-    pub fn new(p1: Point, p2: Point) -> Segment {
-        Segment(p1, p2)
+    pub fn new(p1: Point, p2: Point) -> Self {
+        Self(p1, p2)
     }
 
     pub fn get_length(&self) -> f64 {
@@ -90,7 +129,7 @@ impl Segment {
 /**
  * wrapping in interval [-PI, PI]
  */
-fn angle_wrap(radians: f64) -> f64{
+fn angle_wrap(radians: f64) -> f64 {
     const PI: f64 = std::f64::consts::PI;
     let mut new_angle = (radians + PI) % (2.0 * PI);
 
@@ -99,13 +138,4 @@ fn angle_wrap(radians: f64) -> f64{
     }
 
     new_angle - PI
-}
-
-fun Radians.angleWrap(): Radians {
-var newAngle = (value + Math.PI) % (2.0 * Math.PI)
-
-if (newAngle < 0.0)
-newAngle += 2.0 * Math.PI
-
-return Radians(newAngle - Math.PI)
 }
