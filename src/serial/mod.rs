@@ -1,8 +1,10 @@
-use crate::serial::sender::{MessageSender, SerialMessageSender, TcpMessageSender};
 use std::mem::MaybeUninit;
-use std::net::TcpStream;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Once;
+
 use tokio::task::JoinHandle;
+
+use crate::serial::sender::{MessageSender, SerialMessageSender};
 
 pub use self::message::*;
 
@@ -35,15 +37,13 @@ fn get_serial() -> &'static mut SerialMessageSender {
 }
 
 #[cfg(test)]
-pub fn get_tcp() -> &'static mut TcpMessageSender {
-    static mut SINGLETON: MaybeUninit<TcpMessageSender> = MaybeUninit::uninit();
+pub fn get_test_queue() -> &'static mut (Sender<Message>, Receiver<Message>) {
+    static mut SINGLETON: MaybeUninit<(Sender<Message>, Receiver<Message>)> = MaybeUninit::uninit();
     static ONCE: Once = Once::new();
 
     unsafe {
         ONCE.call_once(|| {
-            SINGLETON.write(TcpMessageSender(
-                TcpStream::connect("0.0.0.0:25565").unwrap(),
-            ));
+            SINGLETON.write(channel::<Message>());
         });
 
         SINGLETON.assume_init_mut()
@@ -53,6 +53,7 @@ pub fn get_tcp() -> &'static mut TcpMessageSender {
 /**
  * Send a message to the nucleo board on the current thread.
  */
+#[cfg(not(test))]
 pub fn send_blocking(message: Message) -> std::io::Result<()> {
     get_serial().send_blocking(message)
 }
@@ -60,6 +61,37 @@ pub fn send_blocking(message: Message) -> std::io::Result<()> {
 /**
  * Send a message to the nucleo board asynchronously on another thread.
  */
+#[cfg(not(test))]
 pub fn send(message: Message) -> JoinHandle<()> {
     get_serial().send(message)
+}
+
+#[cfg(test)]
+pub fn send_blocking(message: Message) -> std::io::Result<()> {
+    let (sender, _) = get_test_queue();
+    sender
+        .clone()
+        .send(message)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+}
+
+// #[cfg(test)]
+// pub fn send(message: Message) -> JoinHandle<()> {
+//     get_serial().send(message)
+// }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serial_through_queue() {
+        let (_, rx) = get_test_queue();
+
+        let sent_message = Message::Speed(1.0);
+        send_blocking(sent_message.clone()).unwrap();
+
+        let received_message = rx.recv().unwrap();
+        assert_eq!(sent_message, received_message);
+    }
 }

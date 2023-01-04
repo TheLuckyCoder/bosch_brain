@@ -22,7 +22,7 @@ pub fn get_track() -> &'static Track {
     }
 }
 
-pub fn find_path(
+pub fn find_path_coords(
     track: &Track,
     start_coord: (f32, f32),
     end_coord: (f32, f32),
@@ -33,6 +33,15 @@ pub fn find_path(
     let end_node = track
         .find_closest_node(end_coord.0, end_coord.1)
         .ok_or_else(|| "Didn't find start node".to_string())?;
+
+    find_path(track, start_node, end_node)
+}
+
+pub fn find_path<'a>(
+    track: &'a Track,
+    start_node: &'a TrackNode,
+    end_node: &'a TrackNode,
+) -> Result<Vec<&'a TrackNode>, String> {
     let mut prio_queue = BinaryHeap::new();
 
     prio_queue.push(State {
@@ -82,7 +91,6 @@ pub fn find_path(
     }
 
     let mut path = Vec::new();
-
     let mut current_node = end_node;
 
     while current_node != start_node {
@@ -120,12 +128,7 @@ mod tests {
             None => panic!("end node not found"),
         };
 
-        let path = find_path(
-            track,
-            (start_node.get_x(), start_node.get_y()),
-            (end_node.get_x(), end_node.get_y()),
-        )
-        .unwrap();
+        let path = find_path(track, start_node, end_node).unwrap();
 
         assert_eq!(path.len(), 6);
     }

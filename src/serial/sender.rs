@@ -1,10 +1,11 @@
-use crate::serial::Message;
-use serialport::SerialPort;
 use std::io::Write;
-use std::net::TcpStream;
 use std::str;
+
+use serialport::SerialPort;
 use tokio::task;
 use tokio::task::JoinHandle;
+
+use crate::serial::Message;
 
 pub trait MessageSender {
     fn send_blocking(&'static mut self, message: Message) -> std::io::Result<()>;
@@ -33,18 +34,6 @@ impl MessageSender for SerialMessageSender {
         }
 
         Ok(())
-    }
-
-    fn send(&'static mut self, message: Message) -> JoinHandle<()> {
-        task::spawn_blocking(|| self.send_blocking(message).unwrap())
-    }
-}
-
-pub struct TcpMessageSender(pub TcpStream);
-
-impl MessageSender for TcpMessageSender {
-    fn send_blocking(&'static mut self, message: Message) -> std::io::Result<()> {
-        self.0.write_all(message.to_string().as_bytes())
     }
 
     fn send(&'static mut self, message: Message) -> JoinHandle<()> {

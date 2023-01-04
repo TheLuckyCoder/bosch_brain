@@ -56,13 +56,13 @@ impl Display for TrafficLight {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
-pub struct RobotPos {
+pub struct ServerCarPos {
     pub x: f32,
     pub y: f32,
 }
 
-impl Display for RobotPos {
+impl Display for ServerCarPos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "RobotPos {{ x: {:.5}, y: {:.5} }}", self.x, self.y)
+        write!(f, "ServerCarPos {{ x: {:.5}, y: {:.5} }}", self.x, self.y)
     }
 }
