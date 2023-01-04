@@ -12,8 +12,11 @@ use crate::server::run_server_listeners;
 mod sensors;
 mod serial;
 mod server;
+#[cfg(test)]
+mod tests;
 mod track;
 mod tui;
+mod math;
 
 struct Cleanup;
 
@@ -37,10 +40,7 @@ async fn main() -> std::io::Result<()> {
     // let tui = task::spawn(tui::run());
 
     let track = track::get_track();
-    // port.send_blocking(Message::speed(0.1_f32))?;
-    // std::thread::sleep(std::time::Duration::from_secs(2));
-    // port.send(Message::speed(0.0_f32)).await?;
-    //
+
     // match imu::get_imu() {
     //     Ok(mut imu) => {
     //         log::info!("Gyro: {:?}", imu.get_gyro().unwrap());
@@ -61,12 +61,7 @@ async fn main() -> std::io::Result<()> {
         None => panic!("end node not found"),
     };
 
-    let path = track::find_path(
-        track,
-        (start_node.get_x(), start_node.get_y()),
-        (end_node.get_x(), end_node.get_y()),
-    )
-    .unwrap();
+    let path = track::find_path(track, start_node, end_node).unwrap();
 
     log::debug!("Start node: {:?}\n", start_node);
     log::info!("Path length: {}\n", path.len());

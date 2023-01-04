@@ -2,7 +2,7 @@ use rsa::pkcs8::DecodePublicKey;
 use rsa::RsaPublicKey;
 use tokio::net::UdpSocket;
 
-use crate::server::data::RobotPos;
+use crate::server::data::ServerCarPos;
 use crate::server::utils::{parse_port, verify_signature};
 
 const CAR_ID: &str = "7"; // TODO How would I know?
@@ -65,16 +65,16 @@ async fn establish_server_connection(port: u16) -> std::io::Result<()> {
     Ok(())
 }
 
-async fn parse_robot_position(socket: &UdpSocket) -> std::io::Result<RobotPos> {
+async fn parse_robot_position(socket: &UdpSocket) -> std::io::Result<ServerCarPos> {
     let mut buffer = [0; 4096];
     let size = socket.recv(&mut buffer).await?;
-    let obstacle: RobotPos = serde_json::from_slice(&buffer[..size])?;
+    let obstacle: ServerCarPos = serde_json::from_slice(&buffer[..size])?;
     Ok(obstacle)
 }
 
 async fn run_localisation_listener(
     port: u16,
-    on_receive_data: fn(RobotPos),
+    on_receive_data: fn(ServerCarPos),
 ) -> std::io::Result<()> {
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).await?;
 
@@ -86,7 +86,7 @@ async fn run_localisation_listener(
     }
 }
 
-pub async fn run_localization(on_receive_data: fn(RobotPos)) -> std::io::Result<()> {
+pub async fn run_localization(on_receive_data: fn(ServerCarPos)) -> std::io::Result<()> {
     // First receive the port to listen on
     let port = listen_for_port().await?;
 
