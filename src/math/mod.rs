@@ -1,3 +1,4 @@
+use std::f64::consts::PI;
 use std::ops::Add;
 
 pub mod kinematics;
@@ -127,10 +128,9 @@ impl Segment {
 }
 
 /**
- * wrapping in interval [-PI, PI]
+ * Wrapping in interval [-PI, PI]
  */
-fn angle_wrap(radians: f64) -> f64 {
-    const PI: f64 = std::f64::consts::PI;
+pub fn angle_wrap(radians: f64) -> f64 {
     let mut new_angle = (radians + PI) % (2.0 * PI);
 
     if new_angle < 0.0 {
@@ -138,4 +138,16 @@ fn angle_wrap(radians: f64) -> f64 {
     }
 
     new_angle - PI
+}
+
+/**
+ * automatically figures out if the shortest distance between two angles on the trigonometric circle is left or right
+ * and returns this newly computed angle
+ */
+pub fn shortcut_wrap(radians: f64) -> f64 {
+    if radians.abs() < (2.0 * PI + radians).abs() {
+        angle_wrap(radians)
+    } else {
+        angle_wrap(PI * 2.0 + radians)
+    }
 }

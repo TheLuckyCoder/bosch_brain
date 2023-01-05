@@ -1,3 +1,4 @@
+#[cfg(target_os = "linux")]
 use linux_embedded_hal::{Delay, I2cdev};
 use mpu6050::Mpu6050;
 use mpu6050::Mpu6050Error::{I2c, InvalidChipId};

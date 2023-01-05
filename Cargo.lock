@@ -87,13 +87,12 @@ dependencies = [
  "digest",
  "env_logger",
  "futures",
- "linux-embedded-hal",
  "log",
  "md-5",
  "mio-serial",
- "mpu6050",
  "ordered-float",
  "rsa",
+ "sensors",
  "serde",
  "serde_json",
  "serialport",
@@ -863,6 +862,14 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "sensors"
+version = "1.0.0"
+dependencies = [
+ "linux-embedded-hal",
+ "mpu6050",
+]
 
 [[package]]
 name = "serde"

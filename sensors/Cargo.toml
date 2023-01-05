@@ -1,0 +1,11 @@
+[package]
+name = "sensors"
+version = "1.0.0"
+edition = "2021"
+
+[target.'cfg(unix)'.dependencies]
+linux-embedded-hal = "0.3"
+
+[dependencies]
+# IMU
+mpu6050 = "0.1.6"

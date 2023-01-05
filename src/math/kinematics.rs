@@ -2,7 +2,7 @@ use crate::math::{angle_wrap, CarPosition, CarTwist, Point, Segment};
 
 const WHEEL_SEPARATION_DISTANCE: f64 = 10.0; // cm
 
-pub fn move_towards_point(position: CarPosition, target: Point) -> (f64, f64) {
+pub fn move_towards_point(position: CarPosition, target: Point) -> CarTwist {
     let segment = Segment(position.into(), target);
     let absolute_angle = segment.get_slope();
     let distance = segment.get_length();
@@ -11,11 +11,11 @@ pub fn move_towards_point(position: CarPosition, target: Point) -> (f64, f64) {
     let relative_x = distance * relative_angle.sin();
     let relative_y = distance * relative_angle.cos();
 
-    ackerman_inverse_kinematics(CarTwist {
+    CarTwist {
         delta_x: relative_x,
         delta_y: relative_y,
         delta_theta: relative_angle,
-    })
+    }
 }
 
 pub fn ackerman_forward(speed: f64, steering_angle: f64) -> CarTwist {

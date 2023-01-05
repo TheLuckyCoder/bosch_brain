@@ -9,7 +9,6 @@ use crate::serial::Message;
 use crate::server::run_server_listeners;
 
 mod math;
-mod sensors;
 mod serial;
 mod server;
 #[cfg(test)]

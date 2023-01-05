@@ -14,17 +14,14 @@ incremental = true
 lto = "thin"
 
 [dependencies]
+sensors = { path = "sensors" }
 # Async
-tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "time", "net", "mio"] }
+tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "time", "net"] }
 futures = "0.3"
 
 # Logging
 log = { version = "0.4", features = ["std", "serde", "max_level_debug", "release_max_level_warn"] }
 env_logger = "0.9"
-
-# IMU
-linux-embedded-hal = "0.3"
-mpu6050 = "0.1.6"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
