@@ -3,26 +3,11 @@ use rsa::RsaPublicKey;
 use tokio::net::UdpSocket;
 
 use crate::server::data::ServerCarPos;
-use crate::server::utils::{parse_port, verify_signature};
+use crate::server::utils::{listen_for_port, parse_port, verify_signature};
 
 const CAR_ID: &str = "7"; // TODO How would I know?
 
-async fn listen_for_port() -> std::io::Result<u16> {
-    let socket = UdpSocket::bind("0.0.0.0:50009").await?;
-
-    let mut buffer = [0u8; 1500];
-    let size = socket.recv(&mut buffer).await?;
-    let port = parse_port(&buffer[..size]).ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Could not parse port from received data",
-        )
-    })?;
-
-    Ok(port)
-}
-
-async fn establish_server_connection(port: u16) -> std::io::Result<()> {
+async fn establish_server_connection(server_address: &String) -> std::io::Result<()> {
     // Parse public key
     let public_key = RsaPublicKey::from_public_key_pem(include_str!("publickey_server.pem"))
         .map_err(|_| {
@@ -32,7 +17,7 @@ async fn establish_server_connection(port: u16) -> std::io::Result<()> {
             )
         })?;
 
-    let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).await?;
+    let socket = UdpSocket::bind(&server_address).await?;
 
     // Send car id
     socket.send(CAR_ID.as_bytes()).await?;
@@ -60,7 +45,7 @@ async fn establish_server_connection(port: u16) -> std::io::Result<()> {
     }
 
     socket.send(b"Authentication ok").await?;
-    log::info!("Connected to server port {port}");
+    log::info!("Connected to server address {server_address}");
 
     Ok(())
 }
@@ -73,10 +58,10 @@ async fn parse_robot_position(socket: &UdpSocket) -> std::io::Result<ServerCarPo
 }
 
 async fn run_localisation_listener(
-    port: u16,
+    server_address: String,
     on_receive_data: fn(ServerCarPos),
 ) -> std::io::Result<()> {
-    let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).await?;
+    let socket = UdpSocket::bind(server_address).await?;
 
     loop {
         match parse_robot_position(&socket).await {
@@ -88,13 +73,13 @@ async fn run_localisation_listener(
 
 pub async fn run_localization(on_receive_data: fn(ServerCarPos)) -> std::io::Result<()> {
     // First receive the port to listen on
-    let port = listen_for_port().await?;
+    let server_address = listen_for_port().await?;
 
     // Verify the server authentication and acknowledge connection
-    establish_server_connection(port).await?;
+    establish_server_connection(&server_address).await?;
 
     // Listen for robot position
-    run_localisation_listener(port, on_receive_data).await?;
+    run_localisation_listener(server_address, on_receive_data).await?;
 
     Ok(())
 }
