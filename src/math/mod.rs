@@ -3,6 +3,7 @@ use std::ops::{Add, Mul};
 
 mod angle_wrap;
 pub mod kinematics;
+pub mod pid;
 mod point;
 mod segment;
 
