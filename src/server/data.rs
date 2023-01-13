@@ -1,4 +1,5 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -21,7 +22,8 @@ impl Display for MovingObstacle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize_repr)]
+#[repr(u8)]
 pub enum TrafficLightColor {
     Red = 0,
     Yellow = 1,
@@ -67,16 +69,17 @@ impl Display for ServerCarPos {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub enum ObstacleDescritpion {
-    TS_Stop = 1,
-    TS_Priority = 2,
-    TS_Parking = 3,
-    TS_Crosswalk = 4,
-    TS_HighwayEntrance = 5,
-    TS_HighwayExit = 6,
-    TS_Roundabout = 7,
-    TS_OneWayRoad = 8,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize_repr)]
+#[repr(u8)]
+pub enum ObstacleId {
+    TsStop = 1,
+    TsPriority = 2,
+    TsParking = 3,
+    TsCrosswalk = 4,
+    TsHighwayEntrance = 5,
+    TsHighwayExit = 6,
+    TsRoundabout = 7,
+    TsOneWayRoad = 8,
     TrafficLight = 9,
     StaticCarOnRoad = 10,
     StaticCarOnParking = 11,
@@ -86,42 +89,37 @@ pub enum ObstacleDescritpion {
     BumpyRoad = 15,
 }
 
-impl Display for ObstacleDescritpion {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ObstacleDescritpion::TS_Stop => write!(f, "TS_Stop"),
-            ObstacleDescritpion::TS_Priority => write!(f, "TS_Priority"),
-            ObstacleDescritpion::TS_Parking => write!(f, "TS_Parking"),
-            ObstacleDescritpion::TS_Crosswalk => write!(f, "TS_Crosswalk"),
-            ObstacleDescritpion::TS_HighwayEntrance => write!(f, "TS_HighwayEntrance"),
-            ObstacleDescritpion::TS_HighwayExit => write!(f, "TS_HighwayExit"),
-            ObstacleDescritpion::TS_Roundabout => write!(f, "TS_Roundabout"),
-            ObstacleDescritpion::TS_OneWayRoad => write!(f, "TS_OneWayRoad"),
-            ObstacleDescritpion::TrafficLight => write!(f, "TrafficLight"),
-            ObstacleDescritpion::StaticCarOnRoad => write!(f, "StaticCarOnRoad"),
-            ObstacleDescritpion::StaticCarOnParking => write!(f, "StaticCarOnParking"),
-            ObstacleDescritpion::PedestrianOnCrosswalk => write!(f, "PedestrianOnCrosswalk"),
-            ObstacleDescritpion::PedestrianOnRoad => write!(f, "PedestrianOnRoad"),
-            ObstacleDescritpion::Roadblock => write!(f, "Roadblock"),
-            ObstacleDescritpion::BumpyRoad => write!(f, "BumpyRoad"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct EnvironmentalObstacle {
-    pub id: i8,
-    #[serde(rename = "coor")]
-    pub position: (f32, f32),
-    pub desc: ObstacleDescritpion,
+    #[serde(rename = "OBS")]
+    pub id: ObstacleId,
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Display for EnvironmentalObstacle {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "EnvironmentalObstacle {{ id: {}, position: {:?}, description: {} }}",
-            self.id, self.position, self.desc
+            "EnvironmentalObstacle {{ id: {:?}, x: {}, y: {} }}",
+            self.id, self.x, self.y
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serialize() {
+        let obstacle = EnvironmentalObstacle {
+            id: ObstacleId::TsStop,
+            x: 1.0,
+            y: 2.0,
+        };
+
+        let serialized = serde_json::to_string(&obstacle).unwrap();
+        assert_eq!(serialized, r#"{"OBS":1,"x":1.0,"y":2.0}"#);
     }
 }
