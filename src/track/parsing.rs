@@ -35,14 +35,14 @@ pub fn parse_track(path: &str) -> std::io::Result<Track> {
         },
     );
     no.sort_by(|a, b| a.id.cmp(&b.id));
-    
+
     let nodes = no
         .iter()
         .map(|node| {
             TrackNode::new(
                 node.id,
-                node.x,
-                node.y,
+                node.x * 100.0,
+                (6.0 - node.y) * 100.0,
                 nodes_and_edges
                     .edges
                     .iter()

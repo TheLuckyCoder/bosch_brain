@@ -14,8 +14,8 @@ pub fn move_towards_point(position: &CarPosition, target: Point) -> CarTwist {
     let distance = segment.get_length();
 
     let relative_angle = (position.angle - absolute_angle).angle_wrap();
-    let relative_x = distance * relative_angle.sin();
-    let relative_y = distance * relative_angle.cos();
+    let relative_x = distance * relative_angle.cos();
+    let relative_y = distance * relative_angle.sin();
 
     CarTwist {
         delta_x: relative_x,
@@ -24,7 +24,7 @@ pub fn move_towards_point(position: &CarPosition, target: Point) -> CarTwist {
     }
 }
 
-pub fn ackerman_forward(car_speed: &CarSpeed) -> CarTwist {
+pub fn ackerman_forward_kinematics(car_speed: &CarSpeed) -> CarTwist {
     let CarSpeed { speed, angle } = *car_speed;
 
     let delta_x = speed * angle.cos();
