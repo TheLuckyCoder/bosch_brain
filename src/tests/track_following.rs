@@ -11,7 +11,7 @@ fn follow_track() {
     let track = track::get_track();
     let start_node = track.get_node_by_id(47).unwrap();
     let end_node = track.get_node_by_id(48).unwrap();
-
+    println!("Start");
     let mut path = find_path(track, start_node, end_node).unwrap();
     path.remove(0);
 

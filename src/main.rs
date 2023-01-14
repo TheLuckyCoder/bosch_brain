@@ -49,12 +49,12 @@ async fn main() -> std::io::Result<()> {
     task::spawn(run_server_listeners());
     // tui.await??; // if the TUI task is finished, the program should exit
 
-    let start_node = match track.get_node_by_id(24) {
+    let start_node = match track.get_node_by_id(4) {
         Some(node) => node,
         None => panic!("start node not found"),
     };
 
-    let end_node = match track.get_node_by_id(22) {
+    let end_node = match track.get_node_by_id(3) {
         Some(node) => node,
         None => panic!("end node not found"),
     };
@@ -66,7 +66,7 @@ async fn main() -> std::io::Result<()> {
     for node in path {
         log::info!("Node: {:?}", node);
     }
-    log::info!("End node: {:?}\n", end_node);
+    log::info!("\nEnd node: {:?}\n", end_node);
 
     Ok(())
 }

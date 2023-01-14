@@ -92,5 +92,6 @@ pub struct CarSpeed {
 pub fn rotate_vector(x: f64, y: f64, angle: f64) -> (f64, f64) {
     let cos = angle.cos();
     let sin = angle.sin();
-    (x * cos - y * sin, x * sin + y * cos)
+    (x * cos - y * sin,
+     y * cos + x * sin)
 }

@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use crate::math::{AngleWrap, CarPosition, CarSpeed, CarTwist, Point, Segment};
 
 // TODO measure these
-const WHEEL_SEPARATION_DISTANCE: f64 = 10.0; // cm
+const LONGITUDINAL_WHEEL_SEPARATION_DISTANCE: f64 = 26.0; // cm
 const MAX_SPEED: f64 = 25.0; // cm/s
 const MAX_ACCELERATION: f64 = 50.0; // cm/s^2
 const MAX_STEERING_ANGLE: f64 = PI / 5.0; // around 36 deg
@@ -29,7 +29,7 @@ pub fn ackerman_forward_kinematics(car_speed: &CarSpeed) -> CarTwist {
 
     let delta_x = speed * angle.cos();
     let delta_y = speed * angle.sin();
-    let delta_theta = speed * angle.tan() / WHEEL_SEPARATION_DISTANCE;
+    let delta_theta = speed * angle.tan() / LONGITUDINAL_WHEEL_SEPARATION_DISTANCE;
 
     CarTwist {
         delta_x,
@@ -44,7 +44,7 @@ pub fn ackerman_inverse_kinematics(twist: &CarTwist) -> CarSpeed {
     }
 
     let steering_angle_tan = twist.delta_y / twist.delta_x;
-    let speed = twist.delta_angle * WHEEL_SEPARATION_DISTANCE / steering_angle_tan;
+    let speed = twist.delta_angle * LONGITUDINAL_WHEEL_SEPARATION_DISTANCE / steering_angle_tan;
     let angle = steering_angle_tan.atan();
 
     CarSpeed {
