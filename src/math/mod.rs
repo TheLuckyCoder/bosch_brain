@@ -31,62 +31,52 @@ impl CarPosition {
     pub fn new(x: f64, y: f64, angle: f64) -> Self {
         Self { x, y, angle }
     }
-}
-
-impl Add<&CarTwist> for CarPosition {
-    type Output = CarPosition;
-
-    fn add(self, rhs: &CarTwist) -> Self::Output {
-        Self::Output {
-            x: self.x + rhs.delta_x,
-            y: self.y + rhs.delta_y,
-            angle: self.angle + rhs.delta_angle,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct CarTwist {
-    pub delta_x: f64,
-    pub delta_y: f64,
-    pub delta_angle: f64,
-}
-
-impl CarTwist {
-    pub fn new(delta_x: f64, delta_y: f64, delta_theta: f64) -> Self {
-        Self {
-            delta_x,
-            delta_y,
-            delta_angle: delta_theta,
-        }
-    }
 
     pub fn rotate(&self, angle: f64) -> Self {
-        let (delta_x, delta_y) = rotate_vector(self.delta_x, self.delta_y, angle - PI / 2.0);
+        let (x, y) = rotate_vector(self.x, self.y, angle - PI / 2.0);
         Self {
-            delta_x,
-            delta_y,
-            delta_angle: self.delta_angle,
+            x,
+            y,
+            angle: self.angle,
         }
     }
 }
 
-impl Mul<f64> for CarTwist {
-    type Output = CarTwist;
+impl Add<&CarPosition> for CarPosition {
+    type Output = CarPosition;
+
+    fn add(self, rhs: &CarPosition) -> Self::Output {
+        Self::Output {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            angle: self.angle + rhs.angle,
+        }
+    }
+}
+
+impl Mul<f64> for CarPosition {
+    type Output = CarPosition;
 
     fn mul(self, rhs: f64) -> Self::Output {
         Self::Output {
-            delta_x: self.delta_x * rhs,
-            delta_y: self.delta_y * rhs,
-            delta_angle: self.delta_angle * rhs,
+            x: self.x * rhs,
+            y: self.y * rhs,
+            angle: self.angle * rhs,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct CarSpeed {
+pub struct Car {
+    pub position: CarPosition,
     pub speed: f64,
-    pub angle: f64,
+}
+
+impl Car {
+    pub fn new(x: f64, y: f64, angle: f64, speed: f64) -> Self {
+        let position = CarPosition::new(x, y, angle);
+        Self { position, speed }
+    }
 }
 
 pub fn rotate_vector(x: f64, y: f64, angle: f64) -> (f64, f64) {
