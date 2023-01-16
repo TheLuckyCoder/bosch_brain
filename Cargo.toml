@@ -16,12 +16,12 @@ lto = "thin"
 [dependencies]
 sensors = { path = "sensors" }
 # Async
-tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "time", "net"] }
+tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net"] }
 futures = "0.3"
 
 # Logging
-log = { version = "0.4", features = ["std", "serde", "max_level_debug", "release_max_level_warn"] }
-env_logger = "0.9"
+log = { version = "0.4", default-features = false, features = ["std", "serde", "max_level_debug", "release_max_level_warn"] }
+env_logger = { version = "0.10", default-features = false, features = ["humantime", "color"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
