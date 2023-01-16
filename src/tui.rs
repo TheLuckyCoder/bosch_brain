@@ -99,6 +99,7 @@ fn react_to_keys(key: KeyCode, params: &mut CarParams) -> std::io::Result<bool> 
         KeyCode::Char('p') => {
             params.pid_enabled = !params.pid_enabled;
             serial::send_blocking(Message::EnablePid(params.pid_enabled))?;
+            // serial::send_blocking(Message::EnableEncoderPublisher(params.pid_enabled))?;
             serial::send_blocking(Message::PidParams {
                 k_p: params.k_p,
                 k_i: params.k_i,
@@ -116,12 +117,11 @@ fn react_to_keys(key: KeyCode, params: &mut CarParams) -> std::io::Result<bool> 
 }
 
 pub async fn run() -> Result<()> {
-    // if enable_raw_mode().is_err() {
-    //     log::error!("Failed to find keyboard/terminal")
-    // }
+    if enable_raw_mode().is_err() {
+        log::error!("Failed to find keyboard/terminal")
+    }
 
     print_events().await;
 
-    // disable_raw_mode()
-    Ok(())
+    disable_raw_mode()
 }
