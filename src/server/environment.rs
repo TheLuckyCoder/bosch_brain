@@ -1,11 +1,12 @@
 use std::thread::sleep;
+use std::time::Duration;
 
-use crate::server::data::EnvironmentalObstacle;
 use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey};
 use rsa::{RsaPrivateKey, RsaPublicKey};
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::Receiver;
 
+use crate::server::data::EnvironmentalObstacle;
 use crate::server::utils::{check_authentication, listen_for_port, sign_message, CAR_ID};
 
 async fn establish_server_connection(server_address: &String) -> std::io::Result<()> {
@@ -30,7 +31,7 @@ async fn establish_server_connection(server_address: &String) -> std::io::Result
     let message = CAR_ID.as_bytes();
     let signature = sign_message(message, private_key)?;
     socket.send(message).await?;
-    sleep(std::time::Duration::from_millis(100));
+    sleep(Duration::from_millis(100));
     socket.send(signature.as_slice()).await?;
 
     check_authentication(public_key, socket).await?;
@@ -39,15 +40,28 @@ async fn establish_server_connection(server_address: &String) -> std::io::Result
     Ok(())
 }
 
-pub async fn run_environment(mut rx: Receiver<EnvironmentalObstacle>) -> std::io::Result<()> {
-    let server_address = listen_for_port("0.0.0.0:1234").await?;
+async fn send_data_to_environment_server(
+    server_address: &String,
+    mut rx: Receiver<EnvironmentalObstacle>,
+) -> std::io::Result<()> {
+    let server_socket = UdpSocket::bind(server_address).await?;
+
+    while let Some(environmental_obstacle) = rx.recv().await {
+        let serialized_obstacle = serde_json::to_string(&environmental_obstacle)?;
+        server_socket.send(serialized_obstacle.as_ref()).await?;
+        sleep(Duration::from_millis(100));
+    }
+
+    Ok(())
+}
+
+pub async fn run_environment(rx: Receiver<EnvironmentalObstacle>) -> std::io::Result<()> {
+    let server_address = listen_for_port("0.0.0.0:25565").await?;
 
     // Verify the server authentication and acknowledge connection
     establish_server_connection(&server_address).await?;
 
-    while let Some(data) = rx.recv().await {
-        // TODO Send data to server
-    }
+    send_data_to_environment_server(&server_address, rx).await?;
 
     Ok(())
 }

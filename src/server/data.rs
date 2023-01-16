@@ -57,7 +57,7 @@ impl Display for TrafficLight {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ServerCarPos {
     pub x: f32,
     pub y: f32,
@@ -69,7 +69,7 @@ impl Display for ServerCarPos {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize_repr)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum ObstacleId {
     TsStop = 1,
@@ -89,7 +89,7 @@ pub enum ObstacleId {
     BumpyRoad = 15,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct EnvironmentalObstacle {
     #[serde(rename = "OBS")]
     pub id: ObstacleId,
