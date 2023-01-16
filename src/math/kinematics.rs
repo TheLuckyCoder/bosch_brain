@@ -1,4 +1,4 @@
-use crate::math::{Car, CarPosition, Point, Segment};
+use crate::math::CarPosition;
 
 // TODO measure these
 const LONGITUDINAL_WHEEL_SEPARATION_DISTANCE: f64 = 26.0; // cm
