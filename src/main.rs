@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use std::env;
-
 use env_logger::Env;
 use tokio::task;
 
@@ -27,7 +25,6 @@ impl Drop for Cleanup {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    env::set_var("RUST_BACKTRACE", "full");
     // let _cleanup = Cleanup;
 
     env_logger::Builder::from_env(Env::default().default_filter_or("debug"))
@@ -37,7 +34,7 @@ async fn main() -> std::io::Result<()> {
 
     // let tui = task::spawn(tui::run());
 
-    let track = track::get_track();
+    // let track = track::get_track();
 
     // match imu::get_imu() {
     //     Ok(mut imu) => {
@@ -48,25 +45,6 @@ async fn main() -> std::io::Result<()> {
 
     task::spawn(run_server_listeners());
     // tui.await??; // if the TUI task is finished, the program should exit
-
-    let start_node = match track.get_node_by_id(4) {
-        Some(node) => node,
-        None => panic!("start node not found"),
-    };
-
-    let end_node = match track.get_node_by_id(3) {
-        Some(node) => node,
-        None => panic!("end node not found"),
-    };
-
-    let path = track::find_path(track, start_node, end_node).unwrap();
-
-    log::debug!("Start node: {:?}\n", start_node);
-    log::info!("Path length: {}\n", path.len());
-    for node in path {
-        log::info!("Node: {:?}", node);
-    }
-    log::info!("\nEnd node: {:?}\n", end_node);
 
     Ok(())
 }
