@@ -36,12 +36,7 @@ async fn main() -> std::io::Result<()> {
 
     // let track = track::get_track();
 
-    // match imu::get_imu() {
-    //     Ok(mut imu) => {
-    //         log::info!("Gyro: {:?}", imu.get_gyro().unwrap());
-    //     }
-    //     Err(e) => log::error!("Failed to initialize IMU: {}", e),
-    // }
+    // let imu = sensors::get_imu().expect("Failed to initialize IMU");
 
     task::spawn(run_server_listeners());
     // tui.await??; // if the TUI task is finished, the program should exit

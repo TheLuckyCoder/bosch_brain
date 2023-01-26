@@ -2,6 +2,7 @@ use std::mem::MaybeUninit;
 #[cfg(test)]
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Once;
+use std::time::Duration;
 
 use tokio::task::JoinHandle;
 
@@ -15,8 +16,9 @@ mod sender;
 fn init_serial() -> SerialMessageSender {
     let serial = SerialMessageSender(
         mio_serial::new("/dev/ttyACM0", 19200)
+            .timeout(Duration::from_millis(100))
             .open()
-            .expect("Failed to open port"),
+            .expect("Failed to open serial port"),
     );
 
     log::info!("Serial port initialized");

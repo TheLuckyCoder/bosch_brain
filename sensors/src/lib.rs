@@ -3,6 +3,7 @@ use linux_embedded_hal::{Delay, I2cdev};
 use mpu6050::Mpu6050;
 use mpu6050::Mpu6050Error::{I2c, InvalidChipId};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Vec3 {
     x: f32,
     y: f32,
@@ -58,7 +59,7 @@ mod internal {
 }
 
 #[cfg(target_os = "linux")]
-pub fn get_imu() -> Result<internal::Imu, String> {
+pub fn get_imu() -> Result<impl ImuSpecs, String> {
     let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| e.to_string())?;
 
     let mut imu = Mpu6050::new(i2c);
