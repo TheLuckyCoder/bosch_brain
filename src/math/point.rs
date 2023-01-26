@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Point {
     pub x: f64,
@@ -13,5 +15,11 @@ impl Point {
         let x = self.x - other.x;
         let y = self.y - other.y;
         x.hypot(y)
+    }
+}
+
+impl Display for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Point {{ x: {}, y: {} }}", self.x, self.y)
     }
 }

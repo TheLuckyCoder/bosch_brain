@@ -1,15 +1,17 @@
 use std::f64::consts::PI;
 use std::ops::{Add, Mul};
 
+pub use angle_wrap::*;
+pub use circle::*;
+pub use point::*;
+pub use segment::*;
+
 mod angle_wrap;
+mod circle;
 pub mod kinematics;
 pub mod pid;
 mod point;
 mod segment;
-
-pub use angle_wrap::*;
-pub use point::*;
-pub use segment::*;
 
 impl From<&CarPosition> for Point {
     fn from(value: &CarPosition) -> Self {
@@ -82,6 +84,5 @@ impl Car {
 pub fn rotate_vector(x: f64, y: f64, angle: f64) -> (f64, f64) {
     let cos = angle.cos();
     let sin = angle.sin();
-    (x * cos - y * sin,
-     y * cos + x * sin)
+    (x * cos - y * sin, y * cos + x * sin)
 }

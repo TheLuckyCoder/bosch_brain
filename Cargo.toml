@@ -3,9 +3,6 @@ name = "bosch_brain"
 version = "0.1.0"
 edition = "2021"
 
-#[profile.dev.package.num-bigint-dig] # Fast RSA in debug mode
-#opt-level = 3
-
 [profile.dev.package."*"]
 opt-level = 3
 
