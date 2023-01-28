@@ -14,7 +14,7 @@ async fn parse_data(socket: &UdpSocket) -> std::io::Result<TrafficLight> {
     Ok(traffic_light)
 }
 
-pub async fn run_listener(on_receive_data: fn(Vec<TrafficLight>)) -> std::io::Result<()> {
+pub async fn run_listener(on_receive_data: impl Fn(Vec<TrafficLight>)) -> std::io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:50007").await?;
 
     let mut traffic_lights = [

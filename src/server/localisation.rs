@@ -3,7 +3,7 @@ use rsa::RsaPublicKey;
 use tokio::net::UdpSocket;
 
 use crate::server::data::ServerCarPos;
-use crate::server::utils::{CAR_ID, check_authentication, listen_for_port};
+use crate::server::utils::{check_authentication, listen_for_port, CAR_ID};
 
 async fn establish_server_connection(server_address: &String) -> std::io::Result<()> {
     // Parse public key
@@ -35,7 +35,7 @@ async fn parse_position(socket: &UdpSocket) -> std::io::Result<ServerCarPos> {
 
 async fn run_localisation_listener(
     server_address: String,
-    on_receive_data: fn(ServerCarPos),
+    on_receive_data: impl Fn(ServerCarPos),
 ) -> std::io::Result<()> {
     let socket = UdpSocket::bind(server_address).await?;
 
@@ -47,7 +47,7 @@ async fn run_localisation_listener(
     }
 }
 
-pub async fn run_localization(on_receive_data: fn(ServerCarPos)) -> std::io::Result<()> {
+pub async fn run_listener(on_receive_data: impl Fn(ServerCarPos)) -> std::io::Result<()> {
     // First receive the port to listen on
     let server_address = listen_for_port("0.0.0.0:50009").await?;
 

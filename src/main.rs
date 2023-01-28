@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 
 use env_logger::Env;
-use tokio::task;
 
 use crate::serial::Message;
-use crate::server::run_server_listeners;
 
+mod brain;
 mod math;
 mod serial;
 mod server;
@@ -38,7 +37,7 @@ async fn main() -> std::io::Result<()> {
 
     // let imu = sensors::get_imu().expect("Failed to initialize IMU");
 
-    task::spawn(run_server_listeners());
+    brain::brain();
     // tui.await??; // if the TUI task is finished, the program should exit
 
     Ok(())

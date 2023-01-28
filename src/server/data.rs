@@ -57,7 +57,7 @@ impl Display for TrafficLight {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct ServerCarPos {
     pub x: f32,
     pub y: f32,

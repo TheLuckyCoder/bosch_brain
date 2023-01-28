@@ -15,7 +15,7 @@ pub fn get_track() -> &'static Track {
 
     unsafe {
         ONCE.call_once(|| {
-            SINGLETON.write(parsing::parse_track("res/tracks/test_track.json").unwrap());
+            SINGLETON.write(parsing::parse_track("res/tracks/test_track.json", 6.0).unwrap());
         });
 
         SINGLETON.assume_init_ref()
@@ -32,7 +32,7 @@ pub fn find_path_coords(
         .ok_or_else(|| "Didn't find start node".to_string())?;
     let end_node = track
         .find_closest_node(end_coord.0, end_coord.1)
-        .ok_or_else(|| "Didn't find start node".to_string())?;
+        .ok_or_else(|| "Didn't find end node".to_string())?;
 
     find_path(track, start_node, end_node)
 }

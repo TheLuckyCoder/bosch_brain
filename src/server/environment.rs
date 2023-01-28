@@ -55,7 +55,7 @@ async fn send_data_to_environment_server(
     Ok(())
 }
 
-pub async fn run_environment(rx: Receiver<EnvironmentalObstacle>) -> std::io::Result<()> {
+pub async fn run_sender(rx: Receiver<EnvironmentalObstacle>) -> std::io::Result<()> {
     let server_address = listen_for_port("0.0.0.0:25565").await?;
 
     // Verify the server authentication and acknowledge connection

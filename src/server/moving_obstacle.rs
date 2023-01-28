@@ -9,7 +9,7 @@ async fn parse_data(socket: &UdpSocket) -> std::io::Result<MovingObstacle> {
     Ok(obstacle)
 }
 
-pub async fn run_listener(on_receive_data: fn(MovingObstacle)) -> std::io::Result<()> {
+pub async fn run_listener(on_receive_data: impl Fn(MovingObstacle)) -> std::io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:50009").await?;
 
     loop {

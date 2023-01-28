@@ -21,7 +21,7 @@ struct NodesAndEdges {
     pub edges: Vec<ParsingEdge>,
 }
 
-pub fn parse_track(path: &str) -> std::io::Result<Track> {
+pub fn parse_track(path: &str, y_axis_size: f32) -> std::io::Result<Track> {
     let file = std::fs::read_to_string(path)?;
     let nodes_and_edges: NodesAndEdges = serde_json::from_str(&file)?;
 
@@ -42,7 +42,7 @@ pub fn parse_track(path: &str) -> std::io::Result<Track> {
             TrackNode::new(
                 node.id,
                 node.x * 100.0,
-                (6.0 - node.y) * 100.0,
+                (y_axis_size - node.y) * 100.0,
                 nodes_and_edges
                     .edges
                     .iter()
