@@ -13,6 +13,7 @@ impl Circle {
     }
 
     pub fn find_center(p1: Point, p2: Point, p3: Point) -> Circle {
+        // println!("p1: {}, p2: {}, p3: {}", p1, p2, p3);
         let a = p1.x - p3.x;
         let b = p1.y - p3.y;
         let c = (p1.x * p1.x - p3.x * p3.x) + (p1.y * p1.y - p3.y * p3.y);

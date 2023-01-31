@@ -37,3 +37,5 @@ digest = "0.10"
 md-5 = "0.10"
 
 ordered-float = "3"
+plotpy = "0.3.5"
+plotly = "0.8.3"

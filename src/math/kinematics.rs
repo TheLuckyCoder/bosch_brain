@@ -35,6 +35,6 @@ pub fn ackerman_forward_kinematics(
     CarPosition {
         x: relative_delta_x,
         y: relative_delta_y,
-        angle: steering_angle.abs().min(MAX_STEERING_ANGLE) * heading_angle.signum(),
+        heading_angle: steering_angle.abs().min(MAX_STEERING_ANGLE) * heading_angle.signum(),
     }
 }

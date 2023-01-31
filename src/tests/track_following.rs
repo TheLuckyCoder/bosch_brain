@@ -19,7 +19,7 @@ fn follow_track() {
 
     // let mut last_timestamp = Instant::now();
 
-    let mut car = Car::new(start_node.get_x() as f64, start_node.get_y() as f64, PI, 5.0);
+    let mut car = Car::new(start_node.get_x() as f64, start_node.get_y() as f64, PI, 5.0, 0.0);
 
     let mut next_node = path.remove(0);
 
@@ -29,23 +29,23 @@ fn follow_track() {
 
     loop {
         print!("\n{:?}", car.position);
-        println!("degrees: {}", car.position.angle.to_degrees());
+        println!("degrees: {}", car.position.heading_angle.to_degrees());
 
         let segment = Segment(Point::from(&car.position), target_point);
 
         let heading_angle = segment.get_angle();
         println!("headingAngle: {}", heading_angle.to_degrees());
 
-        let relative_position = ackerman_forward_kinematics(car.speed, heading_angle, car.position.angle);
+        let relative_position = ackerman_forward_kinematics(car.speed, heading_angle, car.position.heading_angle);
         print!("rel pos: {:?}", relative_position);
-        println!("degrees: {}", relative_position.angle.to_degrees());
+        println!("degrees: {}", relative_position.heading_angle.to_degrees());
 
         car.position.x += relative_position.x;
         car.position.y += relative_position.y;
-        car.position.angle += relative_position.angle;
+        car.position.heading_angle += relative_position.heading_angle;
 
 
-        car.position.angle = car.position.angle.angle_wrap();
+        car.position.heading_angle = car.position.heading_angle.angle_wrap();
 
         // let delta_time = last_timestamp.elapsed().as_secs_f64();
         let dist = Point::from(&car.position).distance_to(target_point);

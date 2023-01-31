@@ -2,6 +2,7 @@
 
 use env_logger::Env;
 use tokio::task;
+use crate::math::{Circle, Point};
 
 use crate::serial::Message;
 use crate::server::run_server_listeners;
@@ -40,6 +41,11 @@ async fn main() -> std::io::Result<()> {
 
     task::spawn(run_server_listeners());
     // tui.await??; // if the TUI task is finished, the program should exit
+
+
+    let circle = Circle::find_center(Point::new(155.0,548.0),Point::new(126.0,546.0),Point::new(97.0,532.0));
+
+    println!("Circle: {:?}", circle);
 
     Ok(())
 }

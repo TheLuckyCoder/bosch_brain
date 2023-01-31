@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 use ordered_float::OrderedFloat;
+use crate::math::Point;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TrackEdge {
@@ -34,6 +35,12 @@ impl TrackNode {
 
     pub fn get_y(&self) -> f32 {
         self.y.into_inner()
+    }
+}
+
+impl From<&TrackNode> for Point {
+    fn from(node: &TrackNode) -> Self {
+        Point::new(node.get_x() as f64, node.get_y() as f64)
     }
 }
 
