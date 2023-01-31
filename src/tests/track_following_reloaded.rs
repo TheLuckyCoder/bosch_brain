@@ -1,15 +1,13 @@
+use plotly::common::Mode;
+use plotly::{Layout, Plot, Scatter};
 use std::env;
 use std::f64::consts::PI;
 use std::io::{stdout, Write};
 use std::time::{Duration, Instant};
-use plotly::common::Mode;
-use plotly::{Layout, Plot, Scatter};
-
 
 use crate::math::{AngleWrap, Car, Circle, Point, Segment};
 use crate::track;
 use crate::track::find_path;
-
 
 fn line_and_scatter_plot() {
     let trace1 = Scatter::new(vec![1, 2, 3, 4], vec![10, 15, 13, 17])
@@ -18,8 +16,7 @@ fn line_and_scatter_plot() {
     let trace2 = Scatter::new(vec![2, 3, 4, 5], vec![16, 5, 11, 9])
         .name("trace2")
         .mode(Mode::Lines);
-    let trace3 = Scatter::new(vec![1, 2, 3, 4], vec![12, 9, 15, 12])
-        .name("trace3");
+    let trace3 = Scatter::new(vec![1, 2, 3, 4], vec![12, 9, 15, 12]).name("trace3");
 
     let mut plot = Plot::new();
     plot.add_trace(trace1);
@@ -58,9 +55,19 @@ fn follow_track() {
 
     println!("NextNodes: {:?}", next_two_nodes);
 
-    let mut car = Car::new(start_node.get_x() as f64, start_node.get_y() as f64, PI, 1.0, 0.0);
+    let mut car = Car::new(
+        start_node.get_x() as f64,
+        start_node.get_y() as f64,
+        PI,
+        1.0,
+        0.0,
+    );
 
-    println!("Target {} (Node: {})", Point::from(next_two_nodes[0]), next_two_nodes[0].id);
+    println!(
+        "Target {} (Node: {})",
+        Point::from(next_two_nodes[0]),
+        next_two_nodes[0].id
+    );
 
     const LONGITUDINAL_WHEEL_SEPARATION_DISTANCE: f64 = 26.0; // cm
 
@@ -74,7 +81,8 @@ fn follow_track() {
 
         println!("\n {}", car);
 
-        let dist_from_car_to_next_node = Point::from(&car.position).distance_to(next_two_nodes[0].into());
+        let dist_from_car_to_next_node =
+            Point::from(&car.position).distance_to(next_two_nodes[0].into());
         println!("\nDist To next Node: {:.3}", dist_from_car_to_next_node);
 
         if dist_from_car_to_next_node > 40.0 {
@@ -92,10 +100,18 @@ fn follow_track() {
 
             println!("NextNodes: {:?}", next_two_nodes);
 
-            println!("\nTarget {} (Node: {})", Point::from(next_two_nodes[0]), next_two_nodes[0].id);
+            println!(
+                "\nTarget {} (Node: {})",
+                Point::from(next_two_nodes[0]),
+                next_two_nodes[0].id
+            );
         }
 
-        let circle = Circle::find_center(Point::from(&car.position),next_two_nodes[0].into(), next_two_nodes[1].into());
+        let circle = Circle::find_center(
+            Point::from(&car.position),
+            next_two_nodes[0].into(),
+            next_two_nodes[1].into(),
+        );
 
         println!("Circle: {:?}", circle);
 
@@ -107,7 +123,8 @@ fn follow_track() {
 
         let change_of_heading_angle = car.speed / distance_to_circle;
 
-        // let change_of_heading_angle_2 = car.speed * car.steering_angle.tan() / LONGITUDINAL_WHEEL_SEPARATION_DISTANCE;
+        // let change_of_heading_angle_2 =
+        //     car.speed * car.steering_angle.tan() / LONGITUDINAL_WHEEL_SEPARATION_DISTANCE;
 
         // println!("Change of Heading Angle: {:.3} {:.3}", change_of_heading_angle, change_of_heading_angle_2);
 
@@ -130,11 +147,9 @@ fn follow_track() {
         stdout().flush().unwrap();
     }
 
-    let trace1 = Scatter::new(path_vec_x, path_vec_y)
-        .name("trace1");
+    let trace1 = Scatter::new(path_vec_x, path_vec_y).name("trace1");
 
-    let trace3 = Scatter::new(vec_x,vec_y)
-        .name("trace3");
+    let trace3 = Scatter::new(vec_x, vec_y).name("trace3");
 
     let mut plot = Plot::new();
     plot.add_trace(trace1);
