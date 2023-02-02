@@ -1,6 +1,6 @@
 use std::str;
 
-use rsa::{PaddingScheme, PublicKey, RsaPrivateKey, RsaPublicKey};
+use rsa::{Pss, PublicKey, RsaPrivateKey, RsaPublicKey};
 use tokio::net::UdpSocket;
 
 pub const CAR_ID: &str = "69"; // TODO How would I know?
@@ -10,14 +10,14 @@ pub fn parse_port(buffer: &[u8]) -> Option<u16> {
 }
 
 pub fn sign_message(message: &[u8], private_key: RsaPrivateKey) -> std::io::Result<Vec<u8>> {
-    let padding = PaddingScheme::new_pss_with_salt::<md5::Md5>(48usize);
+    let padding = Pss::new_with_salt::<md5::Md5>(48usize);
     private_key
         .sign(padding, message)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
 }
 
 fn verify_signature(public_key: RsaPublicKey, message: &[u8], signature: &[u8]) -> bool {
-    let padding = PaddingScheme::new_pss_with_salt::<md5::Md5>(48usize);
+    let padding = Pss::new_with_salt::<md5::Md5>(48usize);
     public_key.verify(padding, message, signature).is_ok()
 }
 

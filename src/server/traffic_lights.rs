@@ -1,4 +1,4 @@
-use crate::server::data::{TrafficLight, TrafficLightColor};
+use crate::server::data::{TrafficLight, TrafficLightsStatus};
 use tokio::net::UdpSocket;
 
 async fn parse_data(socket: &UdpSocket) -> std::io::Result<TrafficLight> {
@@ -14,36 +14,23 @@ async fn parse_data(socket: &UdpSocket) -> std::io::Result<TrafficLight> {
     Ok(traffic_light)
 }
 
-pub async fn run_listener(on_receive_data: impl Fn(Vec<TrafficLight>)) -> std::io::Result<()> {
+pub async fn run_listener(on_receive_data: impl Fn(TrafficLightsStatus)) -> std::io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:50007").await?;
 
-    let mut traffic_lights = [
-        TrafficLight {
-            id: 1,
-            color: TrafficLightColor::Red,
-        },
-        TrafficLight {
-            id: 2,
-            color: TrafficLightColor::Red,
-        },
-        TrafficLight {
-            id: 3,
-            color: TrafficLightColor::Red,
-        },
-        TrafficLight {
-            id: 4,
-            color: TrafficLightColor::Red,
-        },
-    ];
+    let mut traffic_lights = TrafficLightsStatus::default();
 
     loop {
         match parse_data(&socket).await {
-            Ok(traffic_light) => {
-                traffic_lights[traffic_light.id as usize - 1] = traffic_light;
-            }
+            Ok(traffic_light) => match traffic_light.id {
+                1 => traffic_lights.0 = traffic_light.color,
+                2 => traffic_lights.1 = traffic_light.color,
+                3 => traffic_lights.2 = traffic_light.color,
+                4 => traffic_lights.3 = traffic_light.color,
+                _ => unreachable!(),
+            },
             Err(e) => log::error!("Error occurred while receiving/parsing data: {}", e),
         }
 
-        on_receive_data(traffic_lights.to_vec());
+        on_receive_data(traffic_lights);
     }
 }

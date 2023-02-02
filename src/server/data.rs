@@ -3,7 +3,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct MovingObstacle {
+pub struct MovingObstaclePos {
     id: i32,
     timestamp: i64,
     #[serde(rename = "coor")]
@@ -12,7 +12,7 @@ pub struct MovingObstacle {
     angle: (f32, f32),
 }
 
-impl Display for MovingObstacle {
+impl Display for MovingObstaclePos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -22,9 +22,12 @@ impl Display for MovingObstacle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize_repr)]
+// region Traffic Lights
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize_repr)]
 #[repr(u8)]
 pub enum TrafficLightColor {
+    #[default]
     Red = 0,
     Yellow = 1,
     Green = 2,
@@ -40,22 +43,38 @@ impl Display for TrafficLightColor {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct TrafficLight {
     pub id: u8,
     #[serde(rename = "state")]
     pub color: TrafficLightColor,
 }
 
-impl Display for TrafficLight {
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct TrafficLightsStatus(
+    pub TrafficLightColor,
+    pub TrafficLightColor,
+    pub TrafficLightColor,
+    pub TrafficLightColor,
+);
+
+impl Display for TrafficLightsStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "TrafficLight {{ id: {}, color: {} }}",
-            self.id, self.color
+            "TrafficLights {{ 1: {}, 2: {}, 3: {}, 4: {} }}",
+            self.0, self.1, self.2, self.3
         )
     }
 }
+
+impl TrafficLightsStatus {
+    fn as_slice(&self) -> [TrafficLightColor; 4] {
+        [self.0, self.1, self.2, self.3]
+    }
+}
+
+// endregion Traffic Lights
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct ServerCarPos {

@@ -1,5 +1,5 @@
-use crate::server::data::{MovingObstacle, ServerCarPos, TrafficLight};
-use std::sync::mpsc::Sender;
+use crate::server::data::{MovingObstaclePos, ServerCarPos, TrafficLightsStatus};
+use std::sync::mpsc::Receiver;
 use tokio::task;
 
 pub mod data;
@@ -11,11 +11,13 @@ mod utils;
 
 pub enum ServerData {
     Localisation(ServerCarPos),
-    TrafficLights(Vec<TrafficLight>),
-    MovingObstacle(MovingObstacle),
+    TrafficLights(TrafficLightsStatus),
+    MovingObstacle(MovingObstaclePos),
 }
 
-pub fn run_server_listeners(tx: Sender<ServerData>) {
+pub fn run_server_listeners() -> Receiver<ServerData> {
+    let (tx, rx) = std::sync::mpsc::channel();
+
     let tx_clone = tx.clone();
     task::spawn(localisation::run_listener(move |robot_pos| {
         log::info!("Robot Pos: {:?}", robot_pos);
@@ -37,4 +39,6 @@ pub fn run_server_listeners(tx: Sender<ServerData>) {
     }));
 
     // task::spawn(environment::run_sender());
+
+    rx
 }

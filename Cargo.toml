@@ -30,9 +30,9 @@ serialport = { version = "4", default-features = false }
 mio-serial = { version = "5", default-features = false }
 
 # TUI/keycapture
-crossterm = { version = "0.25", features = ["event-stream"] }
+crossterm = { version = "0.26", features = ["event-stream"] }
 
-rsa = "0.7"
+rsa = "0.8"
 digest = "0.10"
 md-5 = "0.10"
 

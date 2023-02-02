@@ -10,6 +10,7 @@ use crate::serial::sender::{MessageSender, SerialMessageSender};
 
 pub use self::message::*;
 
+pub mod camera;
 mod message;
 mod sender;
 
