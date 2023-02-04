@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-struct PidController {
+pub struct PidController {
     k_p: f64,
     k_i: f64,
     k_d: f64,

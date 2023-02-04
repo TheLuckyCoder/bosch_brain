@@ -3,6 +3,8 @@ use std::mem::MaybeUninit;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Once;
 use std::time::Duration;
+#[cfg(test)]
+use tokio::task;
 
 use tokio::task::JoinHandle;
 
@@ -79,10 +81,10 @@ pub fn send_blocking(message: Message) -> std::io::Result<()> {
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
 }
 
-// #[cfg(test)]
-// pub fn send(message: Message) -> JoinHandle<()> {
-//     get_serial().send(message)
-// }
+#[cfg(test)]
+pub fn send(message: Message) -> JoinHandle<()> {
+    task::spawn_blocking(|| send_blocking(message).unwrap())
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,37 +1,47 @@
-use crate::serial::camera::{get_camera_data_receiver, CameraData, LanesAngle};
-use crate::server::data::{MovingObstaclePos, ServerCarPos, TrafficLightsStatus};
-use crate::server::{run_server_listeners, ServerData};
 use std::sync::{Arc, Mutex};
-use tokio::task;
+use std::time::Duration;
 
-struct BrainData {
-    car_pos: ServerCarPos,
-    traffic_lights: TrafficLightsStatus,
-    moving_obstacle: Option<MovingObstaclePos>,
-    lanes_angle: LanesAngle,
-}
+use crate::math::pid::PidController;
+use crate::serial;
+pub use data::*;
 
-impl BrainData {
-    fn default() -> Self {
-        Self {
-            car_pos: ServerCarPos::default(),
-            traffic_lights: TrafficLightsStatus::default(),
-            moving_obstacle: None,
-            lanes_angle: LanesAngle::default(),
-        }
-    }
-}
+use crate::serial::camera::{get_camera_data_receiver, CameraData};
+use crate::serial::Message;
+use crate::server::{run_server_listeners, ServerData};
 
-pub fn brain() {
+mod data;
+
+pub fn start_brain() {
     let brain_data = Arc::new(Mutex::new(BrainData::default()));
 
     update_data_from_server(brain_data.clone());
-    update_data_from_camera(brain_data);
+    update_data_from_camera(brain_data.clone());
+
+    process_data(brain_data);
+}
+
+fn process_data(brain_data: Arc<Mutex<BrainData>>) {
+    let mut last_data = BrainData::default();
+    let mut lane_pid = PidController::new(1.0, 0.5, 0.01);
+
+    loop {
+        std::thread::sleep(Duration::from_millis(1));
+
+        let data = brain_data.lock().unwrap().clone();
+        if last_data == data {
+            continue;
+        }
+        last_data = data.clone();
+
+        let total_angle = data.lanes_angle.left + data.lanes_angle.right;
+        let steering_angle = lane_pid.compute(total_angle);
+        serial::send(Message::Steer(steering_angle as f32));
+    }
 }
 
 fn update_data_from_server(brain_data: Arc<Mutex<BrainData>>) {
     // Receive data from the server and update the brain data
-    task::spawn_blocking(move || {
+    std::thread::spawn(move || {
         let rx = run_server_listeners();
 
         while let Ok(server_data) = rx.recv() {
@@ -51,7 +61,7 @@ fn update_data_from_server(brain_data: Arc<Mutex<BrainData>>) {
 fn update_data_from_camera(brain_data: Arc<Mutex<BrainData>>) {
     let camera_receiver = get_camera_data_receiver();
 
-    task::spawn_blocking(move || {
+    std::thread::spawn(move || {
         while let Ok(camera_data) = camera_receiver.recv() {
             let mut data = brain_data.lock().unwrap();
 

@@ -37,7 +37,7 @@ async fn main() -> std::io::Result<()> {
 
     // let imu = sensors::get_imu().expect("Failed to initialize IMU");
 
-    brain::brain();
+    brain::start_brain();
     // tui.await??; // if the TUI task is finished, the program should exit
 
     Ok(())

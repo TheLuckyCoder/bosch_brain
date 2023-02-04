@@ -44,7 +44,7 @@ impl Display for TrafficLightColor {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct TrafficLight {
+pub(super) struct TrafficLight {
     pub id: u8,
     #[serde(rename = "state")]
     pub color: TrafficLightColor,

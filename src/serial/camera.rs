@@ -5,37 +5,34 @@ use std::time::Duration;
 
 use serialport::SerialPort;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 #[repr(C)]
 pub struct LanesAngle {
-    left: f64,
-    right: f64,
+    pub left: f64,
+    pub right: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[repr(u8)]
 pub enum CameraData {
     LanesAngle(LanesAngle) = 0,
 }
 
-fn parse_camera_data(serial: &mut CameraSerialReceiver) -> CameraData {
-    let mut buffer = [0_u8; 512];
-    serial.read_exact(buffer.as_mut()).unwrap();
+type CameraSerialReceiver = Box<dyn SerialPort>;
 
+fn parse_camera_data(buffer: &[u8; 512]) -> CameraData {
     let discriminant = buffer[0];
 
     match discriminant {
         0 => {
             const SIZE: usize = size_of::<LanesAngle>();
             CameraData::LanesAngle(unsafe {
-                transmute::<[u8; SIZE], LanesAngle>(buffer[1..SIZE].try_into().unwrap())
+                transmute::<[u8; SIZE], LanesAngle>(buffer[1..SIZE + 1].try_into().unwrap())
             })
         }
         _ => panic!("Unknown data type: {discriminant}"),
     }
 }
-
-type CameraSerialReceiver = Box<dyn SerialPort>;
 
 fn get_camera_serial() -> CameraSerialReceiver {
     // TODO
@@ -54,9 +51,38 @@ pub fn get_camera_data_receiver() -> Receiver<CameraData> {
     let (sender, receiver) = std::sync::mpsc::channel();
 
     std::thread::spawn(move || loop {
-        let data = parse_camera_data(&mut serial);
+        let mut buffer = [0_u8; 512];
+        serial.read_exact(buffer.as_mut()).unwrap();
+
+        let data = parse_camera_data(&buffer);
         sender.send(data).unwrap();
     });
 
     receiver
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_camera_data() {
+        let mut buffer = [0_u8; 512];
+        const SIZE: usize = size_of::<LanesAngle>();
+        let data = LanesAngle {
+            left: 1.5,
+            right: 2.0,
+        };
+
+        unsafe {
+            let bytes: [u8; SIZE] = transmute(data.clone());
+            bytes.as_ref().iter().enumerate().for_each(|(i, v)| {
+                buffer[i + 1] = *v;
+            });
+        }
+
+        let parsed_data = parse_camera_data(&buffer);
+        dbg!(data);
+        assert_eq!(CameraData::LanesAngle(data), parsed_data);
+    }
 }
