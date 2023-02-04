@@ -1,5 +1,7 @@
 use crate::server::data::{TrafficLight, TrafficLightsStatus};
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc::Sender;
+use crate::server::ServerData;
 
 async fn parse_data(socket: &UdpSocket) -> std::io::Result<TrafficLight> {
     let mut buffer = [0; 4096];
@@ -14,7 +16,7 @@ async fn parse_data(socket: &UdpSocket) -> std::io::Result<TrafficLight> {
     Ok(traffic_light)
 }
 
-pub async fn run_listener(on_receive_data: impl Fn(TrafficLightsStatus)) -> std::io::Result<()> {
+pub async fn run_listener(sender: Sender<ServerData>) -> std::io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:50007").await?;
 
     let mut traffic_lights = TrafficLightsStatus::default();
@@ -30,7 +32,7 @@ pub async fn run_listener(on_receive_data: impl Fn(TrafficLightsStatus)) -> std:
             },
             Err(e) => log::error!("Error occurred while receiving/parsing data: {}", e),
         }
-
-        on_receive_data(traffic_lights);
+        
+        sender.send(ServerData::TrafficLights(traffic_lights)).await.unwrap();
     }
 }

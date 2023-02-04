@@ -1,6 +1,10 @@
-use crate::server::data::{MovingObstaclePos, ServerCarPos, TrafficLightsStatus};
-use std::sync::mpsc::Receiver;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::task;
+
+use crate::server::data::{
+    EnvironmentalObstacle, MovingObstaclePos, ServerCarPos, TrafficLightsStatus,
+};
 
 pub mod data;
 mod environment;
@@ -9,36 +13,27 @@ mod moving_obstacle;
 mod traffic_lights;
 mod utils;
 
+#[derive(Debug)]
 pub enum ServerData {
-    Localisation(ServerCarPos),
+    CarPos(ServerCarPos),
     TrafficLights(TrafficLightsStatus),
     MovingObstacle(MovingObstaclePos),
 }
 
 pub fn run_server_listeners() -> Receiver<ServerData> {
-    let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, rx) = mpsc::channel(64);
 
-    let tx_clone = tx.clone();
-    task::spawn(localisation::run_listener(move |robot_pos| {
-        log::info!("Robot Pos: {:?}", robot_pos);
-        tx_clone.send(ServerData::Localisation(robot_pos)).unwrap();
-    }));
-
-    let tx_clone = tx.clone();
-    task::spawn(traffic_lights::run_listener(move |traffic_lights| {
-        log::info!("Traffic Lights: {:?}", traffic_lights);
-        tx_clone
-            .send(ServerData::TrafficLights(traffic_lights))
-            .unwrap();
-    }));
-
-    task::spawn(moving_obstacle::run_listener(move |moving_obstacle| {
-        log::info!("MovingObstacle: {}", moving_obstacle);
-        tx.send(ServerData::MovingObstacle(moving_obstacle))
-            .unwrap();
-    }));
-
-    // task::spawn(environment::run_sender());
+    task::spawn(localisation::run_listener(tx.clone()));
+    task::spawn(traffic_lights::run_listener(tx.clone()));
+    task::spawn(moving_obstacle::run_listener(tx));
 
     rx
+}
+
+pub fn environment_server_publisher() -> Sender<EnvironmentalObstacle> {
+    let (tx, rx) = mpsc::channel(64);
+
+    task::spawn(environment::run_sender(rx));
+
+    tx
 }

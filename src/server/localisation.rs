@@ -1,9 +1,11 @@
 use rsa::pkcs8::DecodePublicKey;
 use rsa::RsaPublicKey;
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc::Sender;
 
 use crate::server::data::ServerCarPos;
 use crate::server::utils::{check_authentication, listen_for_port, CAR_ID};
+use crate::server::ServerData;
 
 async fn establish_server_connection(server_address: &String) -> std::io::Result<()> {
     // Parse public key
@@ -35,19 +37,19 @@ async fn parse_position(socket: &UdpSocket) -> std::io::Result<ServerCarPos> {
 
 async fn run_localisation_listener(
     server_address: String,
-    on_receive_data: impl Fn(ServerCarPos),
+    sender: Sender<ServerData>,
 ) -> std::io::Result<()> {
     let socket = UdpSocket::bind(server_address).await?;
 
     loop {
         match parse_position(&socket).await {
-            Ok(obstacle) => on_receive_data(obstacle),
+            Ok(pos) => sender.send(ServerData::CarPos(pos)).await.unwrap(),
             Err(e) => log::error!("Error occurred while receiving/parsing data: {}", e),
         }
     }
 }
 
-pub async fn run_listener(on_receive_data: impl Fn(ServerCarPos)) -> std::io::Result<()> {
+pub async fn run_listener(sender: Sender<ServerData>) -> std::io::Result<()> {
     // First receive the port to listen on
     let server_address = listen_for_port("0.0.0.0:50009").await?;
 
@@ -55,7 +57,7 @@ pub async fn run_listener(on_receive_data: impl Fn(ServerCarPos)) -> std::io::Re
     establish_server_connection(&server_address).await?;
 
     // Listen for robot position
-    run_localisation_listener(server_address, on_receive_data).await?;
+    run_localisation_listener(server_address, sender).await?;
 
     Ok(())
 }

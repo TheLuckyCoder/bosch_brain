@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tokio::task;
 
 use crate::math::pid::PidController;
 use crate::serial;
@@ -41,14 +42,15 @@ fn process_data(brain_data: Arc<Mutex<BrainData>>) {
 
 fn update_data_from_server(brain_data: Arc<Mutex<BrainData>>) {
     // Receive data from the server and update the brain data
-    std::thread::spawn(move || {
-        let rx = run_server_listeners();
+    task::spawn(async move {
+        let mut rx = run_server_listeners();
 
-        while let Ok(server_data) = rx.recv() {
+        while let Some(server_data) = rx.recv().await {
+            dbg!(&server_data);
             let mut data = brain_data.lock().unwrap();
 
             match server_data {
-                ServerData::Localisation(car_pos) => data.car_pos = car_pos,
+                ServerData::CarPos(car_pos) => data.car_pos = car_pos,
                 ServerData::TrafficLights(traffic_lights) => data.traffic_lights = traffic_lights,
                 ServerData::MovingObstacle(moving_obstacle) => {
                     data.moving_obstacle = Some(moving_obstacle)
