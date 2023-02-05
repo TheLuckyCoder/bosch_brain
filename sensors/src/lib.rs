@@ -1,80 +1,52 @@
-#[cfg(target_os = "linux")]
-use linux_embedded_hal::{Delay, I2cdev};
-use mpu6050::Mpu6050;
-use mpu6050::Mpu6050Error::{I2c, InvalidChipId};
+use std::sync::mpsc::{channel, Receiver};
+use std::time::Duration;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Vec3 {
-    x: f32,
-    y: f32,
-    z: f32,
+use hc_sr04::{HcSr04, Unit};
+
+use imu::{ImuSpecs, Vec3};
+
+pub mod imu;
+
+pub enum SensorData {
+    Distance(Option<f32>),
+    Acceleration(Vec3),
+    Gyroscope(Vec3),
 }
 
-impl Vec3 {
-    fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
-    }
+fn get_distance_sensors(
+    ambient_temperature: f32,
+) -> Result<(HcSr04, HcSr04), hc_sr04::error::Error> {
+    // Initialize driver.
+    let sensor_1 = HcSr04::new(24, 23, Some(ambient_temperature))?;
+    let sensor_2 = HcSr04::new(26, 25, Some(ambient_temperature))?;
+
+    Ok((sensor_1, sensor_2))
 }
 
-pub trait ImuSpecs {
-    fn get_acceleration(&mut self) -> Vec3;
+pub fn get_sensor_data() -> Result<Receiver<SensorData>, String> {
+    let (tx, rx) = channel();
+    let mut imu = imu::get_imu()?;
+    let (mut sensor_1, mut sensor_2) = get_distance_sensors(23_f32).map_err(|e| e.to_string())?;
 
-    fn get_gyroscope(&mut self) -> Vec3;
-}
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_millis(100));
+        // TODO perhaps add error handling to the sender
+        let distance_1 = sensor_1
+            .measure_distance(Unit::Centimeters)
+            .map_err(|e| format!("Failed to read distance sensor 1: {e}"))
+            .unwrap();
+        let distance_2 = sensor_2
+            .measure_distance(Unit::Centimeters)
+            .map_err(|e| format!("Failed to read distance sensor 2: {e}"))
+            .unwrap();
 
-#[cfg(target_os = "linux")]
-mod internal {
-    use super::*;
+        // TODO process the values?
 
-    pub type Imu = Mpu6050<I2cdev>;
+        tx.send(SensorData::Distance(distance_1)).unwrap();
+        tx.send(SensorData::Acceleration(imu.get_acceleration()))
+            .unwrap();
+        tx.send(SensorData::Gyroscope(imu.get_gyroscope())).unwrap();
+    });
 
-    impl ImuSpecs for Imu {
-        fn get_acceleration(&mut self) -> Vec3 {
-            let acc = self.get_acc().expect("Failed to get acc");
-            Vec3::new(acc.x, acc.y, acc.z)
-        }
-
-        fn get_gyroscope(&mut self) -> Vec3 {
-            let gyro = self.get_gyro().expect("Failed to get gyro");
-            Vec3::new(gyro.x, gyro.y, gyro.z)
-        }
-    }
-}
-
-#[cfg(target_os = "windows")]
-mod internal {
-    use super::*;
-
-    pub struct FakeImu {}
-
-    impl ImuSpecs for FakeImu {
-        fn get_acceleration(&mut self) -> Vec3 {
-            Vec3::new(0.0, 0.0, 0.0)
-        }
-
-        fn get_gyroscope(&mut self) -> Vec3 {
-            Vec3::new(0.0, 0.0, 0.0)
-        }
-    }
-}
-
-#[cfg(target_os = "linux")]
-pub fn get_imu() -> Result<impl ImuSpecs, String> {
-    let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| e.to_string())?;
-
-    let mut imu = Mpu6050::new(i2c);
-    let mut delay = Delay {};
-    if let Err(e) = imu.init(&mut delay) {
-        return Err(match e {
-            I2c(e) => e.to_string(),
-            InvalidChipId(id) => format!("Invalid chip id: {}", id),
-        });
-    }
-
-    Ok(imu)
-}
-
-#[cfg(target_os = "windows")]
-pub fn get_imu() -> Result<internal::FakeImu, String> {
-    Ok(internal::FakeImu {})
+    Ok(rx)
 }

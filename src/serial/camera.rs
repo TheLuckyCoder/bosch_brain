@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use serialport::SerialPort;
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct LanesAngle {
     pub left: f64,
@@ -75,7 +75,7 @@ mod tests {
         };
 
         unsafe {
-            let bytes: [u8; SIZE] = transmute(data.clone());
+            let bytes: [u8; SIZE] = transmute(data);
             bytes.as_ref().iter().enumerate().for_each(|(i, v)| {
                 buffer[i + 1] = *v;
             });

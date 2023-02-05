@@ -5,6 +5,7 @@ use tokio::task;
 use crate::math::pid::PidController;
 use crate::serial;
 pub use data::*;
+use sensors::{get_sensor_data, SensorData};
 
 use crate::serial::camera::{get_camera_data_receiver, CameraData};
 use crate::serial::Message;
@@ -15,8 +16,8 @@ mod data;
 pub fn start_brain() {
     let brain_data = Arc::new(Mutex::new(BrainData::default()));
 
-    update_data_from_server(brain_data.clone());
-    update_data_from_camera(brain_data.clone());
+    update_server_data(brain_data.clone());
+    update_camera_data(brain_data.clone());
 
     process_data(brain_data);
 }
@@ -40,7 +41,7 @@ fn process_data(brain_data: Arc<Mutex<BrainData>>) {
     }
 }
 
-fn update_data_from_server(brain_data: Arc<Mutex<BrainData>>) {
+fn update_server_data(brain_data: Arc<Mutex<BrainData>>) {
     // Receive data from the server and update the brain data
     task::spawn(async move {
         let mut rx = run_server_listeners();
@@ -60,7 +61,24 @@ fn update_data_from_server(brain_data: Arc<Mutex<BrainData>>) {
     });
 }
 
-fn update_data_from_camera(brain_data: Arc<Mutex<BrainData>>) {
+fn update_camera_data(brain_data: Arc<Mutex<BrainData>>) {
+    let sensors_receiver = get_sensor_data().expect("Failed to initialize sensors data");
+
+    std::thread::spawn(move || {
+        while let Ok(sensors) = sensors_receiver.recv() {
+            // TODO: use the data
+            let mut data = brain_data.lock().unwrap();
+
+            match sensors {
+                SensorData::Distance(_) => {}
+                SensorData::Acceleration(_) => {}
+                SensorData::Gyroscope(_) => {}
+            }
+        }
+    });
+}
+
+fn update_sensor_data(brain_data: Arc<Mutex<BrainData>>) {
     let camera_receiver = get_camera_data_receiver();
 
     std::thread::spawn(move || {

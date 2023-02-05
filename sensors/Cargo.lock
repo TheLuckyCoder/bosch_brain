@@ -69,6 +69,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hc-sr04"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccfabab84731f985c8cb3097f7dd189059ad4a5b99551598e3984083a40fb29e"
+dependencies = [
+ "rppal",
+]
+
+[[package]]
 name = "i2cdev"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -88,6 +97,12 @@ checksum = "f7970510895cee30b3e9128319f2cefd4bde883a39f38baa279567ba3a7eb97d"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "lazy_static"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
@@ -227,9 +242,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d01a5bd0424d00070b0098dd17ebca6f961a959dead1dbcbbbc1d1cd8d3deeba"
 
 [[package]]
+name = "rppal"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c88c9c6248de4d337747b619d8f671055ef48a87dc21b97998833f189a0bbd4f"
+dependencies = [
+ "lazy_static",
+ "libc",
+]
+
+[[package]]
 name = "sensors"
 version = "1.0.0"
 dependencies = [
+ "hc-sr04",
  "linux-embedded-hal",
  "mpu6050",
 ]

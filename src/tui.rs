@@ -40,7 +40,7 @@ impl Display for CarParams {
 
 fn print_params(params: &CarParams) {
     execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-    println!("=========== REMOTE CONTROL ============\n{}", params);
+    println!("=========== REMOTE CONTROL ============\n{params}");
 }
 
 async fn print_events() {

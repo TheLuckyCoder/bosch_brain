@@ -13,7 +13,7 @@ pub struct PidController {
 
     input_bounds: Option<(f64, f64)>,
     output_bounds: Option<(f64, f64)>,
-    pub set_point: f64,
+    pub target_value: f64,
 }
 
 impl PidController {
@@ -29,7 +29,7 @@ impl PidController {
             last_output: 0.0,
             input_bounds: None,
             output_bounds: None,
-            set_point: 0.0,
+            target_value: 0.0,
         }
     }
 
@@ -44,7 +44,7 @@ impl PidController {
     }
 
     fn get_error(&self, input: f64) -> f64 {
-        let mut error = self.set_point - input;
+        let mut error = self.target_value - input;
 
         if let Some((min_input, max_input)) = self.input_bounds {
             let input_range = max_input - min_input;

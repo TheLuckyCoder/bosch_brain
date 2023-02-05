@@ -64,5 +64,5 @@ pub async fn listen_for_port<S: AsRef<str>>(address: S) -> std::io::Result<Strin
         )
     })?;
 
-    Ok(format!("{}:{}", address.ip().to_string(), port))
+    Ok(format!("{}:{}", address.ip(), port))
 }
