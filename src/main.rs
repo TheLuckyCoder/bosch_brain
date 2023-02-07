@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 use env_logger::Env;
+use tokio::task;
 
 use crate::serial::Message;
+use crate::server::steering_wheel::run_steering_wheel_server;
 
 mod brain;
 mod math;
@@ -11,7 +13,6 @@ mod server;
 #[cfg(test)]
 mod tests;
 mod track;
-mod tui;
 
 struct Cleanup;
 
@@ -31,14 +32,13 @@ async fn main() -> std::io::Result<()> {
         .target(env_logger::Target::Stdout)
         .init();
 
-    // let tui = task::spawn(tui::run());
+    task::spawn(run_steering_wheel_server());
 
     // let track = track::get_track();
 
     // let imu = sensors::get_imu().expect("Failed to initialize IMU");
 
     brain::start_brain();
-    // tui.await??; // if the TUI task is finished, the program should exit
 
     Ok(())
 }

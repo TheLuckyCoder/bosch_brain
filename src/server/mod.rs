@@ -12,6 +12,7 @@ mod localisation;
 mod moving_obstacle;
 mod traffic_lights;
 mod utils;
+pub mod steering_wheel;
 
 #[derive(Debug)]
 pub enum ServerData {
