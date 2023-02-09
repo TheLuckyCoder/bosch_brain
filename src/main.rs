@@ -4,7 +4,6 @@ use env_logger::Env;
 use tokio::task;
 
 use crate::serial::Message;
-use crate::server::steering_wheel::run_steering_wheel_server;
 
 mod brain;
 mod math;
@@ -32,12 +31,8 @@ async fn main() -> std::io::Result<()> {
         .target(env_logger::Target::Stdout)
         .init();
 
-    task::spawn(run_steering_wheel_server());
-
     // let track = track::get_track();
-
-    // let imu = sensors::get_imu().expect("Failed to initialize IMU");
-    server::steering_wheel::run_steering_wheel_server();
+    task::spawn(server::steering_wheel::run_steering_wheel_server());
 
     brain::start_brain();
 

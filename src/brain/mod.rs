@@ -61,7 +61,7 @@ fn update_server_data(brain_data: Arc<Mutex<BrainData>>) {
     });
 }
 
-fn update_camera_data(brain_data: Arc<Mutex<BrainData>>) {
+fn update_sensor_data(brain_data: Arc<Mutex<BrainData>>) {
     let sensors_receiver = get_sensor_data().expect("Failed to initialize sensors data");
 
     std::thread::spawn(move || {
@@ -80,7 +80,7 @@ fn update_camera_data(brain_data: Arc<Mutex<BrainData>>) {
     });
 }
 
-fn update_sensor_data(brain_data: Arc<Mutex<BrainData>>) {
+fn update_camera_data(brain_data: Arc<Mutex<BrainData>>) {
     let camera_receiver = get_camera_data_receiver();
 
     std::thread::spawn(move || {
