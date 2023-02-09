@@ -67,7 +67,9 @@ fn update_camera_data(brain_data: Arc<Mutex<BrainData>>) {
     std::thread::spawn(move || {
         while let Ok(sensors) = sensors_receiver.recv() {
             // TODO: use the data
-            let mut data = brain_data.lock().unwrap();
+            // let mut data = brain_data.lock().unwrap();
+
+            println!("Sensor Data: {sensors:?}");
 
             match sensors {
                 SensorData::Distance(_) => {}

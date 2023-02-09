@@ -5,8 +5,9 @@ edition = "2021"
 
 [target.'cfg(unix)'.dependencies]
 linux-embedded-hal = "0.3"
+# HC-SR04 Ultrasonic sensor
+hc-sr04 = "0.1.0"
 
 [dependencies]
 # IMU
 mpu6050 = "0.1.6"
-#hc-sr04 = "0.1.0"

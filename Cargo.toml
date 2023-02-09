@@ -29,9 +29,6 @@ serde_repr = "0.1"
 serialport = { version = "4", default-features = false }
 mio-serial = { version = "5", default-features = false }
 
-# TUI/keycapture
-crossterm = { version = "0.26", features = ["event-stream"] }
-
 rsa = "0.8"
 digest = "0.10"
 md-5 = "0.10"

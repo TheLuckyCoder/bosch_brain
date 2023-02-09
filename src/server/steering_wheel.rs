@@ -1,44 +1,34 @@
-use crate::serial;
-use crate::serial::Message;
 use serde::Deserialize;
 use tokio::net::UdpSocket;
 
+use crate::serial;
+use crate::serial::Message;
+
 #[derive(Debug, Clone, Copy, Deserialize)]
 struct SteeringWheelData {
-    acceleration_percentage: Option<f32>,
-    break_percentage: Option<f32>,
-    clutch_percentage: Option<f32>,
-    steering_angle: Option<f32>,
+    acceleration_percentage: f32,
+    break_percentage: f32,
+    clutch_percentage: f32,
+    steering_angle: f32,
 }
 
 pub async fn run_steering_wheel_server() {
     let udp_socket = UdpSocket::bind("10.1.0.10:40000").await.unwrap();
-
-    let mut speed_percentage: f32 = 0_f32;
 
     loop {
         let mut buffer = [0; 4096];
         let size = udp_socket.recv(&mut buffer).await.unwrap();
 
         let data: SteeringWheelData = serde_json::from_slice(&buffer[0..size]).unwrap();
-        println!("{:?}", data);
+        println!("{data:?}");
 
-        data.steering_angle
-            .map(|angle| serial::send(Message::Steer(angle)));
+        serial::send(Message::Steer(data.steering_angle));
 
-        if data.break_percentage.is_some() && data.break_percentage.unwrap() > 0.05 {
-            speed_percentage = 0.0;
+        let speed_percentage = if data.break_percentage > 0.05 {
+            0.0
         } else {
-            let cp = data.clutch_percentage;
-            let ap = data.acceleration_percentage;
-
-            match (&ap, &cp) {
-                (Some(ap), Some(cp)) => {
-                    speed_percentage = ap - cp;
-                }
-                _ => {}
-            }
-        }
+            data.acceleration_percentage - data.clutch_percentage
+        };
 
         serial::send(Message::Speed(speed_percentage * 0.2));
     }
