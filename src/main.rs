@@ -37,6 +37,7 @@ async fn main() -> std::io::Result<()> {
     // let track = track::get_track();
 
     // let imu = sensors::get_imu().expect("Failed to initialize IMU");
+    server::steering_wheel::run_steering_wheel_server();
 
     brain::start_brain();
 
