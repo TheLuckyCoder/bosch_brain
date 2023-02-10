@@ -5,6 +5,7 @@ pub use angle_wrap::*;
 pub use circle::*;
 pub use point::*;
 pub use segment::*;
+pub use almost_equals::*;
 
 mod angle_wrap;
 mod circle;
@@ -12,6 +13,7 @@ pub mod kinematics;
 pub mod pid;
 mod point;
 mod segment;
+mod almost_equals;
 
 impl From<&CarPosition> for Point {
     fn from(value: &CarPosition) -> Self {
