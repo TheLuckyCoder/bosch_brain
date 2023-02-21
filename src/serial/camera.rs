@@ -12,10 +12,20 @@ pub struct LanesAngle {
     pub right: f64,
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Signs {
+    pub stop: f64,
+    pub crosswalk: f64,
+    pub parking_start: f64,
+    pub parking_stop: f64,
+    pub priority: f64,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[repr(u8)]
 pub enum CameraData {
     LanesAngle(LanesAngle) = 0,
+    Signs(Signs) = 1,
 }
 
 type CameraSerialReceiver = Box<dyn SerialPort>;

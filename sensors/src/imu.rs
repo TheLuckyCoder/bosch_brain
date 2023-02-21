@@ -45,7 +45,7 @@ mod internal {
 mod internal {
     use super::*;
 
-    pub struct FakeImu {}
+    pub struct FakeImu;
 
     impl ImuSpecs for FakeImu {
         fn get_acceleration(&mut self) -> Vec3 {
@@ -67,7 +67,7 @@ pub fn get_imu() -> Result<impl ImuSpecs, String> {
     if let Err(e) = imu.init(&mut delay) {
         return Err(match e {
             I2c(e) => e.to_string(),
-            InvalidChipId(id) => format!("Invalid chip id: {}", id),
+            InvalidChipId(id) => format!("Invalid chip id: {id}"),
         });
     }
 
@@ -76,5 +76,5 @@ pub fn get_imu() -> Result<impl ImuSpecs, String> {
 
 #[cfg(target_os = "windows")]
 pub fn get_imu() -> Result<internal::FakeImu, String> {
-    Ok(internal::FakeImu {})
+    Ok(internal::FakeImu)
 }

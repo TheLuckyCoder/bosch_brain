@@ -1,4 +1,5 @@
-use crate::serial::camera::{get_camera_data_receiver, CameraData, LanesAngle};
+use crate::math::Car;
+use crate::serial::camera::{get_camera_data_receiver, CameraData, LanesAngle, Signs};
 use crate::server::data::{MovingObstaclePos, ServerCarPos, TrafficLightsStatus};
 use crate::server::{run_server_listeners, ServerData};
 use sensors::{get_sensor_data, SensorData};
@@ -7,10 +8,12 @@ use tokio::task;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct BrainData {
-    pub car_pos: ServerCarPos,
+    pub car: Car,
+    pub server_pos: ServerCarPos,
     pub traffic_lights: TrafficLightsStatus,
     pub moving_obstacle: Option<MovingObstaclePos>,
     pub lanes_angle: LanesAngle,
+    pub signs: Signs,
     pub distance_sensor: Option<f32>,
 }
 
@@ -30,7 +33,7 @@ fn update_server_data(brain_data: Arc<Mutex<BrainData>>) {
             let mut data = brain_data.lock().unwrap();
 
             match server_data {
-                ServerData::CarPos(car_pos) => data.car_pos = car_pos,
+                ServerData::CarPos(car_pos) => data.server_pos = car_pos,
                 ServerData::TrafficLights(traffic_lights) => data.traffic_lights = traffic_lights,
                 ServerData::MovingObstacle(moving_obstacle) => {
                     data.moving_obstacle = Some(moving_obstacle)
