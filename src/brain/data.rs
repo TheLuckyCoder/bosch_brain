@@ -70,6 +70,7 @@ fn update_camera_data(brain_data: Arc<Mutex<BrainData>>) {
 
             match camera_data {
                 CameraData::LanesAngle(lanes_angle) => data.lanes_angle = lanes_angle,
+                CameraData::Signs(_) => {}
             }
         }
     });
