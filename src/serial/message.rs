@@ -13,6 +13,8 @@ pub enum Message {
         k_d: f32,
         k_f: f32,
     },
+    // This a raw message that will be sent to the nucleo as is.
+    Raw(String),
 }
 
 impl Display for Message {
@@ -26,6 +28,7 @@ impl Display for Message {
             Message::PidParams { k_p, k_i, k_d, k_f } => {
                 write!(f, "#6:{k_p:.5};{k_i:.5};{k_d:.5};{k_f:.5};;\r\n")
             }
+            Message::Raw(ref message) => write!(f, "{}\r\n", message.trim()),
         }
     }
 }

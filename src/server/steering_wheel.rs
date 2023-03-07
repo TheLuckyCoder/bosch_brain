@@ -1,10 +1,11 @@
-use crate::math::AlmostEquals;
-use serde::Deserialize;
+use std::fs::OpenOptions;
 use std::time::Instant;
-use tokio::fs::OpenOptions;
-use tokio::io::AsyncWriteExt;
+
+use serde::Deserialize;
+use std::io::prelude::*;
 use tokio::net::UdpSocket;
 
+use crate::math::AlmostEquals;
 use crate::serial;
 use crate::serial::Message;
 
@@ -21,12 +22,22 @@ pub async fn run_steering_wheel_server() -> std::io::Result<()> {
     let mut file = OpenOptions::new()
         .write(true)
         .append(true)
-        .open("commands_history.json")
-        .await?;
+        .open("commands_history.psv")?;
 
     let mut last_speed_percentage = 0.0;
     let mut last_steer = 0.0;
     let mut last_message_instant = Instant::now();
+
+    let mut append_message_to_file = |message: &Message| {
+        writeln!(
+            file,
+            "{}|{}",
+            last_message_instant.elapsed().as_millis(),
+            message.to_string().trim()
+        )
+        .unwrap();
+        last_message_instant = Instant::now();
+    };
 
     loop {
         let mut buffer = [0; 4096];
@@ -36,13 +47,11 @@ pub async fn run_steering_wheel_server() -> std::io::Result<()> {
 
         // Do not send the same message twice
         if !last_steer.almost_equals(data.steering_angle, 3.0) {
-            serial::send_blocking(Message::Steer(data.steering_angle))?;
+            let message = Message::Steer(data.steering_angle);
             last_steer = data.steering_angle;
-            file.write_all(
-                format!("{}|{}", last_message_instant.elapsed().as_millis(), message).as_bytes(),
-            )
-            .await?;
-            last_message_instant = Instant::now();
+            append_message_to_file(&message);
+
+            serial::send_blocking(message)?;
         }
 
         let speed_percentage = data.acceleration_percentage - data.clutch_percentage;
@@ -50,25 +59,18 @@ pub async fn run_steering_wheel_server() -> std::io::Result<()> {
         if !last_speed_percentage.almost_equals(speed_percentage, 0.01) {
             let message = if speed_percentage.abs() < 0.05 {
                 // println!("Stopping");
-                let message = Message::Speed(0.0);
-                serial::send_blocking(message.clone())?;
-                message
+                Message::Speed(0.0)
             } else {
                 // println!("Driving");
                 let speed = speed_percentage * 0.1;
                 let min_speed = if speed_percentage > 0.0 { 0.1 } else { -0.1 };
                 let final_speed = speed + min_speed;
 
-                let message = Message::Speed(final_speed);
-                serial::send_blocking(message.clone())?;
-                message
+                Message::Speed(final_speed)
             };
 
-            file.write_all(
-                format!("{}|{}", last_message_instant.elapsed().as_millis(), message).as_bytes(),
-            )
-            .await?;
-            last_message_instant = Instant::now();
+            append_message_to_file(&message);
+            serial::send_blocking(message)?;
         }
 
         last_speed_percentage = speed_percentage;
