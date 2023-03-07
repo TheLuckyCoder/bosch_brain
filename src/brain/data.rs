@@ -19,8 +19,8 @@ pub struct BrainData {
 
 pub fn update_data(brain_data: Arc<Mutex<BrainData>>) {
     update_server_data(brain_data.clone());
-    update_sensor_data(brain_data.clone());
-    update_camera_data(brain_data);
+    // update_sensor_data(brain_data.clone());
+    // update_camera_data(brain_data);
 }
 
 fn update_server_data(brain_data: Arc<Mutex<BrainData>>) {

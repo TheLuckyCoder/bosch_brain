@@ -44,12 +44,12 @@ fn parse_camera_data(buffer: &[u8; 512]) -> CameraData {
     }
 }
 
-fn get_camera_serial() -> std::io::Result<CameraSerialReceiver> {
+fn get_camera_serial() -> CameraSerialReceiver {
     // TODO
     let serial = mio_serial::new("/dev/ttyACM1", 19200)
         .timeout(Duration::from_millis(1000))
         .open()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e));
+        .expect("Failed to start Camera Serial");
 
     log::info!("Camera serial port initialized!");
 
@@ -60,18 +60,13 @@ pub fn get_camera_data_receiver() -> Receiver<CameraData> {
     let mut serial = get_camera_serial();
     let (sender, receiver) = std::sync::mpsc::channel();
 
-    match serial {
-        Ok(ref mut serial) => {
-            std::thread::spawn(move || loop {
-                let mut buffer = [0_u8; 512];
-                serial.read_exact(buffer.as_mut()).unwrap();
+    std::thread::spawn(move || loop {
+        let mut buffer = [0_u8; 512];
+        serial.read_exact(buffer.as_mut()).unwrap();
 
-                let data = parse_camera_data(&buffer);
-                sender.send(data).unwrap();
-            });
-        }
-        Err(e) => log::error!("Failed to load Camera Serial, {e}"),
-    }
+        let data = parse_camera_data(&buffer);
+        sender.send(data).unwrap();
+    });
 
     receiver
 }
