@@ -1,8 +1,8 @@
 use std::fs::OpenOptions;
+use std::io::prelude::*;
 use std::time::Instant;
 
 use serde::Deserialize;
-use std::io::prelude::*;
 use tokio::net::UdpSocket;
 
 use crate::math::AlmostEquals;
@@ -14,15 +14,15 @@ struct SteeringWheelData {
     acceleration_percentage: f32,
     clutch_percentage: f32,
     steering_angle: f32,
+    record: bool,
 }
 
 pub async fn run_steering_wheel_server() -> std::io::Result<()> {
     let udp_socket = UdpSocket::bind("10.1.0.200:40000").await?;
 
     let mut file = OpenOptions::new()
-        .write(true)
         .append(true)
-        .open("commands_history.psv")?;
+        .open("recorded_commands.psv")?;
 
     let mut last_speed_percentage = 0.0;
     let mut last_steer = 0.0;
@@ -36,6 +36,7 @@ pub async fn run_steering_wheel_server() -> std::io::Result<()> {
             message.to_string().trim()
         )
         .unwrap();
+
         last_message_instant = Instant::now();
     };
 
@@ -48,20 +49,21 @@ pub async fn run_steering_wheel_server() -> std::io::Result<()> {
         // Do not send the same message twice
         if !last_steer.almost_equals(data.steering_angle, 3.0) {
             let message = Message::Steer(data.steering_angle);
-            last_steer = data.steering_angle;
-            append_message_to_file(&message);
-
+            if data.record {
+                append_message_to_file(&message);
+            }
             serial::send_blocking(message)?;
+            last_steer = data.steering_angle;
         }
 
         let speed_percentage = data.acceleration_percentage - data.clutch_percentage;
 
         if !last_speed_percentage.almost_equals(speed_percentage, 0.01) {
             let message = if speed_percentage.abs() < 0.05 {
-                // println!("Stopping");
+                println!("Stopping");
                 Message::Speed(0.0)
             } else {
-                // println!("Driving");
+                println!("Driving");
                 let speed = speed_percentage * 0.1;
                 let min_speed = if speed_percentage > 0.0 { 0.1 } else { -0.1 };
                 let final_speed = speed + min_speed;
@@ -69,10 +71,11 @@ pub async fn run_steering_wheel_server() -> std::io::Result<()> {
                 Message::Speed(final_speed)
             };
 
-            append_message_to_file(&message);
+            if data.record {
+                append_message_to_file(&message);
+            }
             serial::send_blocking(message)?;
+            last_speed_percentage = speed_percentage;
         }
-
-        last_speed_percentage = speed_percentage;
     }
 }

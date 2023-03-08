@@ -32,7 +32,11 @@ async fn main() -> std::io::Result<()> {
         .init();
 
     // let track = track::get_track();
-    task::spawn(server::steering_wheel::run_steering_wheel_server());
+    task::spawn(async move {
+        if let Err(e) = server::steering_wheel::run_steering_wheel_server().await {
+            log::error!("Steering wheel server error: {e}");
+        }
+    });
 
     brain::start_brain();
 
