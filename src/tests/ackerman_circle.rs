@@ -4,7 +4,7 @@ use std::time::Instant;
 use plotly::common::Mode;
 
 
-use crate::math::{AngleWrap, Car, Circle, Point, Segment};
+use crate::math::{angle_between_vectors, AngleWrap, Car, Circle, get_heading_vector_and_angle, Point, Segment};
 
 const MAX_STEERING_ANGLE: f64 = 0.4363323129985824; // 25 degrees
 
@@ -29,22 +29,28 @@ fn follow_circle() {
         Point::new(0.0, 1.0),
         Point::new(-1.0, 0.0),
     );
-
     println!("Circle: {:?}", circle);
 
+    let current_position = Point::new(0.0, 1.0);
+
+    let (mut heading_vector, mut heading_angle) = get_heading_vector_and_angle(circle, current_position,1.0);
+
     // let mut car = Car::new(0_f64, 1_f64 as f64, (PI).angle_wrap(), 0.1_f64, 0 as f64);
-    let mut car = Car::new(0_f64, 1_f64, (PI / 1_f64).angle_wrap(), 1.0/30.0, 0 as f64);
+    let mut car = Car::new(current_position.x, current_position.y, heading_angle.angle_wrap(), 1.0, 0 as f64);
 
     let mut vec_x = Vec::new();
-
     let mut vec_y = Vec::new();
+
+    let mut heading_matrix = Vec::new();
+
+    heading_matrix.push(vec![Point::from(&car.position), heading_vector]);
 
     let mut c = 0;
 
-    let mut last_timestamp = Instant::now();
-
     let distance_to_circle = Point::from(&car.position).distance_to(circle.center);
-    print!("Distance to circle: {}", distance_to_circle);
+    println!("Distance to circle: {}", distance_to_circle);
+
+    let mut last_timestamp = Instant::now();
 
     loop {
         c += 1;
@@ -58,33 +64,31 @@ fn follow_circle() {
         // let delta_time = last_timestamp.elapsed().as_secs_f64();
         let delta_time = 0.1;
 
-        if false {
-            // let desired_yaw_rate = car.speed / distance_to_circle;
-            //
-            // car.steering_angle = desired_yaw_rate * LONGITUDINAL_WHEEL_SEPARATION_DISTANCE / car.speed;
-            //
-            // car.position.x += car.speed * delta_time * (car.position.heading_angle + car.steering_angle).cos();
-            // car.position.y += car.speed * delta_time * (car.position.heading_angle + car.steering_angle).sin();
-            // car.position.heading_angle += desired_yaw_rate * delta_time
-        } else {
-            car.steering_angle = LONGITUDINAL_WHEEL_SEPARATION_DISTANCE.atan2(distance_to_circle);
+        car.steering_angle = LONGITUDINAL_WHEEL_SEPARATION_DISTANCE.atan2(distance_to_circle);
 
-            // let change_of_heading_angle = car.speed * delta_time * car.steering_angle.tan() / LONGITUDINAL_WHEEL_SEPARATION_DISTANCE;
-            let change_of_heading_angle = car.speed * delta_time / distance_to_circle;
+        // let change_of_heading_angle = car.speed * delta_time * car.steering_angle.tan() / LONGITUDINAL_WHEEL_SEPARATION_DISTANCE;
+        let change_of_heading_angle = car.speed * delta_time / distance_to_circle;
 
-            car.position.x += car.speed * delta_time * car.position.heading_angle.cos();
-            car.position.y += car.speed * delta_time * car.position.heading_angle.sin();
+        car.position.x += car.speed * delta_time * car.position.heading_angle.cos();
+        car.position.y += car.speed * delta_time * car.position.heading_angle.sin();
 
-            car.position.heading_angle = (car.position.heading_angle + change_of_heading_angle).angle_wrap();
-        }
+        car.position.heading_angle = (car.position.heading_angle + change_of_heading_angle).angle_wrap();
+
         println!("Steering Angle: {:.3}", car.steering_angle.to_degrees());
         println!("Heading Angle: {:.3}", car.position.heading_angle.to_degrees());
 
+        (heading_vector,heading_angle) = get_heading_vector_and_angle(circle, Point::from(&car.position), 1.0);
+
+        heading_matrix.push(vec![Point::from(&car.position), heading_vector]);
+
         last_timestamp = Instant::now();
         // std::thread::sleep(std::time::Duration::from_millis(100));
+        println!()
     }
 
-    let trace3 = Scatter::new(vec_x, vec_y)
+    let mut plot = Plot::new();
+
+    let path = Scatter::new(vec_x, vec_y)
         .name("path")
         .mode(Mode::LinesMarkers);
 
@@ -104,165 +108,24 @@ fn follow_circle() {
         .mode(Mode::Lines);
 
 
-    let mut plot = Plot::new();
+    for (c, vector) in heading_matrix.into_iter().enumerate() {
+        if c % 5 == 0 {
+            let current_pos = vector[0];
+            let heading_vector = vector[1];
+
+            let trace_heading = Scatter::new(vec![current_pos.x, heading_vector.x], vec![current_pos.y, heading_vector.y])
+                .name("Heading".to_string() + &c.to_string())
+                .mode(Mode::LinesMarkers);
+
+            plot.add_trace(trace_heading);
+        }
+    }
+
+
     plot.add_trace(trace_circle);
-    plot.add_trace(trace3);
+    plot.add_trace(path);
 
     let layout = Layout::new().title("<b>Steering around the unit circle</b>".into());
-    plot.set_layout(layout);
-
-    plot.show();
-}
-
-
-#[test]
-fn simulate_car_movement() {
-    let circle_center = Point::new(0.0, 0.0);
-
-    let mut car = Car::new(10 as f64, 0 as f64, 0 as f64, 1 as f64, 0 as f64);
-
-    let mut vec_x = Vec::new();
-
-    let mut vec_y = Vec::new();
-
-    let wheelbase = 2.0;
-
-    let radius = ((circle_center.x - car.position.x).powi(2)
-        + (circle_center.y - car.position.y).powi(2))
-        .sqrt();
-
-    let mut error_heading_derivative = 0.0;
-    let mut time = 0.0;
-    let dt = 0.1;
-    let kd_heading = 0.1;
-    let kp_heading = 0.1;
-
-    loop {
-        // calculate heading error
-        let error_heading =
-            car.position.heading_angle - (car.position.heading_angle - (car.speed / radius));
-        error_heading_derivative = (error_heading - error_heading_derivative) / dt;
-
-        // PD control for heading
-        let heading_control = kp_heading * error_heading + kd_heading * error_heading_derivative;
-        let steering_angle = heading_control * (wheelbase / car.speed);
-
-        vec_x.push(car.position.x);
-        vec_y.push(car.position.y);
-
-        // update vehicle position and heading
-        car.position.x += car.speed * dt * car.position.heading_angle.cos();
-        car.position.x += car.speed * dt * car.position.heading_angle.sin();
-        car.position.heading_angle += (car.speed / radius) * dt;
-
-        // update time
-        time += dt;
-
-        // print vehicle position, heading, and time
-        println!(
-            "time: {:.1}s, x: {:.2}, y: {:.2}, heading: {:.2}, steering_angle: {:.2}",
-            time, car.position.x, car.position.x, car.position.heading_angle, steering_angle
-        );
-
-        // stop the simulation after a certain amount of time
-        if time > 10.0 {
-            break;
-        }
-    }
-
-    let trace1 = Scatter::new(
-        vec![circle_center.x, 1.0, 0.0, -1.0, 0.0],
-        vec![circle_center.y, 0.0, 1.0, 0.0, -1.0],
-    )
-        .name("trace1");
-
-    let trace3 = Scatter::new(vec_x, vec_y).name("trace3");
-
-    let mut plot = Plot::new();
-    plot.add_trace(trace1);
-    plot.add_trace(trace3);
-
-    let layout = Layout::new().title("<b>Line and Scatter Plot</b>".into());
-    plot.set_layout(layout);
-
-    plot.show();
-}
-
-#[test]
-fn test_lateral_control() {
-    let circle_center = Point::new(0.0, 0.0);
-
-    let car = Car::new(10_f64, 0 as f64, PI / 2_f64, 2_f64, 0 as f64);
-
-    let wheelbase = 2.0;
-
-    lateral_control(
-        circle_center.x,
-        circle_center.y,
-        car.position.x,
-        car.position.y,
-        car.position.heading_angle,
-        car.speed,
-        wheelbase,
-    );
-}
-
-fn lateral_control(
-    center_x: f64,
-    center_y: f64,
-    car_x: f64,
-    car_y: f64,
-    car_heading: f64,
-    speed: f64,
-    wheelbase: f64,
-) {
-    let mut vec_x = Vec::new();
-
-    let mut vec_y = Vec::new();
-
-    let radius = ((center_x - car_x).powi(2) + (center_y - car_y).powi(2)).sqrt();
-    let mut car_x = car_x;
-    let mut car_y = car_y;
-    let mut car_heading = car_heading;
-    let mut time = 0.0;
-    let dt = 0.1;
-    loop {
-        vec_x.push(car_x);
-        vec_y.push(car_y);
-
-        let desired_yaw_rate = speed / radius;
-
-        // Steering angle
-        let steering_angle = desired_yaw_rate * wheelbase / speed;
-
-        // Update vehicle position and heading
-        car_x += speed * dt * (car_heading + steering_angle).cos();
-        car_y += speed * dt * (car_heading + steering_angle).sin();
-        car_heading += desired_yaw_rate * dt;
-        println!(
-            "Car position: ({}, {}) Heading: {} Steering angle: {}",
-            car_x, car_y, car_heading, steering_angle
-        );
-        time += dt;
-
-        if time > 10.0 {
-            break;
-        }
-    }
-
-    let trace1 = Scatter::new(
-        vec![center_x, 1.0, 0.0, -1.0, 0.0],
-        vec![center_y, 0.0, 1.0, 0.0, -1.0],
-    )
-        .name("trace1");
-
-    let trace3 = Scatter::new(vec_x, vec_y).name("trace3");
-
-    let mut plot = Plot::new();
-    plot.add_trace(trace1);
-    plot.add_trace(trace3);
-
-    let layout = Layout::new().title("<b>Line and Scatter Plot</b>".into());
     plot.set_layout(layout);
 
     plot.show();

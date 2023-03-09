@@ -4,10 +4,8 @@ use plotly::{Layout, Plot, Scatter};
 use std::f64::consts::PI;
 
 use std::time::{Instant};
-use plotly::layout::Axis;
 
-
-use crate::math::{AngleWrap, Car, Circle, Point};
+use crate::math::{AngleWrap, Car, Circle, get_heading_vector_and_angle, get_heading_vector_and_angle_v2, Point};
 use crate::track;
 use crate::track::{find_path, TrackNode};
 
@@ -47,27 +45,31 @@ fn points_on_circle(circle: Circle, nr_of_points: i32) -> Vec<Point> {
 #[test]
 fn follow_track() {
     let track = track::get_track();
-    let start_node = track.get_node_by_id(46).unwrap();
-    let end_node = track.get_node_by_id(59).unwrap();
+    let start_node = track.get_node_by_id(45).unwrap();
+    let end_node = track.get_node_by_id(104).unwrap();
 
     let mut path = find_path(track, start_node, end_node).unwrap();
+
+    for node in path.iter() {
+        println!("node: {:?}", node);
+    }
 
     let car = Car::new(
         start_node.get_x() as f64,
         start_node.get_y() as f64,
         (PI / 1_f64).angle_wrap(),
-        4.0,
+        1.0,
         0.0,
     );
 
-    follow_path(car, path, 50.0, 10.0);
+    follow_path(car, path, 100.0, 25.0);
 }
 
 #[test]
 fn follow_circle() {
     let start_node = &TrackNode::new(0, 0_f32, 10_f32, Vec::new());
 
-    let start_node = &TrackNode::new(0, 1.96_f32, 9.81_f32, Vec::new());
+    let start_node = &TrackNode::new(0, 1.9_f32, 9.82_f32, Vec::new());
 
     let left_node = &TrackNode::new(2, -10_f32, 0_f32, Vec::new());
 
@@ -77,13 +79,7 @@ fn follow_circle() {
 
     let end_node = &TrackNode::new(1, 0_f32, 10_f32, Vec::new());
 
-    let mut path = Vec::new();
-
-    path.push(start_node);
-    path.push(left_node);
-    path.push(bottom_node);
-    path.push(next_node);
-    path.push(end_node);
+    let path = vec![start_node, left_node, bottom_node, next_node, end_node];
 
     let car = Car::new(
         start_node.get_x() as f64,
@@ -98,21 +94,29 @@ fn follow_circle() {
 
 #[test]
 fn follow_test() {
-    let track = track::get_track();
-    let start_node = track.get_node_by_id(40).unwrap();
-    let end_node = track.get_node_by_id(73).unwrap();
+    let top_node = &TrackNode::new(0, 0_f32, 10_f32, Vec::new());
 
-    let mut path = find_path(track, start_node, end_node).unwrap();
+    let start_node = &TrackNode::new(0, -4.9_f32, -9.17_f32, Vec::new());
+
+    let left_node = &TrackNode::new(2, -10_f32, 0_f32, Vec::new());
+
+    let bottom_node = &TrackNode::new(3, 0_f32, -10_f32, Vec::new());
+
+    let right_node = &TrackNode::new(4, 10_f32, 0_f32, Vec::new());
+
+    let end_node = &TrackNode::new(1, 0_f32, 10_f32, Vec::new());
+
+    let path = vec![start_node, left_node, top_node, right_node, bottom_node];
 
     let car = Car::new(
         start_node.get_x() as f64,
         start_node.get_y() as f64,
         (PI / 1_f64).angle_wrap(),
-        4.0,
+        1.0,
         0.0,
     );
 
-    follow_path(car, path, 100.0, 10.0);
+    follow_path(car, path, 20.0, 0.1);
 }
 
 
@@ -149,6 +153,8 @@ fn follow_path(mut car: Car, mut path: Vec<&TrackNode>, max_allowed_distance: f3
 
     let mut vec_y = Vec::new();
 
+    let mut heading_matrix = Vec::new();
+
     let mut circles = Vec::new();
 
     let mut last_timestamp = Instant::now();
@@ -165,8 +171,19 @@ fn follow_path(mut car: Car, mut path: Vec<&TrackNode>, max_allowed_distance: f3
 
     circles.push(points_on_circle(circle, 50));
 
+    let (mut heading_vector, mut heading_angle) =
+        get_heading_vector_and_angle_v2(circle,
+                                        Point::from(&car.position),
+                                        Point::from(next_two_nodes[0]),
+                                        1.0);
+
+    heading_matrix.push(vec![Point::from(&car.position), heading_vector]);
+
+    //here car should turn to the right heading angle
+    car.position.heading_angle = heading_angle;
+
     loop {
-        println!("current pos: {:?} ", car.position);
+        // println!("current pos: {:?} ", car.position);
         vec_x.push(car.position.x);
         vec_y.push(car.position.y);
 
@@ -211,6 +228,17 @@ fn follow_path(mut car: Car, mut path: Vec<&TrackNode>, max_allowed_distance: f3
                 println!("Distance to circle: {:.3}", distance_to_circle);
 
                 circles.push(points_on_circle(circle, 50));
+
+                (heading_vector, heading_angle) =
+                    get_heading_vector_and_angle_v2(circle,
+                                                 Point::from(&car.position),
+                                                 Point::from(next_two_nodes[0]),
+                                                 1.0);
+
+                heading_matrix.push(vec![Point::from(&car.position), heading_vector]);
+
+                //here car should turn to the right heading angle
+                car.position.heading_angle = heading_angle;
             }
             println!("NextNodes: {:?}", next_two_nodes);
             println!("\nTarget {} (Node: {})", Point::from(next_two_nodes[0]), next_two_nodes[0].id);
@@ -221,20 +249,11 @@ fn follow_path(mut car: Car, mut path: Vec<&TrackNode>, max_allowed_distance: f3
         car.steering_angle = LONGITUDINAL_WHEEL_SEPARATION_DISTANCE.atan2(distance_to_circle);
         let change_of_heading_angle = car.speed * delta_time / distance_to_circle;
 
-        // println!("\nSimple Sterrering Angle: {:.3}", car.steering_angle);
-        // println!("Simple Change of Heading Angle: {:.3}", change_of_heading_angle);
-
-        // car.steering_angle = (LONGITUDINAL_WHEEL_SEPARATION_DISTANCE / distance_to_circle).atan2(1.0);
-        // let change_of_heading_angle =
-        //     car.speed * delta_time * car.steering_angle.tan() / LONGITUDINAL_WHEEL_SEPARATION_DISTANCE;
-        //
-        // println!("Sterrering Angle: {:.3}", car.steering_angle);
-        // println!("Change of Heading Angle: {:.3}", change_of_heading_angle);
-
         car.position.x += car.speed * delta_time * car.position.heading_angle.cos();
         car.position.y += car.speed * delta_time * car.position.heading_angle.sin();
 
         car.position.heading_angle = (car.position.heading_angle + change_of_heading_angle).angle_wrap();
+
 
         last_timestamp = Instant::now();
         // std::thread::sleep(Duration::from_millis(1000));
@@ -246,7 +265,8 @@ fn follow_path(mut car: Car, mut path: Vec<&TrackNode>, max_allowed_distance: f3
         .title("<b>Circle pathing</b>".into());
 
     let trace1 = Scatter::new(path_vec_x, path_vec_y)
-        .name("Path");
+        .name("Path")
+        .mode(Mode::LinesMarkers);
     // .line(Line::new().color("red"));
     plot.add_trace(trace1);
 
@@ -274,6 +294,19 @@ fn follow_path(mut car: Car, mut path: Vec<&TrackNode>, max_allowed_distance: f3
                 .mode(Mode::Lines);
 
             plot.add_trace(trace_circle);
+        }
+    }
+
+    for (c, vector) in heading_matrix.into_iter().enumerate() {
+        if c % 1 == 0 {
+            let current_pos = vector[0];
+            let heading_vector = vector[1];
+
+            let trace_heading = Scatter::new(vec![current_pos.x, heading_vector.x], vec![current_pos.y, heading_vector.y])
+                .name("Heading".to_string() + &c.to_string())
+                .mode(Mode::LinesMarkers);
+
+            plot.add_trace(trace_heading);
         }
     }
 

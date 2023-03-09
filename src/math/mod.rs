@@ -101,3 +101,72 @@ pub fn rotate_vector(x: f64, y: f64, angle: f64) -> (f64, f64) {
     let sin = angle.sin();
     (x * cos - y * sin, y * cos + x * sin)
 }
+
+pub fn angle_between_vectors(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    let dot = x1 * x2 + y1 * y2;
+    let det = x1 * y2 - y1 * x2;
+    det.atan2(dot)
+}
+
+pub fn angle_between_vector_and_x_axis(x: f64, y: f64) -> f64 {
+    y.atan2(x)
+}
+
+pub fn get_heading_vector_and_angle(circle: Circle, current_position: Point, heading_vector_scale: f64) -> (Point, f64) {
+    // Calculate vector from center to point
+    let mut dx = current_position.x - circle.center.x;
+    let mut dy = current_position.y - circle.center.y;
+
+    let theta = dx.atan2(-dy); // Angle between Ox and tangential vector
+
+    // Calculate tangential vector
+    let tx = heading_vector_scale * (-dy + current_position.x);
+    let ty = heading_vector_scale * (dx + current_position.y);
+
+    (Point::new(tx, ty), theta)
+}
+
+pub fn get_heading_vector_and_angle_v2(circle: Circle, current_position: Point, next_waypoint: Point, heading_vector_length: f64) -> (Point, f64) {
+    println!("\n Next waypoint: {:?}", next_waypoint);
+    // Calculate vector from center to point
+    let dx = current_position.x - circle.center.x;
+    let dy = current_position.y - circle.center.y;
+
+    let arc_lengths = arc_lengths(current_position.x, current_position.y,
+                                  next_waypoint.x, next_waypoint.y, circle.radius);
+
+    println!("Arc lengths: {:?}", arc_lengths);
+
+    let clockwise = arc_lengths.0 > arc_lengths.1;
+    println!("Clockwise: {}", clockwise);
+
+    if clockwise {
+        let dx = -dx;
+        let dy = -dy;
+    }
+
+    let theta = dx.atan2(-dy); // Angle between Ox and tangential vector
+
+    // Calculate tangential vector
+    let tx = (-dy + current_position.x);
+    let ty = (dx + current_position.y);
+
+    println!("Heading vector: {:?}", Point::new(tx, ty));
+
+    (Point::new(tx, ty), theta)
+}
+
+pub fn arc_length(x1: f64, y1: f64, x2: f64, y2: f64, radius: f64) -> f64 {
+    let d = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
+    let angle_in_radians = 2.0 * (d / (2.0 * radius)).asin();
+    let arc_length = radius * angle_in_radians;
+    arc_length
+}
+
+pub fn arc_lengths(x1: f64, y1: f64, x2: f64, y2: f64, radius: f64) -> (f64, f64) {
+    let d = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
+    let angle_in_radians = 2.0 * (d / (2.0 * radius)).asin();
+    let shorter_arc_length = radius * angle_in_radians;
+    let longer_arc_length = 2.0 * PI * radius - shorter_arc_length;
+    (shorter_arc_length, longer_arc_length) // if shorter_arc_length < longer_arc_length -> counterclockwise
+}
