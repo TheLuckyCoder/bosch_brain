@@ -17,12 +17,14 @@ struct SteeringWheelData {
     record: bool,
 }
 
-pub async fn run_steering_wheel_server() -> std::io::Result<()> {
+pub async fn run_steering_wheel_server(path: &str) -> std::io::Result<()> {
     let udp_socket = UdpSocket::bind("10.1.0.200:40000").await?;
 
     let mut file = OpenOptions::new()
-        .append(true)
-        .open("recorded_commands.psv")?;
+        .create(true)
+        .write(true)
+        .open(path)
+        .unwrap();
 
     let mut last_speed_percentage = 0.0;
     let mut last_steer = 0.0;
@@ -45,6 +47,11 @@ pub async fn run_steering_wheel_server() -> std::io::Result<()> {
         let size = udp_socket.recv(&mut buffer).await?;
 
         let data: SteeringWheelData = serde_json::from_slice(&buffer[0..size])?;
+        if data.record {
+            println!("Recording");
+        } else {
+            println!("Not recording");
+        }
 
         // Do not send the same message twice
         if !last_steer.almost_equals(data.steering_angle, 3.0) {
