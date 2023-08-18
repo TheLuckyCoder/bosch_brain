@@ -33,6 +33,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.75"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
+
+[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -69,16 +75,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "bno055"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b886b6cd2c2ac51e6ce9c9c412c5f925d5f71a2800ba0638ae8d5ef85876420"
+dependencies = [
+ "bitflags",
+ "byteorder",
+ "embedded-hal",
+ "mint",
+]
+
+[[package]]
 name = "bosch_brain"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "bno055",
  "digest",
  "env_logger",
  "futures",
+ "hc-sr04",
+ "linux-embedded-hal",
  "log",
  "md-5",
  "mio-serial",
  "ordered-float",
+ "pwm-pca9685",
  "rsa",
  "sensors",
  "serde",
@@ -300,9 +323,9 @@ dependencies = [
 
 [[package]]
 name = "hc-sr04"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccfabab84731f985c8cb3097f7dd189059ad4a5b99551598e3984083a40fb29e"
+checksum = "875be774cd3d78313a604584f181ee4ab4ffe193574bdc3fcf2ea0b14c7220c8"
 dependencies = [
  "rppal",
 ]
@@ -448,6 +471,12 @@ checksum = "5de893c32cde5f383baa4c04c5d6dbdd735cfd4a794b0debdb2bb1b421da5ff4"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "mint"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e53debba6bda7a793e5f99b8dacf19e626084f525f7829104ba9898f367d85ff"
 
 [[package]]
 name = "mio"
@@ -704,6 +733,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pwm-pca9685"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f38528c196e50b4bd747634780749dbe4f67f476e03293ccf1c4f324726d8387"
+dependencies = [
+ "embedded-hal",
+ "nb 1.0.0",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -760,11 +799,10 @@ checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
 
 [[package]]
 name = "rppal"
-version = "0.13.1"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c88c9c6248de4d337747b619d8f671055ef48a87dc21b97998833f189a0bbd4f"
+checksum = "612e1a22e21f08a246657c6433fe52b773ae43d07c9ef88ccfc433cc8683caba"
 dependencies = [
- "lazy_static",
  "libc",
 ]
 
