@@ -13,7 +13,7 @@ lto = "thin"
 [dependencies]
 sensors = { path = "sensors" }
 # Async
-tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net"] }
+tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net", "rt"] }
 futures = "0.3"
 
 # Logging
@@ -39,3 +39,4 @@ linux-embedded-hal = "0.3.2"
 pwm-pca9685 = "0.3.1"
 anyhow = "1.0.75"
 bno055 = "0.3.3"
+htu2xd = "0.1.0"

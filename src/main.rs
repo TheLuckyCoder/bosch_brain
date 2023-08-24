@@ -1,41 +1,76 @@
-// use std::thread::sleep;
-// use std::time::Duration;
-// use hc_sr04::{HcSr04, Unit};
-//
-// const TRIGGER: u8 = 24;
-// const ECHO: u8 = 23;
-//
-// fn main() {
-//     // Initialize the sensor
-//     let mut sensor = HcSr04::new(TRIGGER, ECHO, Some(20_f32)).expect("Failed to initialize HC-SR04");
-//
-//
-//     loop {
-//         // Perform a distance measurement
-//         if let Ok(distance) = sensor.measure_distance(Unit::Centimeters) {
-//             println!("Distance: {:?} cm", distance);
-//         } else {
-//             println!("Measurement error");
-//         }
-//
-//         // Wait for a short duration before taking the next measurement
-//         sleep(Duration::from_secs(1));
-//     }
-// }
-
-
-use std::io::{BufRead, stdin};
-use std::thread;
-use std::time::Duration;
+use std::io;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::BufReader;
 use hc_sr04::{HcSr04, Unit};
 use linux_embedded_hal::{Delay, I2cdev};
 use pwm_pca9685::{Address, Channel, Pca9685};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+
+struct MotorSettings {
+    bonnet_channel: Channel,
+    percentage_minimum: f64,
+    percentage_middle: f64,
+    percentage_maximum: f64,
+}
 
 const TRIGGER: u8 = 24;
 const ECHO: u8 = 23;
 
-fn main() -> anyhow::Result<()> {
+///Will need to set these to correct values
+const STEPPER_MOTOR: MotorSettings = MotorSettings {
+    bonnet_channel: Channel::C15,
+    percentage_minimum: 5.0,
+    percentage_middle: 8.0,
+    percentage_maximum: 13.0,
+};
+const DC_MOTOR: MotorSettings = MotorSettings {
+    bonnet_channel: Channel::C4,
+    percentage_minimum: 5.0,
+    percentage_middle: 8.0,
+    percentage_maximum: 13.0,
+};
+
+fn map_from_percentage_to_12_bit_int(input: u64) -> u64 {
+    // Maps an input number that is between 0-100 (percentage) to 0-4096
+    // If the input is smaller than 0 or bigger than 100 it gives equivalent to it
+
+    // Ensure input is within the 0-100 range
+    let clamped_input = input.clamp(0, 100);
+
+    // Map clamped_input to the 0-4096 range
+    ((clamped_input * 4096) / 100) as u64
+}
+
+pub fn set_motor_input(pwm: &mut Pca9685<I2cdev>, input: f64, motor_settings: MotorSettings) {
+    //Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
+    //If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
+    let clamped_input = input.clamp(-1.0, 1.0);
+
+    let motor_input = match clamped_input {
+        0.0 => {
+            motor_settings.percentage_middle as i64
+        }
+        -1.0..=0.0 => {
+            let normalized_input = (clamped_input + 1.0) / 1.0;
+            (normalized_input * (motor_settings.percentage_middle - motor_settings.percentage_minimum)
+                + motor_settings.percentage_minimum) as i64
+        }
+        0.0..=1.0 => {
+            let normalized_input = (clamped_input + 1.0) / 1.0;
+            (normalized_input * (motor_settings.percentage_maximum - motor_settings.percentage_middle)
+                + motor_settings.percentage_middle) as i64
+        }
+        _ => {
+            motor_settings.percentage_middle as i64
+        }
+    };
+
+    pwm.set_channel_on_off(motor_settings.bonnet_channel, 0, motor_input as u16).unwrap();
+}
+
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     println!("Starting PWM");
     let i2c_1 = I2cdev::new("/dev/i2c-1").unwrap();
     let address = Address::default();
@@ -75,14 +110,17 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    // println!("Starting Ultrasonic on pins trigger: {TRIGGER} echo: {ECHO}");
-    // let mut ultrasonic = HcSr04::new(
-    //     TRIGGER,
-    //     ECHO,
-    //     Some(20_f32) // Ambient temperature (if `None` defaults to 20.0C)
-    // )?;
+    println!("Starting Ultrasonic on pins trigger: {TRIGGER} echo: {ECHO}");
+    let mut ultrasonic = HcSr04::new(
+        TRIGGER,
+        ECHO,
+        Some(20_f32) // Ambient temperature (if `None` defaults to 20.0C)
+    )?;
 
     let time_step = 100;
+
+    let stdin = io::stdin();
+    let mut reader = BufReader::new(stdin);
 
     loop {
         let now = SystemTime::now();
@@ -91,6 +129,22 @@ fn main() -> anyhow::Result<()> {
         let seconds = duration.as_secs();
         let nanos = duration.subsec_nanos();
         println!("Timestamp: {} seconds {} nanoseconds", seconds, nanos);
+
+        let steering_percentage = 0u64;
+        let speed_percentage = 0u64;
+
+        // Read input from stdin without blocking
+        // let mut input = String::new();
+        // if let Err(_) = tokio::time::timeout(std::time::Duration::from_secs(1), reader.read_line(&mut input)).await {
+        //     pwm.set_channel_on_off(Channel::C15, 0, map_from_percentage_to_12_bit_int(steering_percentage) as u16).unwrap();
+        //     pwm.set_channel_on_off(Channel::C4, 0, map_from_percentage_to_12_bit_int(speed_percentage) as u16).unwrap();
+        //     continue;
+        // }
+
+        // 0 ... 5000  ... 7000   ... 65536
+        // 0 ... 312.5 ... 437.5  ... 4096
+        // 0 ... 7.62% ... 10.68% ... 100
+        // pwm.set_channel_on_off(Channel::C4, 0, (x as f32 * 40.96f32) as u16).unwrap();
 
         // Read sensor data in the loop
         match imu.quaternion() {
@@ -103,26 +157,11 @@ fn main() -> anyhow::Result<()> {
             }
         }
 
-        println!("Duty Cycle %: ");
-        let x: i32 = stdin().lock().lines().next().unwrap()?.parse()?;
-        // let x = 0;
-        for index in 5000 / 16..7000 / 16 {
-            pwm.set_channel_on_off(Channel::C15, 0, index).unwrap();
-            pwm.set_channel_on_off(Channel::C4, 0, (x as f32 * 40.96f32) as u16).unwrap();
-            thread::sleep(Duration::from_millis(20));
-        }
-
-        for index in (7000 / 16..5000 / 16).rev() {
-            pwm.set_channel_on_off(Channel::C15, 0, index).unwrap();
-            pwm.set_channel_on_off(Channel::C4, 0, (x as f32 * 40.96f32) as u16).unwrap();
-            thread::sleep(Duration::from_millis(20));
-        }
-
         // Perform distance measurement, specifying measuring unit of return value.
-        // match ultrasonic.measure_distance(Unit::Meters)? {
-        //     Some(dist) => println!("Distance: {:.2}m", dist),
-        //     None => println!("Object out of range"),
-        // }
+        match ultrasonic.measure_distance(Unit::Meters)? {
+            Some(dist) => println!("Distance: {:.2}m", dist),
+            None => println!("Object out of range"),
+        }
 
     }
 

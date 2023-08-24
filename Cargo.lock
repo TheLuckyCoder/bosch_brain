@@ -96,6 +96,7 @@ dependencies = [
  "env_logger",
  "futures",
  "hc-sr04",
+ "htu2xd",
  "linux-embedded-hal",
  "log",
  "md-5",
@@ -337,6 +338,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee512640fe35acbfb4bb779db6f0d80704c2cacfa2e39b601ef3e3f47d1ae4c7"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "htu2xd"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ef483989a93a79587f388f8605ae458f4471fcc0a8e863921f0722e6fc4a628"
+dependencies = [
+ "embedded-hal",
+ "nb 1.0.0",
 ]
 
 [[package]]
