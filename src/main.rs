@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 use hc_sr04::{HcSr04, Unit};
 use linux_embedded_hal::{Delay, I2cdev};
 use pwm_pca9685::{Address, Channel, Pca9685};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH, Instant};
+use bno055::mint::Vector3;
 
 struct MotorSettings {
     bonnet_channel: Channel,
@@ -29,6 +30,7 @@ const DC_MOTOR: MotorSettings = MotorSettings {
     percentage_maximum: 13.0,
 };
 
+
 fn map_from_percentage_to_12_bit_int(input: f64) -> u64 {
     // Maps an input floating-point number that is between 0.0-100.0 (percentage) to 0-4096
 
@@ -39,7 +41,7 @@ fn map_from_percentage_to_12_bit_int(input: f64) -> u64 {
     ((clamped_input * 40.96) as u64)
 }
 
-pub fn set_motor_input(pwm: &mut Pca9685<I2cdev>, input: f64, motor_settings: MotorSettings) {
+fn set_motor_input(pwm: &mut Pca9685<I2cdev>, input: f64, motor_settings: MotorSettings) {
     //Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
     //If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
     let clamped_input = input.clamp(-1.0, 1.0);
@@ -113,19 +115,23 @@ async fn main() -> anyhow::Result<()> {
         Some(20_f32) // Ambient temperature (if `None` defaults to 20.0C)
     )?;
 
-    std::panic::set_hook(Box::new(|panic_info| {
-        println!("Panic occurred: {:?}", panic_info);
-
-        pwm.set_channel_on_off(Channel::C4, 0, map_from_percentage_to_12_bit_int(DC_MOTOR.percentage_middle) as u16).unwrap();
-        pwm.set_channel_on_off(Channel::C15, 0, map_from_percentage_to_12_bit_int(STEPPER_MOTOR.percentage_middle) as u16).unwrap();
-
-        let _dev = pwm.destroy(); // Get the I2C device back
-    }));
+    // std::panic::set_hook(Box::new(|panic_info| {
+    //     println!("Panic occurred: {:?}", panic_info);
+    //
+    //     pwm.set_channel_on_off(Channel::C4, 0, map_from_percentage_to_12_bit_int(DC_MOTOR.percentage_middle) as u16).unwrap();
+    //     pwm.set_channel_on_off(Channel::C15, 0, map_from_percentage_to_12_bit_int(STEPPER_MOTOR.percentage_middle) as u16).unwrap();
+    //
+    //     let _dev = pwm.destroy(); // Get the I2C device back
+    // }));
 
     let mut steering_percentage = 0f64;
 
+    let mut previous_time = Instant::now();
+    let mut velocity =  Vector3::from([0.0, 0.0, 0.0]);
+
+
     // Create an Arc and Mutex to share the user input between threads
-    let user_input = Arc::new(Mutex::new(None));
+    // let user_input = Arc::new(Mutex::new(None));
 
 
     loop {
@@ -136,40 +142,40 @@ async fn main() -> anyhow::Result<()> {
         let nanos = duration.subsec_nanos();
         println!("Timestamp: {} seconds {} nanoseconds", seconds, nanos);
 
-        let input_thread = {
-            let user_input = Arc::clone(&user_input);
-            std::thread::spawn(move || {
-                loop {
-                    let mut input = String::new();
-                    println!("Enter a number between 0 and 100:");
-                    io::stdin().read_line(&mut input).expect("Failed to read line");
+        // let input_thread = {
+        //     let user_input = Arc::clone(&user_input);
+        //     std::thread::spawn(move || {
+        //         loop {
+        //             let mut input = String::new();
+        //             println!("Enter a number between 0 and 100:");
+        //             io::stdin().read_line(&mut input).expect("Failed to read line");
+        //
+        //             // Parse the input as a f64
+        //             let parsed_input: Result<f64, _> = input.trim().parse();
+        //
+        //             match parsed_input {
+        //                 Ok(num) if num >= 0.0 && num <= 100.0 => {
+        //                     // Input is valid, store it in the shared data
+        //                     let mut user_input = user_input.lock().unwrap();
+        //                     *user_input = Some(num);
+        //                     break; // Exit the loop
+        //                 }
+        //                 Ok(_) => println!("Input is not between 0.0 and 100.0 please try again."),
+        //                 Err(_) => println!("Invalid input. Please enter a number."),
+        //             }
+        //         }
+        //     })
+        // };
+        //
+        // // Wait for the input thread to finish
+        // input_thread.join().expect("Input thread panicked");
+        //
+        // // Access the user input from the main thread
+        // let locked_user_input = user_input.lock().unwrap();
+        // steering_percentage = *locked_user_input.as_ref().expect("No valid input provided.");
 
-                    // Parse the input as a f64
-                    let parsed_input: Result<f64, _> = input.trim().parse();
-
-                    match parsed_input {
-                        Ok(num) if num >= 0.0 && num <= 100.0 => {
-                            // Input is valid, store it in the shared data
-                            let mut user_input = user_input.lock().unwrap();
-                            *user_input = Some(num);
-                            break; // Exit the loop
-                        }
-                        Ok(_) => println!("Input is not between 0.0 and 100.0 please try again."),
-                        Err(_) => println!("Invalid input. Please enter a number."),
-                    }
-                }
-            })
-        };
-
-        // Wait for the input thread to finish
-        input_thread.join().expect("Input thread panicked");
-
-        // Access the user input from the main thread
-        let locked_user_input = user_input.lock().unwrap();
-        steering_percentage = *locked_user_input.as_ref().expect("No valid input provided.");
-
-        pwm.set_channel_on_off(Channel::C15, 0, map_from_percentage_to_12_bit_int(steering_percentage) as u16).unwrap();
-        // pwm.set_channel_on_off(Channel::C4, 0, map_from_percentage_to_12_bit_int(speed_percentage) as u16).unwrap();
+        // pwm.set_channel_on_off(Channel::C15, 0, map_from_percentage_to_12_bit_int(steering_percentage) as u16).unwrap();
+        pwm.set_channel_on_off(Channel::C4, 0, map_from_percentage_to_12_bit_int(8.3) as u16).unwrap();
 
         // 0 ... 5000  ... 7000   ... 65536
         // 0 ... 312.5 ... 437.5  ... 4096
@@ -187,12 +193,30 @@ async fn main() -> anyhow::Result<()> {
             }
         }
 
+        // Read acceleration data.
+        let acceleration = imu.linear_acceleration().unwrap();
+
+        // Calculate time elapsed since the last iteration.
+        let current_time = Instant::now();
+        let elapsed_time = current_time.duration_since(previous_time).as_secs_f32();
+        previous_time = current_time;
+
+        // Calculate velocity by integrating acceleration.
+        velocity.x += acceleration.z * elapsed_time;
+        velocity.y += acceleration.y * elapsed_time;
+        velocity.z += acceleration.z * elapsed_time;
+
+        // Display acceleration and velocity data.
+        println!("Acceleration: {:?}", acceleration);
+        println!("Velocity: {:?}", velocity);
+
         // Perform distance measurement, specifying measuring unit of return value.
         match ultrasonic.measure_distance(Unit::Meters)? {
             Some(dist) => println!("Distance: {:.2}m", dist),
             None => println!("Object out of range"),
         }
 
+        std::thread::sleep(std::time::Duration::from_millis(2500));
     }
 }
 
