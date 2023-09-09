@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [profile.dev.package."*"]
-opt-level = 3
+opt-level = 2
 
 [profile.release]
 incremental = true
@@ -12,12 +12,14 @@ lto = "thin"
 
 [dependencies]
 sensors = { path = "sensors" }
+mint = "0.5"
+
 # Async
-tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net", "rt"] }
+tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net"] }
 futures = "0.3"
 
 # Logging
-log = { version = "0.4", default-features = false, features = ["std", "serde", "max_level_debug", "release_max_level_warn"] }
+log = "0.4"
 env_logger = { version = "0.10", default-features = false, features = ["humantime", "color"] }
 
 # Serialization
@@ -34,9 +36,4 @@ digest = "0.10"
 md-5 = "0.10"
 
 ordered-float = "3"
-hc-sr04 = "0.1.1"
-linux-embedded-hal = "0.3.2"
-pwm-pca9685 = "0.3.1"
 anyhow = "1.0.75"
-bno055 = "0.3.3"
-htu2xd = "0.1.0"

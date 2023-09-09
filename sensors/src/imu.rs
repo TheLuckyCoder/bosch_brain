@@ -1,80 +1,80 @@
-#[cfg(target_os = "linux")]
+use bno055::{BNO055OperationMode, Bno055};
 use linux_embedded_hal::{Delay, I2cdev};
-use mpu6050::Mpu6050;
-use mpu6050::Mpu6050Error::{I2c, InvalidChipId};
+use std::thread::sleep;
+use std::time::Duration;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Vec3 {
-    x: f32,
-    y: f32,
-    z: f32,
-}
+pub struct GenericImu(Bno055<I2cdev>);
 
-impl Vec3 {
-    fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
-    }
-}
+impl GenericImu {
+    /**
+     * THIS SHOULD ONLY BE CALLED ONCE
+     */
+    pub fn new() -> Result<Self, String> {
+        let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| e.to_string())?;
 
-pub trait ImuSpecs {
-    fn get_acceleration(&mut self) -> Vec3;
+        let mut imu = Bno055::new(i2c).with_alternative_address();
+        let mut delay = Delay {};
 
-    fn get_gyroscope(&mut self) -> Vec3;
-}
+        imu.init(&mut delay).map_err(|e| e.to_string())?;
 
-#[cfg(target_os = "linux")]
-mod internal {
-    use super::*;
-
-    pub type Imu = Mpu6050<I2cdev>;
-
-    impl ImuSpecs for Imu {
-        fn get_acceleration(&mut self) -> Vec3 {
-            let acc = self.get_acc().expect("Failed to get acc");
-            Vec3::new(acc.x, acc.y, acc.z)
-        }
-
-        fn get_gyroscope(&mut self) -> Vec3 {
-            let gyro = self.get_gyro().expect("Failed to get gyro");
-            Vec3::new(gyro.x, gyro.y, gyro.z)
-        }
-    }
-}
-
-#[cfg(target_os = "windows")]
-mod internal {
-    use super::*;
-
-    pub struct FakeImu;
-
-    impl ImuSpecs for FakeImu {
-        fn get_acceleration(&mut self) -> Vec3 {
-            Vec3::new(0.0, 0.0, 0.0)
-        }
-
-        fn get_gyroscope(&mut self) -> Vec3 {
-            Vec3::new(0.0, 0.0, 0.0)
-        }
-    }
-}
-
-#[cfg(target_os = "linux")]
-pub fn get_imu() -> Result<impl ImuSpecs, String> {
-    let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| e.to_string())?;
-
-    let mut imu = Mpu6050::new(i2c);
-    let mut delay = Delay {};
-    if let Err(e) = imu.init(&mut delay) {
-        return Err(match e {
-            I2c(e) => e.to_string(),
-            InvalidChipId(id) => format!("Invalid chip id: {id}"),
-        });
+        Ok(Self(imu))
     }
 
-    Ok(imu)
-}
+    pub fn get_temperature(&mut self) -> Result<i8, String> {
+        self.0.temperature().map_err(|e| e.to_string())
+    }
 
-#[cfg(target_os = "windows")]
-pub fn get_imu() -> Result<internal::FakeImu, String> {
-    Ok(internal::FakeImu)
+    pub fn is_calibrated(&mut self) -> Result<bool, String> {
+        let calibration_status = self.0.get_calibration_status().map_err(|e| e.to_string())?;
+
+        log::debug!("IMU Calibration Status: {:?}", calibration_status);
+
+        Ok(!(calibration_status.sys != 3
+            || calibration_status.gyr != 3
+            || calibration_status.acc != 3
+            || calibration_status.mag != 3))
+    }
+
+    pub fn start_calibration(&mut self) -> Result<(), String> {
+        // Set the sensor to CONFIG mode for calibration.
+        let mut delay = Delay {};
+        self.0
+            .set_mode(BNO055OperationMode::CONFIG_MODE, &mut delay)
+            .map_err(|e| e.to_string())?;
+
+        // Start calibration and wait until it's complete.
+        loop {
+            let calibration_status = self.0.get_calibration_status().map_err(|e| e.to_string())?;
+            log::debug!("IMU Calibration Status: {:?}", calibration_status);
+
+            // Check if all three calibration values are 3 to indicate full calibration.
+            if calibration_status.sys == 3
+                && calibration_status.gyr == 3
+                && calibration_status.acc == 3
+            {
+                log::debug!("Sensor is fully calibrated.");
+                break; // Exit the loop once fully calibrated.
+            }
+
+            sleep(Duration::from_secs(1)); // Wait for a second before checking again.
+        }
+
+        self.0
+            .set_mode(BNO055OperationMode::NDOF, &mut delay)
+            .map_err(|e| e.to_string())
+    }
+
+    pub fn get_acceleration(&mut self) -> mint::Vector3<f32> {
+        match self.0.linear_acceleration() {
+            Ok(v) => v,
+            Err(e) => panic!("Sensor probably not in fusion mode: {e}"),
+        }
+    }
+
+    pub fn get_quaternion(&mut self) -> mint::Quaternion<f32> {
+        match self.0.quaternion() {
+            Ok(v) => v,
+            Err(e) => panic!("Sensor probably not in fusion mode: {e}"),
+        }
+    }
 }

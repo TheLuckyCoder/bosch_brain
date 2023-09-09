@@ -3,11 +3,13 @@ name = "sensors"
 version = "1.0.0"
 edition = "2021"
 
-[target.'cfg(unix)'.dependencies]
+[dependencies]
 linux-embedded-hal = "0.3"
 # HC-SR04 Ultrasonic sensor
-hc-sr04 = "0.1.0"
+hc-sr04 = "0.1"
+bno055 = { version = "0.3", features = ["std"] }
+htu2xd = "0.1"
+pwm-pca9685 = "0.3"
 
-[dependencies]
-# IMU
-mpu6050 = "0.1.6"
+log = "0.4"
+mint = "0.5"

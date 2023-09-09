@@ -3,15 +3,6 @@
 version = 3
 
 [[package]]
-name = "approx"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -22,6 +13,18 @@ name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+
+[[package]]
+name = "bno055"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b886b6cd2c2ac51e6ce9c9c412c5f925d5f71a2800ba0638ae8d5ef85876420"
+dependencies = [
+ "bitflags",
+ "byteorder",
+ "embedded-hal",
+ "mint",
+]
 
 [[package]]
 name = "byteorder"
@@ -37,9 +40,12 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.0.78"
+version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a20104e2335ce8a659d6dd92a51a767a0c062599c73b343fd152cb401e828c3d"
+checksum = "f1174fb0b6ec23863f8b971027804a42614e347eafb0a95bf0b12cdae21fc4d0"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "cfg-if"
@@ -70,11 +76,21 @@ dependencies = [
 
 [[package]]
 name = "hc-sr04"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccfabab84731f985c8cb3097f7dd189059ad4a5b99551598e3984083a40fb29e"
+checksum = "875be774cd3d78313a604584f181ee4ab4ffe193574bdc3fcf2ea0b14c7220c8"
 dependencies = [
  "rppal",
+]
+
+[[package]]
+name = "htu2xd"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ef483989a93a79587f388f8605ae458f4471fcc0a8e863921f0722e6fc4a628"
+dependencies = [
+ "embedded-hal",
+ "nb 1.0.0",
 ]
 
 [[package]]
@@ -99,22 +115,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "lazy_static"
-version = "1.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
-
-[[package]]
 name = "libc"
-version = "0.2.139"
+version = "0.2.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
-
-[[package]]
-name = "libm"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "348108ab3fba42ec82ff6e9564fc4ca0247bdccdc68dd8af9764bbc79c3c8ffb"
+checksum = "b4668fb0ea861c1df094127ac5f1da3409a82116a4ba74fca2e58ef927159bb3"
 
 [[package]]
 name = "linux-embedded-hal"
@@ -135,6 +139,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "log"
+version = "0.4.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
+
+[[package]]
 name = "memoffset"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -144,29 +154,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "mpu6050"
-version = "0.1.6"
+name = "mint"
+version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abd67852b244bcca82aa14dd89d50795c065fa598e435c0fe2724663f6e3b9f2"
-dependencies = [
- "embedded-hal",
- "libm",
- "nalgebra",
-]
-
-[[package]]
-name = "nalgebra"
-version = "0.31.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20bd243ab3dbb395b39ee730402d2e5405e448c75133ec49cc977762c4cba3d1"
-dependencies = [
- "approx",
- "num-complex",
- "num-rational",
- "num-traits",
- "simba",
- "typenum",
-]
+checksum = "e53debba6bda7a793e5f99b8dacf19e626084f525f7829104ba9898f367d85ff"
 
 [[package]]
 name = "nb"
@@ -197,57 +188,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-complex"
-version = "0.4.2"
+name = "pwm-pca9685"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ae39348c8bc5fbd7f40c727a9925f03517afd2ab27d46702108b6a7e5414c19"
+checksum = "f38528c196e50b4bd747634780749dbe4f67f476e03293ccf1c4f324726d8387"
 dependencies = [
- "num-traits",
+ "embedded-hal",
+ "nb 1.0.0",
 ]
-
-[[package]]
-name = "num-integer"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
-dependencies = [
- "autocfg",
- "num-traits",
-]
-
-[[package]]
-name = "num-rational"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0638a1c9d0a3c0914158145bc76cff373a75a627e6ecbfb71cbe6f453a5a19b0"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-traits"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
-dependencies = [
- "autocfg",
-]
-
-[[package]]
-name = "paste"
-version = "1.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d01a5bd0424d00070b0098dd17ebca6f961a959dead1dbcbbbc1d1cd8d3deeba"
 
 [[package]]
 name = "rppal"
-version = "0.13.1"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c88c9c6248de4d337747b619d8f671055ef48a87dc21b97998833f189a0bbd4f"
+checksum = "612e1a22e21f08a246657c6433fe52b773ae43d07c9ef88ccfc433cc8683caba"
 dependencies = [
- "lazy_static",
  "libc",
 ]
 
@@ -255,9 +210,13 @@ dependencies = [
 name = "sensors"
 version = "1.0.0"
 dependencies = [
+ "bno055",
  "hc-sr04",
+ "htu2xd",
  "linux-embedded-hal",
- "mpu6050",
+ "log",
+ "mint",
+ "pwm-pca9685",
 ]
 
 [[package]]
@@ -282,22 +241,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "simba"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3fd720c48c53cace224ae62bef1bbff363a70c68c4802a78b5cc6159618176"
-dependencies = [
- "approx",
- "num-complex",
- "num-traits",
- "paste",
-]
-
-[[package]]
 name = "spidev"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c43e891adf1abc1e09b10f80c8d91959ee20ec28425c6dadac78844ba4c709f"
+checksum = "5a204ca68d7f2109ffaf6326b79d8abf0014870625b78c8aff1941a5e4b9ff7d"
 dependencies = [
  "bitflags",
  "libc",
@@ -321,12 +268,6 @@ checksum = "d5d9cf598a6d7ce700a4e6a9199da127e6819a61e64b68609683cc9a01b5683a"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "typenum"
-version = "1.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "void"

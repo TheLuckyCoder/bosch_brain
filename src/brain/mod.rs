@@ -1,6 +1,7 @@
+use std::io::{BufRead, Read};
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Duration;
+use std::{io, thread};
 
 use crate::brain::data::{update_data, BrainData};
 use crate::math::pid::PidController;
@@ -45,12 +46,15 @@ fn process_data(brain_data: Arc<Mutex<BrainData>>) {
         }
         last_data = data.clone();
 
-        match action_state {
-            ActionState::Intersection => {}
-            ActionState::LaneKeeping(lane) => {
-                action_state = lane_state(&data, &mut lane_pid, &lane);
+        action_state = match action_state {
+            ActionState::Intersection => {
+                todo!("Intersection not implemented yet")
             }
-            ActionState::Parking => {}
+            ActionState::LaneKeeping(lane) => lane_state(&data, &mut lane_pid, &lane),
+            ActionState::Parking => {
+                park_action();
+                ActionState::LaneKeeping(LaneState::Follow)
+            }
         }
     }
 }
@@ -88,5 +92,19 @@ fn lane_state(
         }
     }
 
-    return ActionState::LaneKeeping(*lane_state);
+    ActionState::LaneKeeping(*lane_state)
+}
+
+fn park_action() {
+    let file = std::fs::File::open("parking.psv").unwrap();
+
+    io::BufReader::new(file).lines().for_each(|line| {
+        let line = line.unwrap();
+        let mut parts = line.split('|');
+        let time = parts.next().unwrap().parse::<u64>().unwrap();
+        let message = parts.next().unwrap();
+
+        thread::sleep(Duration::from_millis(time));
+        serial::send(Message::Raw(message.to_string()));
+    });
 }
