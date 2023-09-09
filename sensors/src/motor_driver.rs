@@ -28,7 +28,7 @@ fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
     let clamped_input = input.clamp(0.0, 100.0);
 
     // Map clamped_input to the 0-4096 range
-    ((clamped_input * 40.96) as u16)
+    (clamped_input * 40.96) as u16
 }
 
 pub struct MotorDriver(Pca9685<I2cdev>);
@@ -52,6 +52,10 @@ impl MotorDriver {
         Some(Self(pwm))
     }
 
+    pub fn start_calibration(&mut self) {
+        log::debug!("Not implemented!");
+    }
+
     /**
      * @param angle [-1.0, 1.0]
      */
@@ -71,19 +75,16 @@ impl MotorDriver {
         //If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
         let clamped_input = input.clamp(-1.0, 1.0);
 
-        let motor_input_percentage: f64 = match clamped_input {
-            0.0 => motor_settings.percentage_middle,
-            -1.0..=0.0 => {
-                clamped_input
-                    * (motor_settings.percentage_middle - motor_settings.percentage_minimum)
-                    + motor_settings.percentage_minimum
-            }
-            0.0..=1.0 => {
-                clamped_input
-                    * (motor_settings.percentage_maximum - motor_settings.percentage_middle)
-                    + motor_settings.percentage_middle
-            }
-            _ => motor_settings.percentage_middle,
+        let motor_input_percentage: f64 = if clamped_input == 0.0 {
+            motor_settings.percentage_middle
+        } else if (-1.0..0.0).contains(&clamped_input) {
+            clamped_input * (motor_settings.percentage_middle - motor_settings.percentage_minimum)
+                + motor_settings.percentage_minimum
+        } else if 0.0 < clamped_input && clamped_input <= 1.0 {
+            clamped_input * (motor_settings.percentage_maximum - motor_settings.percentage_middle)
+                + motor_settings.percentage_middle
+        } else {
+            motor_settings.percentage_middle
         };
 
         self.0

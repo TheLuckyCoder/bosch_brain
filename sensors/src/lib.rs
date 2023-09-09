@@ -1,8 +1,12 @@
 use std::sync::mpsc::{channel, Receiver};
 
-pub mod distance;
-pub mod imu;
-pub mod motor_driver;
+mod distance;
+mod imu;
+mod motor_driver;
+
+pub use distance::*;
+pub use imu::*;
+pub use motor_driver::*;
 
 #[derive(Debug)]
 pub enum SensorData {

@@ -12,6 +12,10 @@ impl DistanceSensor {
             .map_err(|e| e.to_string())
     }
 
+    pub fn start_calibration(&self) {
+        log::debug!("Not yet implemented");
+    }
+
     /**
      * Returns the distance in centimeters.
      */

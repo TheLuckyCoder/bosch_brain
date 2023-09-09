@@ -1,52 +1,51 @@
 #![allow(dead_code)]
 
-use env_logger::Env;
-use sensors::distance::DistanceSensor;
-use sensors::imu::GenericImu;
-use sensors::motor_driver::MotorDriver;
-use std::fs::OpenOptions;
-use std::io::{BufRead, Read};
+use std::io::{BufRead, Read, Write};
 use std::net::TcpListener;
-use std::path::Path;
-use std::thread::sleep;
-use tokio::task;
 
-use crate::serial::Message;
-use crate::state_machine::StateMachine;
+use env_logger::Env;
 
 mod brain;
 mod math;
+mod new_brain;
 mod serial;
 mod server;
-mod state_machine;
 #[cfg(test)]
 mod tests;
 mod track;
 
+#[derive(serde::Deserialize)]
+enum TcpMessage {
+    // GetState,
+    SetState(String),
+    DoCalibration,
+}
+
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), String> {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug"))
         .format_timestamp(None)
         .target(env_logger::Target::Stdout)
         .init();
 
-    let mut imu = GenericImu::new().unwrap();
-    let mut distance_sensor = DistanceSensor::new(imu.get_temperature().unwrap() as f32);
-    let mut motor_diver = MotorDriver::new().unwrap();
-
-    let listener = TcpListener::bind("192.168.0.1:12345")?;
-    let mut state_machine = StateMachine::new();
+    let listener = TcpListener::bind("192.168.0.1:12345").map_err(|e| e.to_string())?;
 
     let mut buffer = String::with_capacity(128);
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
-                stream.read_to_string(&mut buffer)?;
-                match buffer.as_str() {
-                    "State:S" => state_machine.to_standby(),
-                    "State:A" => state_machine.to_autonomous_controlled(),
-                    "State:R" => state_machine.to_remote_controlled(),
-                    _ => log::error!("Invalid message: {buffer}"),
+                stream.read_to_string(&mut buffer).unwrap();
+                let tcp_message: TcpMessage = serde_json::from_str(&buffer).unwrap();
+                match tcp_message {
+                    /*TcpMessage::GetState => {
+                        stream
+                            .write_all(state_machine.get_state().to_string().as_bytes())
+                            .unwrap();
+                    }*/
+                    TcpMessage::SetState(new_state) => {
+                        // state_machine.set_state(State::from_str(new_state))
+                    }
+                    TcpMessage::DoCalibration => {}
                 };
             }
             Err(err) => log::error!("{err}"),
