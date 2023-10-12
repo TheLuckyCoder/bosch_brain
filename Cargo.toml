@@ -17,6 +17,13 @@ mint = "0.5"
 # Async
 tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net"] }
 futures = "0.3"
+crossbeam-channel = "0.5"
+
+# HTTP
+axum = "0.6"
+tower = "0.4"
+tower-http = { version = "0.4", features = ["trace"] }
+axum-server = { version = "0.5", default-features = false }
 
 # Logging
 log = "0.4"

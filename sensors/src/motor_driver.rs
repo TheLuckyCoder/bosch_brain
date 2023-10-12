@@ -34,43 +34,35 @@ fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
 pub struct MotorDriver(Pca9685<I2cdev>);
 
 impl MotorDriver {
-    pub fn new() -> Option<Self> {
-        let i2c = I2cdev::new("/dev/i2c-1")
-            .map_err(|e| panic!("{:?}", e))
-            .ok()?;
+    pub fn new() -> Result<Self, String> {
+        let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| format!("{e:?}"))?;
         let address = Address::default();
-        let mut pwm = Pca9685::new(i2c, address)
-            .map_err(|e| panic!("{:?}", e))
-            .ok()?;
+        let mut pwm = Pca9685::new(i2c, address).map_err(|e| format!("{e:?}"))?;
 
         // This corresponds to a frequency of 60 Hz.
-        pwm.set_prescale(100).map_err(|e| panic!("{:?}", e)).ok();
+        pwm.set_prescale(100).map_err(|e| format!("{e:?}"))?;
 
         // It is necessary to enable the device.
-        pwm.enable().map_err(|e| panic!("{:?}", e)).ok()?;
+        pwm.enable().map_err(|e| format!("{e:?}"))?;
 
-        Some(Self(pwm))
-    }
-
-    pub fn start_calibration(&mut self) {
-        log::debug!("Not implemented!");
+        Ok(Self(pwm))
     }
 
     /**
      * @param angle [-1.0, 1.0]
      */
     pub fn set_steering_angle(&mut self, angle: f64) {
-        self.set_motor_input(angle, STEPPER_MOTOR)
+        self.set_motor_input(angle, &STEPPER_MOTOR)
     }
 
     /**
      * @param angle [-1.0, 1.0]
      */
     pub fn set_acceleration(&mut self, acceleration: f64) {
-        self.set_motor_input(acceleration, DC_MOTOR)
+        self.set_motor_input(acceleration, &DC_MOTOR)
     }
 
-    fn set_motor_input(&mut self, input: f64, motor_settings: MotorSettings) {
+    fn set_motor_input(&mut self, input: f64, motor_settings: &MotorSettings) {
         //Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
         //If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
         let clamped_input = input.clamp(-1.0, 1.0);

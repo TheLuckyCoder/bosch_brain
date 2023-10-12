@@ -1,25 +1,19 @@
 #![allow(dead_code)]
 
 use std::io::{BufRead, Read, Write};
-use std::net::TcpListener;
 
 use env_logger::Env;
 
-mod brain;
+mod http;
 mod math;
-mod new_brain;
+mod motor_manager;
 mod serial;
 mod server;
 #[cfg(test)]
 mod tests;
 mod track;
-
-#[derive(serde::Deserialize)]
-enum TcpMessage {
-    // GetState,
-    SetState(String),
-    DoCalibration,
-}
+mod udp_manager;
+mod utils;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -27,30 +21,6 @@ async fn main() -> Result<(), String> {
         .format_timestamp(None)
         .target(env_logger::Target::Stdout)
         .init();
-
-    let listener = TcpListener::bind("192.168.0.1:12345").map_err(|e| e.to_string())?;
-
-    let mut buffer = String::with_capacity(128);
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                stream.read_to_string(&mut buffer).unwrap();
-                let tcp_message: TcpMessage = serde_json::from_str(&buffer).unwrap();
-                match tcp_message {
-                    /*TcpMessage::GetState => {
-                        stream
-                            .write_all(state_machine.get_state().to_string().as_bytes())
-                            .unwrap();
-                    }*/
-                    TcpMessage::SetState(new_state) => {
-                        // state_machine.set_state(State::from_str(new_state))
-                    }
-                    TcpMessage::DoCalibration => {}
-                };
-            }
-            Err(err) => log::error!("{err}"),
-        }
-    }
 
     // let track = track::get_track();
 
