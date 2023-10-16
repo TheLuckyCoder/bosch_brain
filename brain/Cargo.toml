@@ -1,0 +1,42 @@
+[package]
+name = "bosch_brain"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+incremental = true
+
+[dependencies]
+sensors = { path = "../sensors" }
+mint = "0.5"
+
+# Async
+tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net"] }
+futures = "0.3"
+crossbeam-channel = "0.5"
+
+# HTTP
+axum = "0.6"
+tower = "0.4"
+tower-http = { version = "0.4", features = ["trace"] }
+axum-server = { version = "0.5", default-features = false }
+
+# Logging
+log = "0.4"
+env_logger = { version = "0.10", default-features = false, features = ["humantime", "color"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_repr = "0.1"
+
+# Serial port
+serialport = { version = "4", default-features = false }
+mio-serial = { version = "5", default-features = false }
+
+rsa = "0.8"
+digest = "0.10"
+md-5 = "0.10"
+
+ordered-float = "3"
+anyhow = "1.0.75"
