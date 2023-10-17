@@ -9,13 +9,13 @@ struct MotorSettings {
 }
 
 const STEPPER_MOTOR: MotorSettings = MotorSettings {
-    bonnet_channel: Channel::C15,
+    bonnet_channel: Channel::C2,
     percentage_minimum: 5.0,
     percentage_middle: 8.0,
     percentage_maximum: 13.0,
 };
 const DC_MOTOR: MotorSettings = MotorSettings {
-    bonnet_channel: Channel::C4,
+    bonnet_channel: Channel::C1,
     percentage_minimum: 5.0,
     percentage_middle: 8.0,
     percentage_maximum: 13.0,

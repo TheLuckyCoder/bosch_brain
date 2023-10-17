@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 use std::io::{BufRead, Read, Write};
+use std::time::Duration;
 
 use env_logger::Env;
+use sensors::{DistanceSensor, GenericImu, MotorDriver};
 
 mod http;
 mod math;
@@ -22,38 +24,23 @@ async fn main() -> Result<(), String> {
         .target(env_logger::Target::Stdout)
         .init();
 
-    // let track = track::get_track();
+    let mut imu = GenericImu::new().unwrap();
+    let mut distance_sensor = DistanceSensor::new(22f32).unwrap();
+    let mut motor_diver = MotorDriver::new().unwrap();
 
-    // let path = "/home/car/recorded_movements/full_run.txt";
-
-    // task::spawn(async move {
-    //     if let Err(e) = server::steering_wheel::run_steering_wheel_server(path).await {
-    //         log::error!("Steering wheel server error: {e}");
-    //     }
-    // });
-    // if Path::new(path).exists() {
-    //     let file = OpenOptions::new().read(true).open(path)?;
-    //
-    //     // read all lines from file and store them in a Vec
-    //     let lines: Vec<_> = std::io::BufReader::new(file)
-    //         .lines()
-    //         .map(|l| l.unwrap())
-    //         .collect();
-    //
-    //     for line in lines {
-    //         let mut split = line.split('|');
-    //         let time = split.next().unwrap();
-    //         let message = split.next().unwrap();
-    //
-    //         serial::send_blocking(Message::Raw(message.to_string()))?;
-    //         //sleep for time milliseconds
-    //         sleep(std::time::Duration::from_millis(
-    //             time.parse::<u64>().unwrap(),
-    //         ));
-    //     }
-    // }
-    // serial::send_blocking(Message::Speed(0_f32))?; //stop car
-    // brain::start_brain();
-
+    loop {
+        println!(
+            "Acc: {:?} ; Quat: {:?}",
+            imu.get_acceleration(),
+            imu.get_quaternion()
+        );
+        println!(
+            "Distance: {}",
+            distance_sensor.get_distance_cm().unwrap_or(f32::NAN)
+        );
+        motor_diver.set_acceleration(0.2);
+        motor_diver.set_steering_angle(1.0);
+        std::thread::sleep(Duration::from_millis(200));
+    }
     Ok(())
 }
