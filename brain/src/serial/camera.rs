@@ -4,6 +4,7 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use serialport::SerialPort;
+use tracing::info;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
@@ -51,7 +52,7 @@ fn get_camera_serial() -> CameraSerialReceiver {
         .open()
         .expect("Failed to start Camera Serial");
 
-    log::info!("Camera serial port initialized!");
+    info!("Camera serial port initialized!");
 
     serial
 }

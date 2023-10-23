@@ -1,5 +1,6 @@
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::Sender;
+use tracing::error;
 
 use crate::server::data::MovingObstaclePos;
 use crate::server::ServerData;
@@ -20,7 +21,7 @@ pub async fn run_listener(sender: Sender<ServerData>) -> std::io::Result<()> {
                 .send(ServerData::MovingObstacle(obstacle))
                 .await
                 .unwrap(),
-            Err(e) => log::error!("Error occurred while receiving/parsing data: {}", e),
+            Err(e) => error!("Error occurred while receiving/parsing data: {}", e),
         }
     }
 }

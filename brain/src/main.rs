@@ -1,10 +1,21 @@
 #![allow(dead_code)]
 
-use std::io::{BufRead, Read, Write};
+use std::io::Read;
+use std::sync::Arc;
 use std::time::Duration;
 
-use env_logger::Env;
-use sensors::{DistanceSensor, GenericImu, MotorDriver};
+use tokio::task;
+use tracing::log::LevelFilter;
+use tracing::Level;
+use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
+
+use sensors::{DistanceSensor, GenericImu, MotorDriver, SensorManager};
+
+use crate::http::GlobalState;
+use crate::motor_manager::MotorManager;
 
 mod http;
 mod math;
@@ -19,15 +30,33 @@ mod utils;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("debug"))
-        .format_timestamp(None)
-        .target(env_logger::Target::Stdout)
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().compact())
+        // .with(LevelFilter::Debug)
         .init();
+
+    println!("Start server? [y/N]");
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+
+    if input.to_ascii_lowercase() == "y" {
+        let sensor_manager = Arc::new(SensorManager::new());
+        let motor_manager = Arc::new(MotorManager::new());
+        let global_state = GlobalState::new(sensor_manager, motor_manager);
+
+        task::spawn(http::http_server(global_state))
+            .await
+            .unwrap()
+            .unwrap();
+    }
+
+    println!("Started manual mode");
 
     let mut imu = GenericImu::new().unwrap();
     let mut distance_sensor = DistanceSensor::new(22f32).unwrap();
     let mut motor_diver = MotorDriver::new().unwrap();
 
+    let mut angle = 0;
     loop {
         println!(
             "Acc: {:?} ; Quat: {:?}",
@@ -38,9 +67,13 @@ async fn main() -> Result<(), String> {
             "Distance: {}",
             distance_sensor.get_distance_cm().unwrap_or(f32::NAN)
         );
-        motor_diver.set_acceleration(0.2);
-        motor_diver.set_steering_angle(1.0);
-        std::thread::sleep(Duration::from_millis(200));
+        motor_diver.set_acceleration(0.5);
+        motor_diver.set_steering_angle(angle as f64 / 10.0);
+        angle += 1;
+        if angle == 9 {
+            angle = 0;
+        }
+        std::thread::sleep(Duration::from_millis(400));
     }
-    Ok(())
+    // Ok(())
 }

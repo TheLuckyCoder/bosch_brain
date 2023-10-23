@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use tracing::error;
 
 pub use distance::*;
 pub use imu::*;
@@ -25,12 +26,12 @@ impl SensorManager {
         Self {
             imu: GenericImu::new()
                 .map(|imu| Mutex::new(imu))
-                .map_err(|e| log::error!("Generic IMU failed to initialize: {e}"))
+                .map_err(|e| error!("Generic IMU failed to initialize: {e}"))
                 .ok(),
             // TODO Don't hardcode temperature
             distance_sensor: DistanceSensor::new(21f32)
                 .map(|sensor| Mutex::new(sensor))
-                .map_err(|e| log::error!("Distance Sensor failed to initialize: {e}"))
+                .map_err(|e| error!("Distance Sensor failed to initialize: {e}"))
                 .ok(),
             // TODO Camera
         }

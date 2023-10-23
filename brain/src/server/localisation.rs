@@ -2,6 +2,7 @@ use rsa::pkcs8::DecodePublicKey;
 use rsa::RsaPublicKey;
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::Sender;
+use tracing::{error, info};
 
 use crate::server::data::ServerCarPos;
 use crate::server::utils::{check_authentication, listen_for_port, CAR_ID};
@@ -23,7 +24,7 @@ async fn establish_server_connection(server_address: &String) -> std::io::Result
     socket.send(CAR_ID.as_bytes()).await?;
 
     check_authentication(public_key, socket).await?;
-    log::info!("Connected to server address {server_address}");
+    info!("Connected to server address {server_address}");
 
     Ok(())
 }
@@ -44,7 +45,7 @@ async fn run_localisation_listener(
     loop {
         match parse_position(&socket).await {
             Ok(pos) => sender.send(ServerData::CarPos(pos)).await.unwrap(),
-            Err(e) => log::error!("Error occurred while receiving/parsing data: {}", e),
+            Err(e) => error!("Error occurred while receiving/parsing data: {}", e),
         }
     }
 }

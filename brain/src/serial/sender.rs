@@ -4,6 +4,7 @@ use std::str;
 use serialport::SerialPort;
 use tokio::task;
 use tokio::task::JoinHandle;
+use tracing::debug;
 
 use crate::serial::Message;
 
@@ -25,12 +26,12 @@ impl MessageSender for SerialMessageSender {
         let mut result = [0_u8; 512];
 
         match self.0.read(&mut result) {
-            Ok(size) => log::debug!(
+            Ok(size) => debug!(
                 "Response for \"{}\": {:?}",
                 string.trim(),
                 str::from_utf8(&result[..size])
             ),
-            Err(e) => log::debug!("No response for \"{}\": {}", string.trim(), e),
+            Err(e) => debug!("No response for \"{}\": {}", string.trim(), e),
         }
 
         Ok(())

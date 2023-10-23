@@ -1,4 +1,5 @@
 use hc_sr04::{HcSr04, Unit};
+use tracing::debug;
 
 const TRIGGER: u8 = 24;
 const ECHO: u8 = 23;
@@ -13,7 +14,7 @@ impl DistanceSensor {
     }
 
     pub fn start_calibration(&self) {
-        log::debug!("Not yet implemented");
+        debug!("Not yet implemented");
     }
 
     /**

@@ -7,6 +7,7 @@ use std::time::Duration;
 use tokio::task;
 
 use tokio::task::JoinHandle;
+use tracing::info;
 
 use crate::serial::sender::{MessageSender, SerialMessageSender};
 
@@ -24,7 +25,7 @@ fn init_serial() -> SerialMessageSender {
             .expect("Failed to open serial port"),
     );
 
-    log::info!("Serial port initialized");
+    info!("Serial port initialized");
 
     serial
 }

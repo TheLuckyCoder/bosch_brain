@@ -2,6 +2,7 @@ use bno055::{BNO055OperationMode, Bno055};
 use linux_embedded_hal::{Delay, I2cdev};
 use std::thread::sleep;
 use std::time::Duration;
+use tracing::debug;
 
 pub struct GenericImu(Bno055<I2cdev>);
 
@@ -16,6 +17,8 @@ impl GenericImu {
         let mut delay = Delay {};
 
         imu.init(&mut delay).map_err(|e| e.to_string())?;
+        imu.set_mode(BNO055OperationMode::NDOF, &mut delay)
+            .map_err(|e| e.to_string())?;
 
         Ok(Self(imu))
     }
@@ -27,7 +30,7 @@ impl GenericImu {
     pub fn is_calibrated(&mut self) -> Result<bool, String> {
         let calibration_status = self.0.get_calibration_status().map_err(|e| e.to_string())?;
 
-        log::debug!("IMU Calibration Status: {:?}", calibration_status);
+        debug!("IMU Calibration Status: {:?}", calibration_status);
 
         Ok(!(calibration_status.sys != 3
             || calibration_status.gyr != 3
@@ -45,14 +48,14 @@ impl GenericImu {
         // Start calibration and wait until it's complete.
         loop {
             let calibration_status = self.0.get_calibration_status().map_err(|e| e.to_string())?;
-            log::debug!("IMU Calibration Status: {:?}", calibration_status);
+            debug!("IMU Calibration Status: {:?}", calibration_status);
 
             // Check if all three calibration values are 3 to indicate full calibration.
             if calibration_status.sys == 3
                 && calibration_status.gyr == 3
                 && calibration_status.acc == 3
             {
-                log::debug!("Sensor is fully calibrated.");
+                debug!("Sensor is fully calibrated.");
                 break; // Exit the loop once fully calibrated.
             }
 

@@ -5,6 +5,7 @@ use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey};
 use rsa::{RsaPrivateKey, RsaPublicKey};
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::Receiver;
+use tracing::info;
 
 use crate::server::data::EnvironmentalObstacle;
 use crate::server::utils::{check_authentication, listen_for_port, sign_message, CAR_ID};
@@ -35,7 +36,7 @@ async fn establish_server_connection(server_address: &String) -> std::io::Result
     socket.send(signature.as_slice()).await?;
 
     check_authentication(public_key, socket).await?;
-    log::info!("Connected to server address {server_address}");
+    info!("Connected to server address {server_address}");
 
     Ok(())
 }

@@ -1,7 +1,8 @@
 use crate::server::data::{TrafficLight, TrafficLightsStatus};
+use crate::server::ServerData;
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::Sender;
-use crate::server::ServerData;
+use tracing::error;
 
 async fn parse_data(socket: &UdpSocket) -> std::io::Result<TrafficLight> {
     let mut buffer = [0; 4096];
@@ -30,9 +31,12 @@ pub async fn run_listener(sender: Sender<ServerData>) -> std::io::Result<()> {
                 4 => traffic_lights.3 = traffic_light.color,
                 _ => unreachable!(),
             },
-            Err(e) => log::error!("Error occurred while receiving/parsing data: {}", e),
+            Err(e) => error!("Error occurred while receiving/parsing data: {}", e),
         }
-        
-        sender.send(ServerData::TrafficLights(traffic_lights)).await.unwrap();
+
+        sender
+            .send(ServerData::TrafficLights(traffic_lights))
+            .await
+            .unwrap();
     }
 }

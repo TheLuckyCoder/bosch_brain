@@ -1,23 +1,21 @@
+use serde_json::json;
 use std::net::UdpSocket;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use ordered_float::Float;
-use serde_json::json;
-
 use sensors::SensorManager;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
-pub enum ActiveSensor {
+pub enum UdpActiveSensor {
     #[default]
     None,
     Imu,
-    DistanceSensor,
+    Distance,
 }
 
 #[derive(Default)]
 pub struct UdpManager {
-    active_sensor: Mutex<ActiveSensor>,
+    active_sensor: Mutex<UdpActiveSensor>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -45,8 +43,8 @@ impl UdpManager {
             let active_sensor = *udp_manager.active_sensor.lock().unwrap();
 
             let data = match active_sensor {
-                ActiveSensor::None => continue,
-                ActiveSensor::Imu => {
+                UdpActiveSensor::None => continue,
+                UdpActiveSensor::Imu => {
                     let mut imu = sensor_manager.imu().lock().unwrap();
 
                     UdpData {
@@ -57,12 +55,12 @@ impl UdpManager {
                         distance: None,
                     }
                 }
-                ActiveSensor::DistanceSensor => {
+                UdpActiveSensor::Distance => {
                     let mut distance_sensor = sensor_manager.distance_sensor().lock().unwrap();
 
                     UdpData {
                         imu: None,
-                        distance: Some(distance_sensor.get_distance_cm().unwrap_or(f32::nan())),
+                        distance: Some(distance_sensor.get_distance_cm().unwrap_or(f32::NAN)),
                     }
                 }
             };
@@ -74,6 +72,10 @@ impl UdpManager {
         });
 
         Ok(udp_manager_clone)
+    }
+
+    pub fn set_active_sensor(&self, sensor: UdpActiveSensor) {
+        *self.active_sensor.lock().unwrap() = sensor;
     }
 }
 

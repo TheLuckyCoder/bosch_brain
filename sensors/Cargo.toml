@@ -11,5 +11,5 @@ bno055 = { version = "0.3", features = ["std"] }
 htu2xd = "0.1"
 pwm-pca9685 = "0.3"
 
-log = "0.4"
+tracing = "0.1"
 mint = "0.5"

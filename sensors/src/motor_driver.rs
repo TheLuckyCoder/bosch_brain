@@ -9,16 +9,16 @@ struct MotorSettings {
 }
 
 const STEPPER_MOTOR: MotorSettings = MotorSettings {
-    bonnet_channel: Channel::C2,
+    bonnet_channel: Channel::C1,
     percentage_minimum: 5.0,
     percentage_middle: 8.0,
     percentage_maximum: 13.0,
 };
 const DC_MOTOR: MotorSettings = MotorSettings {
-    bonnet_channel: Channel::C1,
+    bonnet_channel: Channel::C0,
     percentage_minimum: 5.0,
     percentage_middle: 8.0,
-    percentage_maximum: 13.0,
+    percentage_maximum: 11.0,
 };
 
 fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
