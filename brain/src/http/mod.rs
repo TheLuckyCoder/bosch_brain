@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -86,16 +87,26 @@ async fn get_all_available_sensors(
 
 async fn set_udp_sensor(
     State(state): State<Arc<GlobalState>>,
-    Path(sensor): Path<String>,
+    Json(sensor): Json<Vec<String>>,
 ) -> StatusCode {
-    let active_sensor = match sensor.as_str() {
-        "None" => UdpActiveSensor::None,
-        "Imu" => UdpActiveSensor::Imu,
-        "Distance" => UdpActiveSensor::Distance,
-        _ => return StatusCode::BAD_REQUEST,
-    };
+    let sensors: Vec<_> = sensor
+        .into_iter()
+        .map(|sensor| {
+            Some(match sensor.as_str() {
+                "Imu" => UdpActiveSensor::Imu,
+                "Distance" => UdpActiveSensor::Distance,
+                _ => return None,
+            })
+        })
+        .collect();
 
-    state.udp_manager.set_active_sensor(active_sensor);
+    if sensors.iter().any(|sensor| sensor.is_none()) {
+        return StatusCode::BAD_REQUEST;
+    }
+
+    state
+        .udp_manager
+        .set_active_sensor(sensors.into_iter().filter_map(|sensor| sensor).collect());
 
     StatusCode::OK
 }
@@ -133,7 +144,7 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
         .route("/current_state", get(get_current_state))
         .route("/current_state/:new_state", post(set_current_state))
         .route("/available_sensors", get(get_all_available_sensors))
-        .route("/udp_sensor/:sensor", post(set_udp_sensor))
+        .route("/udp_sensor", post(set_udp_sensor))
         .route("/remote_control", post(set_steering_and_acceleration))
         .layer(
             TraceLayer::new_for_http()

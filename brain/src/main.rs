@@ -39,7 +39,7 @@ async fn main() -> Result<(), String> {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
 
-    if input.to_ascii_lowercase() == "y" {
+    if input.trim().to_ascii_lowercase() == "y" {
         let sensor_manager = Arc::new(SensorManager::new());
         let motor_manager = Arc::new(MotorManager::new());
         let global_state = GlobalState::new(sensor_manager, motor_manager);
