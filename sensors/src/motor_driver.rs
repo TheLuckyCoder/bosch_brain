@@ -1,24 +1,35 @@
 use linux_embedded_hal::I2cdev;
-use pwm_pca9685::{Address, Channel, Pca9685};
+use pwm_pca9685::{Address, Pca9685};
 
-struct MotorSettings {
-    bonnet_channel: Channel,
-    percentage_minimum: f64,
-    percentage_middle: f64,
-    percentage_maximum: f64,
+pub use pwm_pca9685::Channel;
+
+#[repr(usize)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum Motor {
+    Acceleration,
+    Steering,
 }
 
-const STEPPER_MOTOR: MotorSettings = MotorSettings {
-    bonnet_channel: Channel::C1,
-    percentage_minimum: 5.0,
-    percentage_middle: 8.0,
-    percentage_maximum: 13.0,
-};
-const DC_MOTOR: MotorSettings = MotorSettings {
-    bonnet_channel: Channel::C0,
+#[derive(Debug, Clone)]
+pub struct MotorParams {
+    pub percentage_minimum: f64,
+    pub percentage_middle: f64,
+    pub percentage_maximum: f64,
+    pub bonnet_channel: Channel,
+}
+
+const DEFAULT_DC_MOTOR: MotorParams = MotorParams {
     percentage_minimum: 5.0,
     percentage_middle: 8.0,
     percentage_maximum: 11.0,
+    bonnet_channel: Channel::C0,
+};
+
+const DEFAULT_STEPPER_MOTOR: MotorParams = MotorParams {
+    percentage_minimum: 5.0,
+    percentage_middle: 8.0,
+    percentage_maximum: 13.0,
+    bonnet_channel: Channel::C1,
 };
 
 fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
@@ -31,7 +42,11 @@ fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
     (clamped_input * 40.96) as u16
 }
 
-pub struct MotorDriver(Pca9685<I2cdev>);
+pub struct MotorDriver {
+    device: Pca9685<I2cdev>,
+    params: [MotorParams; 2],
+    last_value: [f64; 2],
+}
 
 impl MotorDriver {
     pub fn new() -> Result<Self, String> {
@@ -45,26 +60,40 @@ impl MotorDriver {
         // It is necessary to enable the device.
         pwm.enable().map_err(|e| format!("{e:?}"))?;
 
-        Ok(Self(pwm))
+        Ok(Self {
+            device: pwm,
+            params: [DEFAULT_DC_MOTOR, DEFAULT_STEPPER_MOTOR],
+            last_value: [f64::INFINITY; 2],
+        })
     }
 
-    /**
-     * @param angle [-1.0, 1.0]
-     */
+    ///
+    ///* `angle` value between [-1.0, 1.0]
+    ///
     pub fn set_steering_angle(&mut self, angle: f64) {
-        self.set_motor_input(angle, &STEPPER_MOTOR)
+        self.set_motor_value(Motor::Steering, angle)
     }
 
-    /**
-     * @param angle [-1.0, 1.0]
-     */
+    ///
+    ///* `acceleration` value between [-1.0, 1.0]
+    ///
     pub fn set_acceleration(&mut self, acceleration: f64) {
-        self.set_motor_input(acceleration, &DC_MOTOR)
+        self.set_motor_value(Motor::Acceleration, acceleration)
     }
 
-    fn set_motor_input(&mut self, input: f64, motor_settings: &MotorSettings) {
-        //Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
-        //If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
+    pub fn set_motor_value(&mut self, motor: Motor, input: f64) {
+        let last_value = &mut self.last_value[motor as usize];
+
+        if (input - *last_value).abs() < 10e-4 {
+            return;
+        }
+
+        *last_value = input;
+
+        let motor_settings = &self.params[0];
+
+        // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
+        // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
         let clamped_input = input.clamp(-1.0, 1.0);
 
         let motor_input_percentage: f64 = if clamped_input == 0.0 {
@@ -79,13 +108,21 @@ impl MotorDriver {
             motor_settings.percentage_middle
         };
 
-        self.0
+        self.device
             .set_channel_on_off(
                 motor_settings.bonnet_channel,
                 0,
                 map_from_percentage_to_12_bit_int(motor_input_percentage),
             )
             .expect("Failed to set motor input");
+    }
+
+    pub fn get_params(&self, motor: Motor) -> MotorParams {
+        self.params[motor as usize].clone()
+    }
+
+    pub fn set_params(&mut self, motor: Motor, params: MotorParams) {
+        self.params[motor as usize] = params
     }
 }
 

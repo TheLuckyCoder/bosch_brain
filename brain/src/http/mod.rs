@@ -2,21 +2,18 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
-use tokio::task;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 
-use sensors::SensorManager;
+use sensors::{MotorDriver, SensorManager};
 
-use crate::motor_manager::MotorManager;
 use crate::udp_manager::{UdpActiveSensor, UdpManager};
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -32,17 +29,17 @@ pub struct GlobalState {
     pub car_state: Mutex<CarStates>,
     pub udp_manager: Arc<UdpManager>,
     pub sensor_manager: Arc<SensorManager>,
-    pub motor_manager: Arc<MotorManager>,
+    pub motor_driver: Arc<Mutex<MotorDriver>>,
 }
 
 impl GlobalState {
-    pub fn new(sensor_manager: Arc<SensorManager>, motor_manager: Arc<MotorManager>) -> Self {
+    pub fn new(sensor_manager: Arc<SensorManager>, motor_driver: MotorDriver) -> Self {
         Self {
             car_state: Mutex::default(),
             udp_manager: UdpManager::new(sensor_manager.clone())
                 .expect("Failed to initialize UDP Manager"),
             sensor_manager,
-            motor_manager,
+            motor_driver: Arc::new(Mutex::new(motor_driver)),
         }
     }
 }
@@ -125,14 +122,10 @@ async fn set_steering_and_acceleration(
         return StatusCode::BAD_REQUEST;
     }
 
-    let motor = state.motor_manager.clone();
+    let mut motor = state.motor_driver.lock().await;
 
-    task::spawn_blocking(move || {
-        motor.set_acceleration(values.acceleration);
-        motor.set_steering(values.steering);
-    })
-    .await
-    .unwrap();
+    motor.set_acceleration(values.acceleration);
+    motor.set_steering_angle(values.steering);
 
     StatusCode::OK
 }

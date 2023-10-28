@@ -79,17 +79,23 @@ impl UdpManager {
     }
 }
 
-#[test]
-fn test_deserialize() {
-    let json = json!(
-        {
-            "imu": {
-                "acceleration": [1, 2, 3],
-                "quaternion": [1, 2, 3, 4],
-            },
-            "distance": 23.5
-        }
-    );
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
 
-    let data: UdpData = serde_json::from_value(json).unwrap();
+    #[test]
+    fn test_deserialize() {
+        let json = json!(
+            {
+                "imu": {
+                    "acceleration": [1, 2, 3],
+                    "quaternion": [1, 2, 3, 4],
+                },
+                "distance": 23.5
+            }
+        );
+
+        let data: UdpData = serde_json::from_value(json).unwrap();
+    }
 }
