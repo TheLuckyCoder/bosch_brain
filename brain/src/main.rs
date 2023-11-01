@@ -8,7 +8,7 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use sensors::{DistanceSensor, GenericImu, MotorDriver, SensorManager};
+use sensors::{DistanceSensor, GenericImu, Motor, MotorDriver, SensorManager};
 
 use crate::http::GlobalState;
 
@@ -60,8 +60,8 @@ async fn main() -> Result<(), String> {
             "Distance: {}",
             distance_sensor.get_distance_cm().unwrap_or(f32::NAN)
         );
-        motor_driver.set_acceleration(0.5);
-        motor_driver.set_steering_angle(angle as f64 / 10.0);
+        motor_driver.set_motor_value(Motor::Acceleration, 0.5);
+        motor_driver.set_motor_value(Motor::Steering, angle as f64 / 10.0);
         angle += 1;
         if angle == 9 {
             angle = 0;

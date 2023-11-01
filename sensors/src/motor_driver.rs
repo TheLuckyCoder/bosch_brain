@@ -1,11 +1,11 @@
 use linux_embedded_hal::I2cdev;
 use pwm_pca9685::{Address, Pca9685};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 pub use pwm_pca9685::Channel;
 
 #[repr(usize)]
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Motor {
     Acceleration,
     Steering,
@@ -69,6 +69,7 @@ impl MotorDriver {
     }
 
     pub fn set_motor_value(&mut self, motor: Motor, input: f64) {
+        let input = input.clamp(-1.0, 1.0);
         let last_value = &mut self.last_value[motor as usize];
 
         if (input - *last_value).abs() < 10e-4 {
@@ -77,24 +78,34 @@ impl MotorDriver {
 
         *last_value = input;
 
-        let motor_params = &self.params[motor as usize];
+        let params = &self.params[motor as usize];
         let bonnet_channel = self.bonnet_channel[motor as usize];
 
         // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
         // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
-        let clamped_input = input.clamp(-1.0, 1.0);
+        let motor_input_percentage = if input != 0.0 {
+            let max_min = if input > 0.0 {
+                params.percentage_maximum
+            } else {
+                params.percentage_minimum
+            };
 
-        let motor_input_percentage: f64 = if (-1.0..0.0).contains(&clamped_input) {
-            -clamped_input * (motor_params.percentage_middle - motor_params.percentage_minimum)
-                + motor_params.percentage_minimum
-        } else if 0.0 < clamped_input && clamped_input <= 1.0 {
-            clamped_input * (motor_params.percentage_maximum - motor_params.percentage_middle)
-                + motor_params.percentage_middle
+            params.percentage_middle + input.abs() * (max_min - params.percentage_middle)
         } else {
-            motor_params.percentage_middle
+            params.percentage_middle
         };
 
-        println!("Params: {motor_params:?}");
+        /*let motor_input_percentage: f64 = if (-1.0..0.0).contains(&clamped_input) {
+            -clamped_input * (params.percentage_middle - params.percentage_minimum)
+                + params.percentage_minimum
+        } else if 0.0 < clamped_input && clamped_input <= 1.0 {
+            clamped_input * (params.percentage_maximum - params.percentage_middle)
+                + params.percentage_middle
+        } else {
+            params.percentage_middle
+        };*/
+
+        println!("Params: {params:?}");
         self.device
             .set_channel_on_off(
                 bonnet_channel,
