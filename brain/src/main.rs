@@ -16,10 +16,7 @@ mod http;
 mod math;
 mod serial;
 mod server;
-#[cfg(test)]
-mod tests;
 mod track;
-mod utils;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {

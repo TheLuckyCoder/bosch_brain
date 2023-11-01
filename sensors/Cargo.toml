@@ -13,3 +13,5 @@ pwm-pca9685 = "0.3"
 
 tracing = "0.1"
 mint = "0.5"
+
+serde = "1"

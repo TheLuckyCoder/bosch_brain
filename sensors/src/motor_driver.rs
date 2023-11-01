@@ -1,38 +1,37 @@
 use linux_embedded_hal::I2cdev;
 use pwm_pca9685::{Address, Pca9685};
+use serde::{Serialize, Deserialize};
 
 pub use pwm_pca9685::Channel;
 
 #[repr(usize)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Motor {
     Acceleration,
     Steering,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MotorParams {
     pub percentage_minimum: f64,
     pub percentage_middle: f64,
     pub percentage_maximum: f64,
-    pub bonnet_channel: Channel,
 }
 
 const DEFAULT_DC_MOTOR: MotorParams = MotorParams {
     percentage_minimum: 5.0,
     percentage_middle: 8.0,
     percentage_maximum: 11.0,
-    bonnet_channel: Channel::C0,
 };
 
 const DEFAULT_STEPPER_MOTOR: MotorParams = MotorParams {
     percentage_minimum: 5.0,
     percentage_middle: 8.0,
     percentage_maximum: 13.0,
-    bonnet_channel: Channel::C1,
 };
 
 fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
+    println!("Final value %: {input}");
     // Maps an input floating-point number that is between 0.0-100.0 (percentage) to 0-4096
 
     // Ensure input is within the 0.0-100.0 range
@@ -45,6 +44,7 @@ fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
 pub struct MotorDriver {
     device: Pca9685<I2cdev>,
     params: [MotorParams; 2],
+    bonnet_channel: [Channel; 2],
     last_value: [f64; 2],
 }
 
@@ -63,22 +63,9 @@ impl MotorDriver {
         Ok(Self {
             device: pwm,
             params: [DEFAULT_DC_MOTOR, DEFAULT_STEPPER_MOTOR],
+            bonnet_channel: [Channel::C0, Channel::C1],
             last_value: [f64::INFINITY; 2],
         })
-    }
-
-    ///
-    ///* `angle` value between [-1.0, 1.0]
-    ///
-    pub fn set_steering_angle(&mut self, angle: f64) {
-        self.set_motor_value(Motor::Steering, angle)
-    }
-
-    ///
-    ///* `acceleration` value between [-1.0, 1.0]
-    ///
-    pub fn set_acceleration(&mut self, acceleration: f64) {
-        self.set_motor_value(Motor::Acceleration, acceleration)
     }
 
     pub fn set_motor_value(&mut self, motor: Motor, input: f64) {
@@ -90,31 +77,40 @@ impl MotorDriver {
 
         *last_value = input;
 
-        let motor_settings = &self.params[0];
+        let motor_params = &self.params[motor as usize];
+        let bonnet_channel = self.bonnet_channel[motor as usize];
 
         // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
         // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
         let clamped_input = input.clamp(-1.0, 1.0);
 
-        let motor_input_percentage: f64 = if clamped_input == 0.0 {
-            motor_settings.percentage_middle
-        } else if (-1.0..0.0).contains(&clamped_input) {
-            clamped_input * (motor_settings.percentage_middle - motor_settings.percentage_minimum)
-                + motor_settings.percentage_minimum
+        let motor_input_percentage: f64 = if (-1.0..0.0).contains(&clamped_input) {
+            -clamped_input * (motor_params.percentage_middle - motor_params.percentage_minimum)
+                + motor_params.percentage_minimum
         } else if 0.0 < clamped_input && clamped_input <= 1.0 {
-            clamped_input * (motor_settings.percentage_maximum - motor_settings.percentage_middle)
-                + motor_settings.percentage_middle
+            clamped_input * (motor_params.percentage_maximum - motor_params.percentage_middle)
+                + motor_params.percentage_middle
         } else {
-            motor_settings.percentage_middle
+            motor_params.percentage_middle
         };
 
+        println!("Params: {motor_params:?}");
         self.device
             .set_channel_on_off(
-                motor_settings.bonnet_channel,
+                bonnet_channel,
                 0,
                 map_from_percentage_to_12_bit_int(motor_input_percentage),
             )
             .expect("Failed to set motor input");
+    }
+
+    pub fn stop_motor(&mut self, motor: Motor) {
+        let bonnet_channel = self.bonnet_channel[motor as usize];
+
+        self.device
+            .set_channel_full_off(bonnet_channel)
+            .expect("Failed to set motor input");
+        self.last_value[motor as usize] = f64::INFINITY;
     }
 
     pub fn get_params(&self, motor: Motor) -> MotorParams {
@@ -122,12 +118,13 @@ impl MotorDriver {
     }
 
     pub fn set_params(&mut self, motor: Motor, params: MotorParams) {
+        self.last_value[motor as usize] = f64::INFINITY;
         self.params[motor as usize] = params
     }
 }
 
 impl Drop for MotorDriver {
     fn drop(&mut self) {
-        self.set_acceleration(0.0);
+        self.stop_motor(Motor::Acceleration);
     }
 }

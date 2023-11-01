@@ -2,12 +2,14 @@ use std::net::UdpSocket;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use tracing::warn;
+
 use sensors::SensorManager;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UdpActiveSensor {
     Imu,
-    Distance,
+    Ultrasonic,
 }
 
 #[derive(Default)]
@@ -61,7 +63,7 @@ impl UdpManager {
                             quaternion: imu.get_quaternion().into(),
                         });
                     }
-                    UdpActiveSensor::Distance => {
+                    UdpActiveSensor::Ultrasonic => {
                         let mut distance_sensor = sensor_manager.distance_sensor().lock().unwrap();
 
                         udp_data.distance =
@@ -72,9 +74,9 @@ impl UdpManager {
 
             if udp_data.imu.is_some() || udp_data.distance.is_some() {
                 let json = serde_json::to_string(&udp_data).expect("Failed to serialize udp data");
-                server
-                    .send_to(json.as_bytes(), address)
-                    .expect("Failed to send Udp Packet");
+                if let Err(err) = server.send_to(json.as_bytes(), address) {
+                    warn!("Failed to send UDP Packet: {err}")
+                }
             }
         });
 
@@ -89,8 +91,9 @@ impl UdpManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::json;
+
+    use super::*;
 
     #[test]
     fn test_deserialize() {

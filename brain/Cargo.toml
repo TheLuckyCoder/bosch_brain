@@ -11,7 +11,7 @@ sensors = { path = "../sensors" }
 mint = "0.5"
 
 # Async
-tokio = { version = "1", features = ["libc", "bytes", "fs", "io-std", "io-util", "macros", "rt-multi-thread", "sync", "net"] }
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread", "sync", "net"] }
 crossbeam-channel = "0.5"
 
 # HTTP
