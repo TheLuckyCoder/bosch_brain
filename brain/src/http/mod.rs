@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::{ConnectInfo, Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -12,9 +12,10 @@ use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 
+use crate::http::udp_manager::{UdpActiveSensor, UdpManager};
 use sensors::{MotorDriver, SensorManager};
 
-use crate::udp_manager::{UdpActiveSensor, UdpManager};
+mod udp_manager;
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum CarStates {
@@ -29,7 +30,7 @@ pub struct GlobalState {
     pub car_state: Mutex<CarStates>,
     pub udp_manager: Arc<UdpManager>,
     pub sensor_manager: Arc<SensorManager>,
-    pub motor_driver: Arc<Mutex<MotorDriver>>,
+    pub motor_driver: Mutex<MotorDriver>,
 }
 
 impl GlobalState {
@@ -39,7 +40,7 @@ impl GlobalState {
             udp_manager: UdpManager::new(sensor_manager.clone())
                 .expect("Failed to initialize UDP Manager"),
             sensor_manager,
-            motor_driver: Arc::new(Mutex::new(motor_driver)),
+            motor_driver: Mutex::new(motor_driver),
         }
     }
 }
@@ -83,6 +84,7 @@ async fn get_all_available_sensors(
 }
 
 async fn set_udp_sensor(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(state): State<Arc<GlobalState>>,
     Json(sensor): Json<Vec<String>>,
 ) -> StatusCode {
@@ -101,9 +103,11 @@ async fn set_udp_sensor(
         return StatusCode::BAD_REQUEST;
     }
 
+    let sensors = sensors.into_iter().filter_map(|sensor| sensor).collect();
+
     state
         .udp_manager
-        .set_active_sensor(sensors.into_iter().filter_map(|sensor| sensor).collect());
+        .set_active_sensor(sensors, addr.ip().to_string());
 
     StatusCode::OK
 }

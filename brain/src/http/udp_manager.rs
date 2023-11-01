@@ -13,6 +13,7 @@ pub enum UdpActiveSensor {
 #[derive(Default)]
 pub struct UdpManager {
     active_sensors: Mutex<Vec<UdpActiveSensor>>,
+    address: Mutex<Option<String>>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -32,11 +33,17 @@ impl UdpManager {
         let udp_manager = Arc::new(Self::default());
 
         let server = UdpSocket::bind("0.0.0.0:3000")?;
-        server.connect("10.0.2.16:3001")?;
 
         let udp_manager_clone = udp_manager.clone();
+
         std::thread::spawn(move || loop {
             std::thread::sleep(Duration::from_millis(100));
+
+            let address = match udp_manager.address.lock().unwrap().clone() {
+                None => continue,
+                Some(address) => address,
+            };
+
             let active_sensors = udp_manager.active_sensors.lock().unwrap().clone();
 
             let mut udp_data = UdpData {
@@ -66,7 +73,7 @@ impl UdpManager {
             if udp_data.imu.is_some() || udp_data.distance.is_some() {
                 let json = serde_json::to_string(&udp_data).expect("Failed to serialize udp data");
                 server
-                    .send(json.as_bytes())
+                    .send_to(json.as_bytes(), address)
                     .expect("Failed to send Udp Packet");
             }
         });
@@ -74,8 +81,9 @@ impl UdpManager {
         Ok(udp_manager_clone)
     }
 
-    pub fn set_active_sensor(&self, sensor: Vec<UdpActiveSensor>) {
+    pub fn set_active_sensor(&self, sensor: Vec<UdpActiveSensor>, address: String) {
         *self.active_sensors.lock().unwrap() = sensor;
+        *self.address.lock().unwrap() = Some(address);
     }
 }
 

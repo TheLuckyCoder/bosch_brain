@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 
-use std::io::Read;
 use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::task;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -20,14 +19,14 @@ mod server;
 #[cfg(test)]
 mod tests;
 mod track;
-mod udp_manager;
 mod utils;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    std::env::set_var("RUST_LOG", "info");
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().compact())
-        // .with(LevelFilter::Debug)
+        .with(EnvFilter::from_default_env())
         .init();
 
     println!("Start server? [y/N]");
