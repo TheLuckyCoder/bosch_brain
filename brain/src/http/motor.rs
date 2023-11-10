@@ -25,14 +25,14 @@ fn get_motor_params_file(motor: Motor) -> PathBuf {
 fn read_params_from_files(global_state: &Arc<GlobalState>) {
     for motor in ALL_MOTORS {
         let file_path = get_motor_params_file(motor);
-        let params_file = match std::fs::File::open(file_path) {
+        let params_file = match std::fs::File::open(&file_path) {
             Ok(params_file) => params_file,
             Err(_) => continue,
         };
-        let reader = BufReader::new(params_file);
+        let mut reader = BufReader::new(params_file);
 
-        let params: MotorParams = serde_json::from_reader(&reader)
-            .unwrap_or_else(|| panic!("Failed to deserialize {file_path}"));
+        let params: MotorParams = serde_json::from_reader(&mut reader)
+            .unwrap_or_else(|_| panic!("Failed to deserialize {}", file_path.display()));
 
         global_state.motor_driver.blocking_lock().set_params(motor, params)
     }
@@ -47,6 +47,7 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
         .route("/params/:motor", post(set_motor_parameters))
         .route("/stop/:motor", post(stop_motor))
         .route("/start/:motor", post(set_motor_value))
+        .route("/sweep/:motor", post(motor_sweep))
         .route("/remote_control", post(set_steering_and_acceleration))
         .with_state(global_state)
 }
@@ -95,6 +96,29 @@ async fn set_motor_value(
     let mut motor_driver = state.motor_driver.lock().await;
 
     motor_driver.set_motor_value(motor, value);
+}
+
+async fn motor_sweep(
+    State(state): State<Arc<GlobalState>>,
+    Path(motor): Path<Motor>,
+) {
+
+    tokio::spawn(async move {
+        let mut motor_driver = state.motor_driver.lock().await;
+
+        for i in 0..10 {
+            motor_driver.set_motor_value(motor, i as f64 / 10f64);
+        }
+
+        for i in -10..=10 {
+            motor_driver.set_motor_value(motor, -i as f64 / 10f64);
+        }
+
+        for i in 0..=10 {
+            motor_driver.set_motor_value(motor, -i as f64 / 10f64);
+        }
+    });
+
 }
 
 #[derive(serde::Deserialize)]

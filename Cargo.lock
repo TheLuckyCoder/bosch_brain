@@ -1093,6 +1093,7 @@ dependencies = [
  "linux-embedded-hal",
  "mint",
  "pwm-pca9685",
+ "serde",
  "tracing",
 ]
 

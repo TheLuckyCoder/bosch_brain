@@ -6,8 +6,8 @@ use serde::Deserialize;
 use tokio::net::UdpSocket;
 
 use crate::math::AlmostEquals;
-use crate::serial;
-use crate::serial::Message;
+use crate::serial_old;
+use crate::serial_old::Message;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 struct SteeringWheelData {
@@ -59,7 +59,7 @@ pub async fn run_steering_wheel_server(path: &str) -> std::io::Result<()> {
             if data.record {
                 append_message_to_file(&message);
             }
-            serial::send_blocking(message)?;
+            serial_old::send_blocking(message)?;
             last_steer = data.steering_angle;
         }
 
@@ -81,7 +81,7 @@ pub async fn run_steering_wheel_server(path: &str) -> std::io::Result<()> {
             if data.record {
                 append_message_to_file(&message);
             }
-            serial::send_blocking(message)?;
+            serial_old::send_blocking(message)?;
             last_speed_percentage = speed_percentage;
         }
     }

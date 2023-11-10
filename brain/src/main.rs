@@ -11,10 +11,12 @@ use tracing_subscriber::util::SubscriberInitExt;
 use sensors::{DistanceSensor, GenericImu, Motor, MotorDriver, SensorManager};
 
 use crate::http::GlobalState;
+use crate::serial::SerialManager;
 
 mod http;
 mod math;
 mod serial;
+mod serial_old;
 mod server;
 mod track;
 
@@ -25,6 +27,13 @@ async fn main() -> Result<(), String> {
         .with(tracing_subscriber::fmt::layer().compact())
         .with(EnvFilter::from_default_env())
         .init();
+
+    // let mut serial_manager = SerialManager::new();
+    // loop {
+    //     if let Some(actions) = serial_manager.read_data() {
+    //         println!("{actions:?}")
+    //     }
+    // }
 
     println!("Start server? [y/N]");
     let mut input = String::new();

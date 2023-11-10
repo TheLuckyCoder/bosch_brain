@@ -6,7 +6,7 @@ use tokio::task;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::serial::Message;
+use crate::serial_old::Message;
 
 pub trait MessageSender {
     fn send_blocking(&'static mut self, message: Message) -> std::io::Result<()>;
