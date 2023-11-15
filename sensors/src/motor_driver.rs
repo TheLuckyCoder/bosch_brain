@@ -31,7 +31,7 @@ const DEFAULT_STEPPER_MOTOR: MotorParams = MotorParams {
 };
 
 fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
-    println!("Final value %: {input}");
+    tracing::info!("Final value %: {input}");
     // Maps an input floating-point number that is between 0.0-100.0 (percentage) to 0-4096
 
     // Ensure input is within the 0.0-100.0 range
@@ -41,11 +41,16 @@ fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
     (clamped_input * 40.96) as u16
 }
 
+struct MotorContents {
+    params: MotorParams,
+    bonnet_channel: Channel,
+    last_value: f64,
+    paused: bool,
+}
+
 pub struct MotorDriver {
     device: Pca9685<I2cdev>,
-    params: [MotorParams; 2],
-    bonnet_channel: [Channel; 2],
-    last_value: [f64; 2],
+    contents: [MotorContents; 2],
 }
 
 impl MotorDriver {
@@ -62,24 +67,36 @@ impl MotorDriver {
 
         Ok(Self {
             device: pwm,
-            params: [DEFAULT_DC_MOTOR, DEFAULT_STEPPER_MOTOR],
-            bonnet_channel: [Channel::C0, Channel::C1],
-            last_value: [f64::INFINITY; 2],
+            contents: [
+                MotorContents {
+                    params: DEFAULT_DC_MOTOR,
+                    bonnet_channel: Channel::C0,
+                    last_value: f64::INFINITY,
+                    paused: false,
+                },
+                MotorContents {
+                    params: DEFAULT_STEPPER_MOTOR,
+                    bonnet_channel: Channel::C1,
+                    last_value: f64::INFINITY,
+                    paused: false,
+                },
+            ],
         })
     }
 
     pub fn set_motor_value(&mut self, motor: Motor, input: f64) {
         let input = input.clamp(-1.0, 1.0);
-        let last_value = &mut self.last_value[motor as usize];
+        let contents = &mut self.contents[motor as usize];
+        let last_value = &mut contents.last_value;
 
-        if (input - *last_value).abs() < 10e-4 {
-            return;
-        }
+        // if (input - *last_value).abs() < 10e-4 {
+        //     return;
+        // }
 
         *last_value = input;
 
-        let params = &self.params[motor as usize];
-        let bonnet_channel = self.bonnet_channel[motor as usize];
+        let params = &contents.params;
+        let bonnet_channel = contents.bonnet_channel;
 
         // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
         // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
@@ -95,17 +112,7 @@ impl MotorDriver {
             params.percentage_middle
         };
 
-        /*let motor_input_percentage: f64 = if (-1.0..0.0).contains(&clamped_input) {
-            -clamped_input * (params.percentage_middle - params.percentage_minimum)
-                + params.percentage_minimum
-        } else if 0.0 < clamped_input && clamped_input <= 1.0 {
-            clamped_input * (params.percentage_maximum - params.percentage_middle)
-                + params.percentage_middle
-        } else {
-            params.percentage_middle
-        };*/
-
-        println!("Params: {params:?}");
+        // println!("Params: {params:?}");
         self.device
             .set_channel_on_off(
                 bonnet_channel,
@@ -116,21 +123,35 @@ impl MotorDriver {
     }
 
     pub fn stop_motor(&mut self, motor: Motor) {
-        let bonnet_channel = self.bonnet_channel[motor as usize];
+        let contents = &mut self.contents[motor as usize];
 
         self.device
-            .set_channel_full_off(bonnet_channel)
+            .set_channel_full_off(contents.bonnet_channel)
             .expect("Failed to set motor input");
-        self.last_value[motor as usize] = f64::INFINITY;
+
+        contents.last_value = f64::INFINITY;
+    }
+
+    pub fn pause_motor(&mut self, motor: Motor) {
+        self.stop_motor(motor);
+        self.contents[motor as usize].paused = true;
+    }
+
+    pub fn resume_motor(&mut self, motor: Motor) {
+        self.contents[motor as usize].paused = false;
     }
 
     pub fn get_params(&self, motor: Motor) -> MotorParams {
-        self.params[motor as usize].clone()
+        let contents = &self.contents[motor as usize];
+
+        contents.params.clone()
     }
 
     pub fn set_params(&mut self, motor: Motor, params: MotorParams) {
-        self.last_value[motor as usize] = f64::INFINITY;
-        self.params[motor as usize] = params
+        let contents = &mut self.contents[motor as usize];
+
+        contents.last_value = f64::INFINITY;
+        contents.params = params
     }
 }
 
