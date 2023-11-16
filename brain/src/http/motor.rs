@@ -50,7 +50,7 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
         .route("/params/:motor", get(get_motor_parameters))
         .route("/params/:motor", post(set_motor_parameters))
         .route("/stop/:motor", post(stop_motor))
-        .route("/set/:motor", post(set_motor_value))
+        .route("/set/:motor/:value", post(set_motor_value))
         .route("/set_all", post(set_all_motors))
         .route("/pause/:motor", post(pause_motor))
         .route("/resume/:motor", post(resume_motor))
@@ -80,12 +80,12 @@ async fn set_motor_parameters(
 
     motor_driver.set_params(motor, params.clone());
 
-    let motor_params_path = get_motor_params_file(motor);
-
-    let file = std::fs::File::create(motor_params_path).unwrap();
-    let mut writer = BufWriter::new(file);
-    serde_json::to_writer(&mut writer, &params).unwrap();
-    writer.flush().unwrap();
+    // let motor_params_path = get_motor_params_file(motor);
+    //
+    // let file = std::fs::File::create(motor_params_path).unwrap();
+    // let mut writer = BufWriter::new(file);
+    // serde_json::to_writer(&mut writer, &params).unwrap();
+    // writer.flush().unwrap();
 }
 
 async fn stop_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
@@ -93,11 +93,20 @@ async fn stop_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mot
 
     motor_driver.stop_motor(motor);
 }
+//
+// async fn set_motor_value(
+//     State(state): State<Arc<GlobalState>>,
+//     Path(motor): Path<Motor>,
+//     Json(value): Json<f64>,
+// ) {
+//     let mut motor_driver = state.motor_driver.lock().await;
+//
+//     motor_driver.set_motor_value(motor, value);
+// }
 
 async fn set_motor_value(
     State(state): State<Arc<GlobalState>>,
-    Path(motor): Path<Motor>,
-    Json(value): Json<f64>,
+    Path((motor, value)): Path<(Motor, f64)>,
 ) {
     let mut motor_driver = state.motor_driver.lock().await;
 
@@ -122,18 +131,19 @@ async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mo
 
         for i in 0..10 {
             motor_driver.set_motor_value(motor, i as f64 / 10f64);
-            std::thread::sleep(Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(150));
         }
 
         for i in -10..=10 {
             motor_driver.set_motor_value(motor, -i as f64 / 10f64);
-            std::thread::sleep(Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(150));
+        }
+        for i in 0..=10 {
+            motor_driver.set_motor_value(motor, (-10+i) as f64 / 10f64);
+            std::thread::sleep(Duration::from_millis(150));
         }
 
-        for i in 0..=10 {
-            motor_driver.set_motor_value(motor, -i as f64 / 10f64);
-            std::thread::sleep(Duration::from_millis(100));
-        }
+        motor_driver.stop_motor(motor);
     });
 }
 
