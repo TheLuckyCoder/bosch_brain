@@ -3,7 +3,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use tokio::task;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
@@ -36,10 +35,7 @@ async fn main() -> Result<(), String> {
         let sensor_manager = Arc::new(SensorManager::new());
         let global_state = GlobalState::new(sensor_manager, motor_driver);
 
-        task::spawn(http::http_server(global_state))
-            .await
-            .unwrap()
-            .unwrap();
+        http::http_server(global_state).await.unwrap();
 
         return Ok(());
     }

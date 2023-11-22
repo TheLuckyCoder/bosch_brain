@@ -10,6 +10,7 @@ use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::time::sleep;
 use tracing::log;
 
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Acceleration];
@@ -26,7 +27,7 @@ fn get_motor_params_file(motor: Motor) -> PathBuf {
     path
 }
 
-fn read_params_from_files(global_state: &Arc<GlobalState>) {
+async fn read_params_from_files(global_state: &Arc<GlobalState>) {
     for motor in ALL_MOTORS {
         let file_path = get_motor_params_file(motor);
         let params_file = match std::fs::File::open(&file_path) {
@@ -41,7 +42,8 @@ fn read_params_from_files(global_state: &Arc<GlobalState>) {
         match serde_json::from_reader(&mut reader) {
             Ok(params) => global_state
                 .motor_driver
-                .blocking_lock()
+                .lock()
+                .await
                 .set_params(motor, params),
             Err(e) => {
                 log::error!("Failed to deserialize {} reason: {e}", file_path.display());
@@ -50,8 +52,8 @@ fn read_params_from_files(global_state: &Arc<GlobalState>) {
     }
 }
 
-pub fn router(global_state: Arc<GlobalState>) -> Router {
-    read_params_from_files(&global_state);
+pub async fn router(global_state: Arc<GlobalState>) -> Router {
+    read_params_from_files(&global_state).await;
 
     Router::new()
         .route("/all", get(get_motors))
@@ -129,16 +131,16 @@ async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mo
 
         for i in 0..10 {
             motor_driver.set_motor_value(motor, i as f64 / 10f64);
-            std::thread::sleep(Duration::from_millis(150));
+            sleep(Duration::from_millis(150)).await;
         }
 
         for i in -10..=10 {
             motor_driver.set_motor_value(motor, -i as f64 / 10f64);
-            std::thread::sleep(Duration::from_millis(150));
+            sleep(Duration::from_millis(150)).await;
         }
         for i in 0..=10 {
             motor_driver.set_motor_value(motor, (-10 + i) as f64 / 10f64);
-            std::thread::sleep(Duration::from_millis(150));
+            sleep(Duration::from_millis(150)).await;
         }
 
         motor_driver.stop_motor(motor);
