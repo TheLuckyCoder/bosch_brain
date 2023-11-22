@@ -10,6 +10,7 @@ use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tracing::log;
 
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Acceleration];
 
@@ -20,7 +21,9 @@ fn get_home_dir() -> PathBuf {
 }
 
 fn get_motor_params_file(motor: Motor) -> PathBuf {
-    get_home_dir().with_file_name(format!("motor_params_{motor:?}.json"))
+    let mut path = get_home_dir();
+    path.push(&format!("motor_params_{motor:?}.json"));
+    path
 }
 
 fn read_params_from_files(global_state: &Arc<GlobalState>) {
@@ -28,17 +31,22 @@ fn read_params_from_files(global_state: &Arc<GlobalState>) {
         let file_path = get_motor_params_file(motor);
         let params_file = match std::fs::File::open(&file_path) {
             Ok(params_file) => params_file,
-            Err(_) => continue,
+            Err(e) => {
+                log::warn!("Failed to read {} reason: {e}", file_path.display());
+                continue;
+            }
         };
         let mut reader = BufReader::new(params_file);
 
-        let params: MotorParams = serde_json::from_reader(&mut reader)
-            .unwrap_or_else(|_| panic!("Failed to deserialize {}", file_path.display()));
-
-        global_state
-            .motor_driver
-            .blocking_lock()
-            .set_params(motor, params)
+        match serde_json::from_reader(&mut reader) {
+            Ok(params) => global_state
+                .motor_driver
+                .blocking_lock()
+                .set_params(motor, params),
+            Err(e) => {
+                log::error!("Failed to deserialize {} reason: {e}", file_path.display());
+            }
+        }
     }
 }
 
@@ -80,12 +88,12 @@ async fn set_motor_parameters(
 
     motor_driver.set_params(motor, params.clone());
 
-    // let motor_params_path = get_motor_params_file(motor);
-    //
-    // let file = std::fs::File::create(motor_params_path).unwrap();
-    // let mut writer = BufWriter::new(file);
-    // serde_json::to_writer(&mut writer, &params).unwrap();
-    // writer.flush().unwrap();
+    let motor_params_path = get_motor_params_file(motor);
+
+    let file = std::fs::File::create(motor_params_path).unwrap_or_else(|e| panic!("{e}"));
+    let mut writer = BufWriter::new(file);
+    serde_json::to_writer(&mut writer, &params).unwrap_or_else(|e| panic!("{e}"));
+    writer.flush().unwrap_or_else(|e| panic!("{e}"));
 }
 
 async fn stop_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
@@ -93,16 +101,6 @@ async fn stop_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mot
 
     motor_driver.stop_motor(motor);
 }
-//
-// async fn set_motor_value(
-//     State(state): State<Arc<GlobalState>>,
-//     Path(motor): Path<Motor>,
-//     Json(value): Json<f64>,
-// ) {
-//     let mut motor_driver = state.motor_driver.lock().await;
-//
-//     motor_driver.set_motor_value(motor, value);
-// }
 
 async fn set_motor_value(
     State(state): State<Arc<GlobalState>>,
@@ -139,7 +137,7 @@ async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mo
             std::thread::sleep(Duration::from_millis(150));
         }
         for i in 0..=10 {
-            motor_driver.set_motor_value(motor, (-10+i) as f64 / 10f64);
+            motor_driver.set_motor_value(motor, (-10 + i) as f64 / 10f64);
             std::thread::sleep(Duration::from_millis(150));
         }
 

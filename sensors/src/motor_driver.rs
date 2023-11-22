@@ -13,21 +13,24 @@ pub enum Motor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MotorParams {
-    pub percentage_minimum: f64,
-    pub percentage_middle: f64,
-    pub percentage_maximum: f64,
+    pub min: f64,
+    pub lower_middle: f64,
+    pub upper_middle: f64,
+    pub max: f64,
 }
 
 const DEFAULT_DC_MOTOR: MotorParams = MotorParams {
-    percentage_minimum: 5.0,
-    percentage_middle: 8.0,
-    percentage_maximum: 11.0,
+    min: 5.0,
+    lower_middle: 7.0,
+    upper_middle: 9.0,
+    max: 11.0,
 };
 
 const DEFAULT_STEPPER_MOTOR: MotorParams = MotorParams {
-    percentage_minimum: 5.0,
-    percentage_middle: 8.0,
-    percentage_maximum: 13.0,
+    min: 7.2,
+    lower_middle: 9.07,
+    upper_middle: 9.07,
+    max: 10.95,
 };
 
 fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
@@ -101,15 +104,13 @@ impl MotorDriver {
         // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
         // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
         let motor_input_percentage = if input != 0.0 {
-            let max_min = if input > 0.0 {
-                params.percentage_maximum
+            if input > 0.0 {
+                params.upper_middle + input * (params.max - params.upper_middle)
             } else {
-                params.percentage_minimum
-            };
-
-            params.percentage_middle + input.abs() * (max_min - params.percentage_middle)
+                params.lower_middle + -input * (params.min - params.lower_middle)
+            }
         } else {
-            params.percentage_middle
+            (params.lower_middle + params.upper_middle) / 2.0
         };
 
         // println!("Params: {params:?}");
