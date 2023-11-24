@@ -63,7 +63,9 @@ pub async fn router(global_state: Arc<GlobalState>) -> Router {
         .route("/set/:motor/:value", post(set_motor_value))
         .route("/set_all", post(set_all_motors))
         .route("/pause/:motor", post(pause_motor))
+        .route("/pause", post(pause_motors))
         .route("/resume/:motor", post(resume_motor))
+        .route("/resume", post(resume_motors))
         .route("/sweep/:motor", post(motor_sweep))
         .with_state(global_state)
 }
@@ -119,10 +121,36 @@ async fn pause_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mo
     motor_driver.pause_motor(motor);
 }
 
+async fn pause_motors(
+    State(state): State<Arc<GlobalState>>,
+    Json(motors): Json<Vec<Motor>>,
+) -> StatusCode {
+    let mut motor_driver = state.motor_driver.lock().await;
+
+    for motor in motors {
+        motor_driver.pause_motor(motor);
+    }
+
+    StatusCode::OK
+}
+
 async fn resume_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
     let mut motor_driver = state.motor_driver.lock().await;
 
     motor_driver.resume_motor(motor);
+}
+
+async fn resume_motors(
+    State(state): State<Arc<GlobalState>>,
+    Json(motors): Json<Vec<Motor>>,
+) -> StatusCode {
+    let mut motor_driver = state.motor_driver.lock().await;
+
+    for motor in motors {
+        motor_driver.resume_motor(motor);
+    }
+
+    StatusCode::OK
 }
 
 async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
