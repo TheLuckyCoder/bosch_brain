@@ -1,11 +1,11 @@
 use crate::http::states::CarStates;
 use crate::http::GlobalState;
+use crate::sensors::{Motor, MotorParams};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use sensors::{Motor, MotorParams};
 use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::sync::Arc;

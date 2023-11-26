@@ -1,17 +1,15 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::http::states::CarStates;
+use crate::http::udp_manager::UdpManager;
+use crate::sensors::{MotorDriver, SensorManager};
 use axum::routing::get;
 use axum::Router;
 use tokio::sync::Mutex;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-
-use sensors::{MotorDriver, SensorManager};
-
-use crate::http::states::CarStates;
-use crate::http::udp_manager::UdpManager;
 
 mod motor;
 mod sensor;

@@ -25,10 +25,10 @@ impl Circle {
             (d * c - a * f) / (2.0 * b * d - 2.0 * a * e),
         );
 
-        Circle::new(
+        Self {
             center,
-            ((center.x - p1.x) * (center.x - p1.x) + (center.y - p1.y) * (center.y - p1.y)).sqrt(),
-        )
+            radius: (center.x - p1.x).hypot(center.y - p1.y),
+        }
     }
 }
 

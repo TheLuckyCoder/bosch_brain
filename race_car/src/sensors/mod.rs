@@ -9,13 +9,6 @@ mod distance;
 mod imu;
 mod motor_driver;
 
-#[derive(Debug)]
-pub enum SensorData {
-    Distance(Option<f32>),
-    Acceleration(mint::Vector3<f32>),
-    Gyroscope(mint::Quaternion<f32>),
-}
-
 pub struct SensorManager {
     imu: Option<Mutex<GenericImu>>,
     distance_sensor: Option<Mutex<DistanceSensor>>,

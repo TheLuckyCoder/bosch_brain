@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context};
 use bno055::{BNO055OperationMode, Bno055};
 use linux_embedded_hal::{Delay, I2cdev};
 use std::thread::sleep;
@@ -10,25 +11,30 @@ impl GenericImu {
     /**
      * THIS SHOULD ONLY BE CALLED ONCE
      */
-    pub fn new() -> Result<Self, String> {
-        let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| e.to_string())?;
+    pub fn new() -> anyhow::Result<Self> {
+        let i2c =
+            I2cdev::new("/dev/i2c-1").map_err(|e| anyhow!("Failed to open I2C device: {e}"))?;
 
         let mut imu = Bno055::new(i2c).with_alternative_address();
         let mut delay = Delay {};
 
-        imu.init(&mut delay).map_err(|e| e.to_string())?;
+        imu.init(&mut delay)
+            .map_err(|e| anyhow!("Failed to init IMU: {e}"))?;
         imu.set_mode(BNO055OperationMode::NDOF, &mut delay)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| anyhow!("Failed to set IMU mode: {e}"))?;
 
         Ok(Self(imu))
     }
 
-    pub fn get_temperature(&mut self) -> Result<i8, String> {
-        self.0.temperature().map_err(|e| e.to_string())
+    pub fn get_temperature(&mut self) -> anyhow::Result<i8> {
+        self.0.temperature().context("Failed to get temperature")
     }
 
-    pub fn is_calibrated(&mut self) -> Result<bool, String> {
-        let calibration_status = self.0.get_calibration_status().map_err(|e| e.to_string())?;
+    pub fn is_calibrated(&mut self) -> anyhow::Result<bool> {
+        let calibration_status = self
+            .0
+            .get_calibration_status()
+            .context("Failed to get calibration status")?;
 
         debug!("IMU Calibration Status: {:?}", calibration_status);
 
@@ -38,16 +44,19 @@ impl GenericImu {
             || calibration_status.mag != 3))
     }
 
-    pub fn start_calibration(&mut self) -> Result<(), String> {
+    pub fn start_calibration(&mut self) -> anyhow::Result<()> {
         // Set the sensor to CONFIG mode for calibration.
         let mut delay = Delay {};
         self.0
             .set_mode(BNO055OperationMode::CONFIG_MODE, &mut delay)
-            .map_err(|e| e.to_string())?;
+            .context("Failed to set IMU Mode")?;
 
         // Start calibration and wait until it's complete.
         loop {
-            let calibration_status = self.0.get_calibration_status().map_err(|e| e.to_string())?;
+            let calibration_status = self
+                .0
+                .get_calibration_status()
+                .context("Failed to get calibration status")?;
             debug!("IMU Calibration Status: {:?}", calibration_status);
 
             // Check if all three calibration values are 3 to indicate full calibration.
@@ -64,7 +73,7 @@ impl GenericImu {
 
         self.0
             .set_mode(BNO055OperationMode::NDOF, &mut delay)
-            .map_err(|e| e.to_string())
+            .context("Failed to set IMU Mode")
     }
 
     pub fn get_acceleration(&mut self) -> mint::Vector3<f32> {

@@ -1,13 +1,13 @@
+use crate::http::udp_manager::UdpActiveSensor;
+use crate::http::GlobalState;
+use axum::extract::{ConnectInfo, State};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::routing::{get, post};
+use axum::{Json, Router};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use axum::extract::{ConnectInfo, State};
-use axum::response::IntoResponse;
-use axum::{Json, Router};
-use axum::http::StatusCode;
-use axum::routing::{get, post};
-use crate::http::GlobalState;
-use crate::http::udp_manager::UdpActiveSensor;
 
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
@@ -16,9 +16,7 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
         .with_state(global_state)
 }
 
-async fn get_all_available_sensors(
-    State(state): State<Arc<GlobalState>>,
-) -> impl IntoResponse {
+async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let sensor_manager = &state.sensor_manager;
 
     Json(HashMap::from([

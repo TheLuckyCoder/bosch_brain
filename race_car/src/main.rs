@@ -1,21 +1,14 @@
-#![allow(dead_code)]
-
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::http::GlobalState;
+use crate::sensors::{DistanceSensor, GenericImu, Motor, MotorDriver, SensorManager};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
-use sensors::{DistanceSensor, GenericImu, Motor, MotorDriver, SensorManager};
-
-use crate::http::GlobalState;
-
 mod http;
-mod math;
-mod serial_old;
-mod server;
-mod track;
+mod sensors;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {

@@ -9,7 +9,7 @@ use tokio::task;
 use tokio::task::JoinHandle;
 use tracing::info;
 
-use crate::serial_old::sender::{MessageSender, SerialMessageSender};
+use crate::serial::sender::{MessageSender, SerialMessageSender};
 
 pub use self::message::*;
 

@@ -1,0 +1,36 @@
+[package]
+name = "race_car"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared" }
+
+# Async
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread", "sync", "net"] }
+
+# HTTP
+axum = "0.6"
+tower = "0.4"
+tower-http = { version = "0.4.4", features = ["trace"] }
+axum-server = { version = "0.5", default-features = false }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+anyhow = "1"
+
+### Sensors
+linux-embedded-hal = "0.3"
+# HC-SR04 Ultrasonic sensor
+hc-sr04 = "0.1"
+bno055 = { version = "0.3", features = ["std"] }
+htu2xd = "0.1"
+pwm-pca9685 = "0.3"
+
+mint = "0.5"

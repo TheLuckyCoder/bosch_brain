@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use crate::http::GlobalState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::{Json, Router};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use crate::http::GlobalState;
-use serde::{Serialize, Deserialize};
+use axum::{Json, Router};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum CarStates {

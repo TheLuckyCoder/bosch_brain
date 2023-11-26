@@ -2,8 +2,8 @@ use crate::math::CarPosition;
 
 // TODO measure these
 const LONGITUDINAL_WHEEL_SEPARATION_DISTANCE: f64 = 26.0; // cm
-const MAX_SPEED: f64 = 25.0; // cm/s
-const MAX_ACCELERATION: f64 = 50.0; // cm/s^2
+                                                          // const MAX_SPEED: f64 = 25.0; // cm/s
+                                                          // const MAX_ACCELERATION: f64 = 50.0; // cm/s^2
 const MAX_STEERING_ANGLE: f64 = 0.366519; // around 21 deg
 
 // pub fn move_towards_point(position: &CarPosition, target: Point) -> CarPos {

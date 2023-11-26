@@ -2,9 +2,8 @@ use std::net::UdpSocket;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::sensors::SensorManager;
 use tracing::warn;
-
-use sensors::SensorManager;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UdpActiveSensor {
@@ -18,13 +17,13 @@ pub struct UdpManager {
     address: Mutex<Option<String>>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize)]
 struct UdpImuData {
     acceleration: [f32; 3],
     quaternion: [f32; 4],
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize)]
 struct UdpData {
     imu: Option<UdpImuData>,
     distance: Option<f32>,

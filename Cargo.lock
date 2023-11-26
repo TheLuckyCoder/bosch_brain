@@ -193,23 +193,18 @@ name = "bosch_brain"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "axum",
- "axum-server",
  "crossbeam-channel",
  "digest",
  "md-5",
- "mint",
  "mio-serial",
  "ordered-float",
  "rsa",
- "sensors",
  "serde",
  "serde_json",
  "serde_repr",
  "serialport",
+ "shared",
  "tokio",
- "tower",
- "tower-http",
  "tracing",
  "tracing-subscriber",
 ]
@@ -964,6 +959,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "race_car"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-server",
+ "bno055",
+ "hc-sr04",
+ "htu2xd",
+ "linux-embedded-hal",
+ "mint",
+ "pwm-pca9685",
+ "serde",
+ "serde_json",
+ "shared",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "rand"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1090,20 +1108,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
-name = "sensors"
-version = "1.0.0"
-dependencies = [
- "bno055",
- "hc-sr04",
- "htu2xd",
- "linux-embedded-hal",
- "mint",
- "pwm-pca9685",
- "serde",
- "tracing",
-]
-
-[[package]]
 name = "serde"
 version = "1.0.193"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1213,6 +1217,10 @@ checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
 ]
+
+[[package]]
+name = "shared"
+version = "1.0.0"
 
 [[package]]
 name = "signature"
