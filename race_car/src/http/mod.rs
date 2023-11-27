@@ -56,5 +56,6 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
 
     println!("Server started on port {PORT}");
 
-    axum_server::bind(addr).serve(http_service).await
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, http_service).await
 }
