@@ -10,6 +10,7 @@ use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::task;
 use tokio::time::sleep;
 use tracing::log;
 
@@ -94,10 +95,15 @@ async fn set_motor_parameters(
 
     let motor_params_path = get_motor_params_file(motor);
 
-    let file = std::fs::File::create(motor_params_path).unwrap_or_else(|e| panic!("{e}"));
-    let mut writer = BufWriter::new(file);
-    serde_json::to_writer(&mut writer, &params).unwrap_or_else(|e| panic!("{e}"));
-    writer.flush().unwrap_or_else(|e| panic!("{e}"));
+    task::spawn_blocking(move || {
+        let file = std::fs::File::create(motor_params_path).unwrap_or_else(|e| panic!("{e}"));
+        let mut writer = BufWriter::new(file);
+
+        serde_json::to_writer(&mut writer, &params).unwrap_or_else(|e| panic!("{e}"));
+        writer.flush().unwrap_or_else(|e| panic!("{e}"));
+    })
+    .await
+    .unwrap();
 }
 
 async fn stop_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
