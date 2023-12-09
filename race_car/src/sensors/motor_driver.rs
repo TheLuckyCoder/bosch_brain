@@ -20,10 +20,10 @@ pub struct MotorParams {
 }
 
 const DEFAULT_DC_MOTOR: MotorParams = MotorParams {
-    min: 5.0,
-    lower_middle: 7.0,
-    upper_middle: 9.0,
-    max: 11.0,
+    min: 8.2,
+    lower_middle: 8.6,
+    upper_middle: 9.05,
+    max: 9.08,
 };
 
 const DEFAULT_STEPPER_MOTOR: MotorParams = MotorParams {
@@ -92,9 +92,13 @@ impl MotorDriver {
         let contents = &mut self.contents[motor as usize];
         let last_value = &mut contents.last_value;
 
-        // if (input - *last_value).abs() < 10e-4 {
-        //     return;
-        // }
+        if contents.paused {
+            return;
+        }
+
+        if (input - *last_value).abs() < 10e-6 {
+            return;
+        }
 
         *last_value = input;
 

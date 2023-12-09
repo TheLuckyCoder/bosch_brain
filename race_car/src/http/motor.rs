@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::task;
 use tokio::time::sleep;
-use tracing::log;
+use tracing::{info, log};
 
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Acceleration];
 
@@ -91,16 +91,18 @@ async fn set_motor_parameters(
 ) {
     let mut motor_driver = state.motor_driver.lock().await;
 
+    info!("Motor params received: {params:?}");
     motor_driver.set_params(motor, params.clone());
 
     let motor_params_path = get_motor_params_file(motor);
 
     task::spawn_blocking(move || {
-        let file = std::fs::File::create(motor_params_path).unwrap_or_else(|e| panic!("{e}"));
+        let file = std::fs::File::create(motor_params_path).unwrap();
         let mut writer = BufWriter::new(file);
 
-        serde_json::to_writer(&mut writer, &params).unwrap_or_else(|e| panic!("{e}"));
-        writer.flush().unwrap_or_else(|e| panic!("{e}"));
+        serde_json::to_writer(&mut writer, &params).unwrap();
+        writer.flush().unwrap();
+        writer.get_ref().sync_all().unwrap();
     })
     .await
     .unwrap();
@@ -196,6 +198,11 @@ async fn set_all_motors(
     }
 
     let mut motor = state.motor_driver.lock().await;
+
+    info!(
+        "Motor Values received: Acceleration({}) Steering({})",
+        values.acceleration, values.steering
+    );
 
     motor.set_motor_value(Motor::Acceleration, values.acceleration);
     motor.set_motor_value(Motor::Steering, values.steering);

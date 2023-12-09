@@ -8,9 +8,10 @@ shared = { path = "../shared" }
 
 # Async
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread", "sync", "net"] }
+multiqueue2 = "0.1.7"
 
 # HTTP
-axum = "0.7"
+axum = { version = "0.7", features = ["http2"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["trace"] }
 

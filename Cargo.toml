@@ -6,5 +6,8 @@ members = [
     "race_car"
 ]
 
+[profile.dev.package."*"]
+opt-level = 1
+
 [profile.release]
 incremental = true
