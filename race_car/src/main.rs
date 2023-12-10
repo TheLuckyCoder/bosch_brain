@@ -1,11 +1,11 @@
-use std::sync::Arc;
 use std::time::Duration;
 
-use crate::http::GlobalState;
-use crate::sensors::{DistanceSensor, GenericImu, Motor, MotorDriver, SensorManager};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
+
+use crate::http::GlobalState;
+use crate::sensors::{UltrasonicSensor, ImuSensor, Motor, MotorDriver, SensorManager};
 
 mod http;
 mod sensors;
@@ -25,7 +25,7 @@ async fn main() -> Result<(), String> {
     let mut motor_driver = MotorDriver::new().unwrap();
 
     if input.trim().to_ascii_lowercase() == "y" {
-        let sensor_manager = Arc::new(SensorManager::new());
+        let sensor_manager = SensorManager::new();
         let global_state = GlobalState::new(sensor_manager, motor_driver);
 
         http::http_server(global_state).await.unwrap();
@@ -35,8 +35,8 @@ async fn main() -> Result<(), String> {
 
     println!("Started manual mode");
 
-    let mut imu = GenericImu::new().unwrap();
-    let mut distance_sensor = DistanceSensor::new(22f32).unwrap();
+    let mut imu = ImuSensor::new().unwrap();
+    let mut distance_sensor = UltrasonicSensor::new(22f32).unwrap();
 
     let mut angle = 0;
     loop {

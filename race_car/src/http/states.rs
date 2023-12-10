@@ -1,11 +1,13 @@
-use crate::http::GlobalState;
+use std::sync::Arc;
+
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+
+use crate::http::GlobalState;
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum CarStates {
@@ -44,6 +46,19 @@ async fn set_current_state(
     let mut car_state_guard = state.car_state.lock().await;
 
     *car_state_guard = new_car_state;
+
+    let mut sensor_manager = state.sensor_manager.lock().await;
+
+    match new_car_state {
+        CarStates::Standby => sensor_manager.reset(),
+        CarStates::Config => sensor_manager.reset(),
+        CarStates::RemoteControlled => {
+            sensor_manager.listen_to_all_sensors();
+        } // TODO Do something with it
+        CarStates::AutonomousControlled => {
+            sensor_manager.listen_to_all_sensors();
+        }
+    }
 
     StatusCode::OK
 }

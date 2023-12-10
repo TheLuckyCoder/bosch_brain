@@ -17,12 +17,12 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
 }
 
 async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
-    let sensor_manager = &state.sensor_manager;
+    let sensor_manager = &state.sensor_manager.lock().await;
 
     Json(HashMap::from([
-        ("IMU", sensor_manager.check_imu()),
-        ("Ultrasonic", sensor_manager.check_distance_sensor()),
-        ("Camera", sensor_manager.check_camera()),
+        ("IMU", sensor_manager.imu().is_some()),
+        ("Ultrasonic", sensor_manager.distance_sensor().is_some()),
+        ("Camera", false),
         ("Temperature", false),
         ("GPS", false),
     ]))
@@ -48,7 +48,7 @@ async fn set_udp_sensor(
         return StatusCode::BAD_REQUEST;
     }
 
-    let sensors = sensors.into_iter().filter_map(|sensor| sensor).collect();
+    let sensors = sensors.into_iter().flatten().collect();
 
     state
         .udp_manager

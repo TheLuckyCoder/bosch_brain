@@ -19,12 +19,13 @@ mod udp_manager;
 pub struct GlobalState {
     pub car_state: Mutex<CarStates>,
     pub udp_manager: Arc<UdpManager>,
-    pub sensor_manager: Arc<SensorManager>,
+    pub sensor_manager: Arc<Mutex<SensorManager>>,
     pub motor_driver: Mutex<MotorDriver>,
 }
 
 impl GlobalState {
-    pub fn new(sensor_manager: Arc<SensorManager>, motor_driver: MotorDriver) -> Self {
+    pub fn new(sensor_manager: SensorManager, motor_driver: MotorDriver) -> Self {
+        let sensor_manager = Arc::new(Mutex::new(sensor_manager));
         Self {
             car_state: Mutex::default(),
             udp_manager: UdpManager::new(sensor_manager.clone())

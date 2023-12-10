@@ -1,36 +1,30 @@
-use anyhow::{anyhow, Context};
-use bno055::{BNO055OperationMode, Bno055};
-use linux_embedded_hal::{Delay, I2cdev};
 use std::thread::sleep;
 use std::time::Duration;
-use tracing::debug;
 
-pub struct GenericImu(Bno055<I2cdev>);
+use anyhow::Context;
+use bno055::{BNO055OperationMode, Bno055};
+use linux_embedded_hal::{Delay, I2cdev};
+use tracing::{debug, error};
 
-impl GenericImu {
-    /**
-     * THIS SHOULD ONLY BE CALLED ONCE
-     */
+use crate::sensors::{BasicSensor, SensorData};
+
+pub struct ImuSensor(Bno055<I2cdev>);
+
+impl ImuSensor {
     pub fn new() -> anyhow::Result<Self> {
-        let i2c =
-            I2cdev::new("/dev/i2c-1").map_err(|e| anyhow!("Failed to open I2C device: {e}"))?;
+        let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device: {e}")?;
 
         let mut imu = Bno055::new(i2c).with_alternative_address();
         let mut delay = Delay {};
 
-        imu.init(&mut delay)
-            .map_err(|e| anyhow!("Failed to init IMU: {e}"))?;
+        imu.init(&mut delay).context("Failed to init IMU: {e}")?;
         imu.set_mode(BNO055OperationMode::NDOF, &mut delay)
-            .map_err(|e| anyhow!("Failed to set IMU mode: {e}"))?;
+            .context("Failed to set IMU mode: {e}")?;
 
         Ok(Self(imu))
     }
 
-    pub fn get_temperature(&mut self) -> anyhow::Result<i8> {
-        self.0.temperature().context("Failed to get temperature")
-    }
-
-    pub fn is_calibrated(&mut self) -> anyhow::Result<bool> {
+    pub fn check_is_calibrated(&mut self) -> anyhow::Result<bool> {
         let calibration_status = self
             .0
             .get_calibration_status()
@@ -79,14 +73,33 @@ impl GenericImu {
     pub fn get_acceleration(&mut self) -> mint::Vector3<f32> {
         match self.0.linear_acceleration() {
             Ok(v) => v,
-            Err(e) => panic!("Sensor probably not in fusion mode: {e}"),
+            Err(e) => {
+                error!("IMU probably not in fusion mode: {e}");
+                mint::Vector3::from([f32::NAN; 3])
+            }
         }
     }
 
     pub fn get_quaternion(&mut self) -> mint::Quaternion<f32> {
         match self.0.quaternion() {
             Ok(v) => v,
-            Err(e) => panic!("Sensor probably not in fusion mode: {e}"),
+            Err(e) => {
+                error!("IMU probably not in fusion mode: {e}");
+                mint::Quaternion::from([f32::NAN; 4])
+            }
+        }
+    }
+}
+
+impl BasicSensor for ImuSensor {
+    fn name(&self) -> &'static str {
+        "IMU"
+    }
+
+    fn read_data(&mut self) -> SensorData {
+        SensorData::Imu {
+            quaternion: self.get_quaternion(),
+            acceleration: self.get_acceleration(),
         }
     }
 }

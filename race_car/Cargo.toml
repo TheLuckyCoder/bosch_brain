@@ -33,4 +33,4 @@ bno055 = { version = "0.3", features = ["std"] }
 htu2xd = "0.1"
 pwm-pca9685 = "0.3"
 
-mint = "0.5"
+mint = { version = "0.5", features = ["serde"] }

@@ -1,69 +1,21 @@
-use std::sync::Mutex;
-use tracing::error;
-
-pub use distance::*;
+pub use data::*;
 pub use imu::*;
+pub use manager::*;
 pub use motor_driver::*;
+pub use ultrasonic::*;
 
-mod distance;
+mod data;
 mod imu;
+mod manager;
 mod motor_driver;
+mod ultrasonic;
 
-pub struct SensorManager {
-    imu: Option<Mutex<GenericImu>>,
-    distance_sensor: Option<Mutex<DistanceSensor>>,
-}
+trait BasicSensor {
+    fn name(&self) -> &'static str;
 
-impl SensorManager {
-    pub fn new() -> Self {
-        Self {
-            imu: GenericImu::new()
-                .map(|imu| Mutex::new(imu))
-                .map_err(|e| error!("Generic IMU failed to initialize: {e}"))
-                .ok(),
-            // TODO Don't hardcode temperature
-            distance_sensor: DistanceSensor::new(21f32)
-                .map(|sensor| Mutex::new(sensor))
-                .map_err(|e| error!("Distance Sensor failed to initialize: {e}"))
-                .ok(),
-            // TODO Camera
-        }
+    fn read_data(&mut self) -> SensorData;
+
+    fn read_data_timed(&mut self) -> TimedSensorData {
+        TimedSensorData::new(self.read_data())
     }
-
-    pub fn check_imu(&self) -> bool {
-        self.imu.is_some()
-    }
-
-    pub fn check_distance_sensor(&self) -> bool {
-        self.distance_sensor.is_some()
-    }
-
-    pub fn check_camera(&self) -> bool {
-        false
-    }
-
-    pub fn imu(&self) -> &Mutex<GenericImu> {
-        self.imu.as_ref().unwrap()
-    }
-
-    pub fn distance_sensor(&self) -> &Mutex<DistanceSensor> {
-        self.distance_sensor.as_ref().unwrap()
-    }
-
-    // pub fn get_sensor_data(&mut self) -> Result<Receiver<SensorData>, String> {
-    //     let (tx, rx) = crossbeam_channel::unbounded();
-
-    // std::thread::spawn(move || loop {
-    //     std::thread::sleep(Duration::from_millis(100));
-    //
-    //     tx.send(SensorData::Distance(distance_sensor.get_distance_cm()))
-    //         .unwrap();
-    //     tx.send(SensorData::Acceleration(imu.get_acceleration()))
-    //         .unwrap();
-    //     tx.send(SensorData::Gyroscope(imu.get_quaternion()))
-    //         .unwrap();
-    // });
-
-    // Ok(rx)
-    // }
 }

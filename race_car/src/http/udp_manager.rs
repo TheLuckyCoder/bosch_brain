@@ -1,6 +1,7 @@
 use std::net::UdpSocket;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 
 use crate::sensors::SensorManager;
 use tracing::warn;
@@ -30,7 +31,7 @@ struct UdpData {
 }
 
 impl UdpManager {
-    pub fn new(sensor_manager: Arc<SensorManager>) -> std::io::Result<Arc<Self>> {
+    pub fn new(sensor_manager: Arc<Mutex<SensorManager>>) -> std::io::Result<Arc<Self>> {
         let udp_manager = Arc::new(Self::default());
 
         let server = UdpSocket::bind("0.0.0.0:3000")?;
@@ -40,33 +41,34 @@ impl UdpManager {
         std::thread::spawn(move || loop {
             std::thread::sleep(Duration::from_millis(100));
 
-            let address = match udp_manager.address.lock().unwrap().clone() {
+            let address = match udp_manager.address.blocking_lock().clone() {
                 None => continue,
                 Some(address) => address,
             };
 
-            let active_sensors = udp_manager.active_sensors.lock().unwrap().clone();
+            let active_sensors = udp_manager.active_sensors.blocking_lock().clone();
 
             let mut udp_data = UdpData {
                 imu: None,
                 distance: None,
             };
 
+            let mut guard = sensor_manager.blocking_lock();
             for sensor in active_sensors {
                 match sensor {
                     UdpActiveSensor::Imu => {
-                        let mut imu = sensor_manager.imu().lock().unwrap();
-
-                        udp_data.imu = Some(UdpImuData {
-                            acceleration: imu.get_acceleration().into(),
-                            quaternion: imu.get_quaternion().into(),
-                        });
+                        // let imu = guard.imu().unwrap();
+                        //
+                        // udp_data.imu = Some(UdpImuData {
+                        //     acceleration: imu.get_acceleration().into(),
+                        //     quaternion: imu.get_quaternion().into(),
+                        // });
                     }
                     UdpActiveSensor::Ultrasonic => {
-                        let mut distance_sensor = sensor_manager.distance_sensor().lock().unwrap();
+                        // let distance_sensor = guard.distance_sensor().unwrap();
 
-                        udp_data.distance =
-                            Some(distance_sensor.get_distance_cm().unwrap_or(f32::NAN));
+                        // udp_data.distance =
+                        //     Some(distance_sensor.get_distance_cm().unwrap_or(f32::NAN));
                     }
                 };
             }
@@ -83,8 +85,8 @@ impl UdpManager {
     }
 
     pub fn set_active_sensor(&self, sensor: Vec<UdpActiveSensor>, address: String) {
-        *self.active_sensors.lock().unwrap() = sensor;
-        *self.address.lock().unwrap() = Some(address);
+        *self.active_sensors.blocking_lock() = sensor;
+        *self.address.blocking_lock() = Some(address);
     }
 }
 
