@@ -9,6 +9,7 @@ mod imu;
 mod manager;
 mod motor_driver;
 mod ultrasonic;
+mod gps;
 
 trait BasicSensor {
     fn name(&self) -> &'static str;
