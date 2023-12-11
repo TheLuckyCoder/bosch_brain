@@ -1,4 +1,7 @@
+use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -6,8 +9,9 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use tokio::task;
 
-use crate::http::GlobalState;
+use crate::http::{get_home_dir, GlobalState};
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum CarStates {
@@ -45,6 +49,10 @@ async fn set_current_state(
 ) -> StatusCode {
     let mut car_state_guard = state.car_state.lock().await;
 
+    if *car_state_guard == new_car_state {
+        return StatusCode::OK;
+    }
+
     *car_state_guard = new_car_state;
 
     let mut sensor_manager = state.sensor_manager.lock().await;
@@ -53,7 +61,27 @@ async fn set_current_state(
         CarStates::Standby => sensor_manager.reset(),
         CarStates::Config => sensor_manager.reset(),
         CarStates::RemoteControlled => {
-            sensor_manager.listen_to_all_sensors();
+            let receiver = sensor_manager.listen_to_all_sensors();
+
+            task::spawn_blocking(move || {
+                let system_time = SystemTime::now();
+                let mut path = get_home_dir();
+                path.push(format!(
+                    "{}.log",
+                    system_time
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                ));
+                let mut output_file = File::create(path).unwrap();
+
+                while let Ok(data) = receiver.recv() {
+                    output_file
+                        .write_all(serde_json::to_string(&data).unwrap().as_bytes())
+                        .unwrap();
+                    output_file.write(&[b'\n']).unwrap();
+                }
+            });
         } // TODO Do something with it
         CarStates::AutonomousControlled => {
             sensor_manager.listen_to_all_sensors();

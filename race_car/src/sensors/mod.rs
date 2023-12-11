@@ -5,13 +5,13 @@ pub use motor_driver::*;
 pub use ultrasonic::*;
 
 mod data;
+mod gps;
 mod imu;
 mod manager;
 mod motor_driver;
 mod ultrasonic;
-mod gps;
 
-trait BasicSensor {
+pub trait BasicSensor {
     fn name(&self) -> &'static str;
 
     fn read_data(&mut self) -> SensorData;

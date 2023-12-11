@@ -12,14 +12,14 @@ pub struct ImuSensor(Bno055<I2cdev>);
 
 impl ImuSensor {
     pub fn new() -> anyhow::Result<Self> {
-        let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device: {e}")?;
+        let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device")?;
 
         let mut imu = Bno055::new(i2c).with_alternative_address();
         let mut delay = Delay {};
 
-        imu.init(&mut delay).context("Failed to init IMU: {e}")?;
+        imu.init(&mut delay).context("Failed to init IMU")?;
         imu.set_mode(BNO055OperationMode::NDOF, &mut delay)
-            .context("Failed to set IMU mode: {e}")?;
+            .context("Failed to set IMU mode")?;
 
         Ok(Self(imu))
     }

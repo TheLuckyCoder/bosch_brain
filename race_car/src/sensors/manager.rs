@@ -3,17 +3,19 @@ use std::sync::mpsc::TrySendError;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, info, warn};
 
+use crate::sensors::gps::Gps;
 use crate::sensors::{BasicSensor, ImuSensor, TimedSensorData, UltrasonicSensor};
 
 enum ManagerState {
     Normal {
         imu: Option<ImuSensor>,
         ultrasonic: Option<UltrasonicSensor>,
+        gps: Option<Gps>,
     },
     Reading {
         is_active: Arc<AtomicBool>,
@@ -31,13 +33,16 @@ impl SensorManager {
             .map_err(|e| error!("IMU failed to initialize: {e}"))
             .ok();
         let ultrasonic = UltrasonicSensor::new(21f32)
-            .map_err(|e| error!("Distance Sensor failed to initialize: {e}"))
+            .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e}"))
             .ok();
+        let gps = Gps::new()
+            .map_err(|e| error!("GPS failed to initialize: {e}"))
+            .ok();
+
         let state = ManagerState::Normal {
             imu,
-            // TODO Don't hardcode temperature
             ultrasonic,
-            // TODO Camera
+            gps,
         };
 
         Self { state }
@@ -57,12 +62,17 @@ impl SensorManager {
         }
     }
 
-    fn get_sensors(&self) -> Vec<&dyn BasicSensor> {
+    pub fn get_active_sensors(&self) -> Vec<&dyn BasicSensor> {
         match &self.state {
-            ManagerState::Normal { imu, ultrasonic } => {
+            ManagerState::Normal {
+                imu,
+                ultrasonic,
+                gps,
+            } => {
                 let sensors = [
                     imu.as_ref().map(|x| x as &dyn BasicSensor),
                     ultrasonic.as_ref().map(|x| x as &dyn BasicSensor),
+                    gps.as_ref().map(|x| x as &dyn BasicSensor),
                 ];
 
                 sensors.into_iter().flatten().collect()
@@ -107,14 +117,20 @@ impl SensorManager {
                         }
                     }
                 }
+
+                thread::sleep(Duration::from_millis(200)); // TODO Remove
             }
         })
     }
 
     pub fn listen_to_all_sensors(&mut self) -> BroadcastReceiver<TimedSensorData> {
         match &mut self.state {
-            ManagerState::Normal { imu, ultrasonic } => {
-                let (tx, rx) = broadcast_queue(32);
+            ManagerState::Normal {
+                imu,
+                ultrasonic,
+                gps,
+            } => {
+                let (tx, rx) = broadcast_queue(16);
 
                 let is_active = Arc::new(AtomicBool::new(true));
                 let handles = vec![];
@@ -123,7 +139,10 @@ impl SensorManager {
                     Self::spawn_reading_thread(imu, is_active.clone(), tx.clone());
                 }
                 if let Some(ultrasonic) = ultrasonic.take() {
-                    Self::spawn_reading_thread(ultrasonic, is_active.clone(), tx);
+                    Self::spawn_reading_thread(ultrasonic, is_active.clone(), tx.clone());
+                }
+                if let Some(gps) = gps.take() {
+                    Self::spawn_reading_thread(gps, is_active.clone(), tx);
                 }
 
                 self.state = ManagerState::Reading { is_active, handles };
@@ -134,5 +153,28 @@ impl SensorManager {
         }
     }
 
-    pub fn reset(&mut self) {}
+    pub fn reset(&mut self) {
+        match &mut self.state {
+            ManagerState::Normal {
+                imu,
+                ultrasonic,
+                gps,
+            } => {
+                drop(imu.take());
+                drop(ultrasonic.take());
+                drop(gps.take());
+            }
+            ManagerState::Reading { is_active, handles } => {
+                is_active.store(false, Ordering::Release);
+
+                let mut h = vec![];
+                std::mem::swap(handles, &mut h);
+                h.into_iter().for_each(|handle| {
+                    handle.join().unwrap();
+                });
+            }
+        }
+
+        self.state = SensorManager::new().state;
+    }
 }

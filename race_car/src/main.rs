@@ -1,11 +1,9 @@
-use std::time::Duration;
-
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
 use crate::http::GlobalState;
-use crate::sensors::{UltrasonicSensor, ImuSensor, Motor, MotorDriver, SensorManager};
+use crate::sensors::{MotorDriver, SensorManager};
 
 mod http;
 mod sensors;
@@ -18,44 +16,12 @@ async fn main() -> Result<(), String> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    println!("Start server? [y/N]");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
+    let motor_driver = MotorDriver::new().unwrap();
 
-    let mut motor_driver = MotorDriver::new().unwrap();
+    let sensor_manager = SensorManager::new();
+    let global_state = GlobalState::new(sensor_manager, motor_driver);
 
-    if input.trim().to_ascii_lowercase() == "y" {
-        let sensor_manager = SensorManager::new();
-        let global_state = GlobalState::new(sensor_manager, motor_driver);
+    http::http_server(global_state).await.unwrap();
 
-        http::http_server(global_state).await.unwrap();
-
-        return Ok(());
-    }
-
-    println!("Started manual mode");
-
-    let mut imu = ImuSensor::new().unwrap();
-    let mut distance_sensor = UltrasonicSensor::new(22f32).unwrap();
-
-    let mut angle = 0;
-    loop {
-        println!(
-            "Acc: {:?} ; Quat: {:?}",
-            imu.get_acceleration(),
-            imu.get_quaternion()
-        );
-        println!(
-            "Distance: {}",
-            distance_sensor.get_distance_cm().unwrap_or(f32::NAN)
-        );
-        motor_driver.set_motor_value(Motor::Acceleration, 0.5);
-        motor_driver.set_motor_value(Motor::Steering, angle as f64 / 10.0);
-        angle += 1;
-        if angle == 9 {
-            angle = 0;
-        }
-        std::thread::sleep(Duration::from_millis(400));
-    }
-    // Ok(())
+    return Ok(());
 }

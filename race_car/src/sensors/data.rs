@@ -2,6 +2,14 @@ use mint::{Quaternion, Vector3};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct GpsCoordinates {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub confidence: u8,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum SensorData {
     Imu {
@@ -9,9 +17,10 @@ pub enum SensorData {
         acceleration: Vector3<f32>,
     },
     Distance(f32),
+    Gps(GpsCoordinates),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TimedSensorData {
     pub data: SensorData,
     pub timestamp: Duration,

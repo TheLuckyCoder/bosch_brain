@@ -1,5 +1,4 @@
 use hc_sr04::{HcSr04, Unit};
-use tracing::debug;
 
 use crate::sensors::{BasicSensor, SensorData};
 
@@ -15,9 +14,9 @@ impl UltrasonicSensor {
             .map_err(|e| e.to_string())
     }
 
-    pub fn start_calibration(&self) {
-        debug!("Not yet implemented");
-    }
+    // pub fn start_calibration(&self) {
+    //     debug!("Not yet implemented");
+    // }
 
     ///
     /// Returns the distance in centimeters.

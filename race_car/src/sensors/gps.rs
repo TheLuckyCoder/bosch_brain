@@ -1,72 +1,107 @@
+use std::io::{Read, Write};
+use std::time::Duration;
+
+use serialport::{DataBits, Parity, StopBits, TTYPort};
+use tracing::{error, info};
+
+use crate::sensors::{BasicSensor, GpsCoordinates, SensorData};
+
 pub struct Gps {
+    serial: TTYPort,
     buffer: Vec<u8>,
 }
 
 impl Gps {
-    pub fn new() -> anyhow::Result<>{
+    pub fn new() -> anyhow::Result<Gps> {
         let mut serial = serialport::new(
             "/dev/serial/by-id/usb-SEGGER_J-Link_000760170010-if00",
             115200,
         )
-            .data_bits(DataBits::Eight)
-            .parity(Parity::None)
-            .stop_bits(StopBits::One)
-            .timeout(Duration::from_millis(200))
-            .open_native()?;
+        .data_bits(DataBits::Eight)
+        .parity(Parity::None)
+        .stop_bits(StopBits::One)
+        .timeout(Duration::from_millis(200))
+        .open_native()?;
 
         info!("Serial initialized");
 
         while let Err(e) = serial.write_all(b"\n\n") {
             error!("{e}");
-            sleep(Duration::from_secs(1));
+            std::thread::sleep(Duration::from_secs(1));
         }
-        info!("Wrote!");
-        while let Err(e) = serial.write_all(b"les\n") {
+        while let Err(e) = serial.write_all(b"les") {
             error!("{e}");
-            sleep(Duration::from_secs(1));
+            std::thread::sleep(Duration::from_secs(1));
         }
 
+        Ok(Self {
+            serial,
+            buffer: vec![0; 4096],
+        })
+    }
+
+    pub fn get_coordinates(&mut self) -> GpsCoordinates {
         loop {
-            match serial.read(serial_buf.as_mut_slice()) {
-                Ok(t) => {
-                    std::io::stdout().write_all(&serial_buf[..t]).unwrap()
-                },
-                Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
-                    if let Err(err) = serial.write_all(b"\n") {
-                        error!("Write error: {err}");
-                    }
-                },
-                Err(e) => error!("Read error: {:?}", e),
-            }
+            let line = match self.read() {
+                Some(value) => value,
+                None => continue,
+            };
+
+            info!("GPS: {line}");
+            let values = match line
+                .rsplit_once(" est[")
+                .map(|(_, string)| string.split_once(']'))
+                .flatten()
+            {
+                Some((v, _)) => v,
+                None => continue,
+            };
+
+            let coordinates: Vec<_> = values
+                .split(',')
+                .into_iter()
+                .filter_map(|v| v.parse::<f32>().ok())
+                .collect();
+
+            return GpsCoordinates {
+                x: coordinates[0],
+                y: coordinates[1],
+                z: coordinates[2],
+                confidence: coordinates[4] as u8,
+            };
         }
     }
 
-    pub fn read(&mut self) {
-        let mut serial_buf: Vec<u8> = vec![0; 1000];
-
-        //
-
-        let mut line = String::new();
-
-        loop {
-            sleep(Duration::from_millis(200)).await;
-            if serial.bytes_to_read()? == 0 {
-                info!("Skipping");
-                continue;
-            }
-            match serial.read_to_string(&mut line) {
-                Ok(size) => info!("Read {size} chars: {line}"),
-                Err(e) => {
-                    error!("Read error: {e}");
-                    if let Err(err) = serial.write_all(b"\n") {
-                        error!("{err}")
-                    }
+    fn read(&mut self) -> Option<String> {
+        match self.serial.read(self.buffer.as_mut_slice()) {
+            Ok(bytes_read) => {
+                if bytes_read == 0 {
+                    self.serial.write_all(b"\n").unwrap();
+                    None
+                } else {
+                    String::from_utf8(self.buffer[..bytes_read].to_vec()).ok()
                 }
-            };
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                if let Err(err) = self.serial.write_all(b"\n") {
+                    error!("Write error: {err}");
+                }
+                None
+            }
+            Err(e) => {
+                error!("Read error: {e}");
+                None
+            }
         }
     }
 }
 
 impl BasicSensor for Gps {
+    fn name(&self) -> &'static str {
+        "GPS"
+    }
 
+    fn read_data(&mut self) -> SensorData {
+        SensorData::Gps(self.get_coordinates())
+    }
 }

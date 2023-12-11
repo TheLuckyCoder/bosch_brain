@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::http::states::CarStates;
@@ -34,6 +35,12 @@ impl GlobalState {
             motor_driver: Mutex::new(motor_driver),
         }
     }
+}
+
+pub fn get_home_dir() -> PathBuf {
+    std::env::var("HOME")
+        .map(PathBuf::from)
+        .unwrap_or(std::env::current_dir().expect("Failed to get current working directory"))
 }
 
 pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {

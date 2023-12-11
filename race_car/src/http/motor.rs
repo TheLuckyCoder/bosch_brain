@@ -1,5 +1,5 @@
 use crate::http::states::CarStates;
-use crate::http::GlobalState;
+use crate::http::{get_home_dir, GlobalState};
 use crate::sensors::{Motor, MotorParams};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -15,12 +15,6 @@ use tokio::time::sleep;
 use tracing::{info, log};
 
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Acceleration];
-
-fn get_home_dir() -> PathBuf {
-    std::env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or(std::env::current_dir().expect("Failed to get current working directory"))
-}
 
 fn get_motor_params_file(motor: Motor) -> PathBuf {
     let mut path = get_home_dir();
