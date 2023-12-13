@@ -12,6 +12,8 @@ pub struct Gps {
 }
 
 impl Gps {
+    pub const NAME: &'static str = "GPS";
+
     pub fn new() -> anyhow::Result<Gps> {
         let mut serial = serialport::new(
             "/dev/serial/by-id/usb-SEGGER_J-Link_000760170010-if00",
@@ -50,8 +52,7 @@ impl Gps {
             info!("GPS: {line}");
             let values = match line
                 .rsplit_once(" est[")
-                .map(|(_, string)| string.split_once(']'))
-                .flatten()
+                .and_then(|(_, string)| string.split_once(']'))
             {
                 Some((v, _)) => v,
                 None => continue,
@@ -59,7 +60,6 @@ impl Gps {
 
             let coordinates: Vec<_> = values
                 .split(',')
-                .into_iter()
                 .filter_map(|v| v.parse::<f32>().ok())
                 .collect();
 
@@ -98,7 +98,7 @@ impl Gps {
 
 impl BasicSensor for Gps {
     fn name(&self) -> &'static str {
-        "GPS"
+        Self::NAME
     }
 
     fn read_data(&mut self) -> SensorData {

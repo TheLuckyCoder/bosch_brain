@@ -6,11 +6,13 @@ use bno055::{BNO055OperationMode, Bno055};
 use linux_embedded_hal::{Delay, I2cdev};
 use tracing::{debug, error};
 
-use crate::sensors::{BasicSensor, SensorData};
+use crate::sensors::{BasicSensor, ImuData, SensorData};
 
-pub struct ImuSensor(Bno055<I2cdev>);
+pub struct Imu(Bno055<I2cdev>);
 
-impl ImuSensor {
+impl Imu {
+    pub const NAME: &'static str = "IMU";
+
     pub fn new() -> anyhow::Result<Self> {
         let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device")?;
 
@@ -91,15 +93,15 @@ impl ImuSensor {
     }
 }
 
-impl BasicSensor for ImuSensor {
+impl BasicSensor for Imu {
     fn name(&self) -> &'static str {
-        "IMU"
+        Self::NAME
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Imu {
+        SensorData::Imu(ImuData {
             quaternion: self.get_quaternion(),
             acceleration: self.get_acceleration(),
-        }
+        })
     }
 }

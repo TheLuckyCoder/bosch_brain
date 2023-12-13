@@ -19,7 +19,7 @@ mod udp_manager;
 
 pub struct GlobalState {
     pub car_state: Mutex<CarStates>,
-    pub udp_manager: Arc<UdpManager>,
+    pub udp_manager: Arc<Mutex<UdpManager>>,
     pub sensor_manager: Arc<Mutex<SensorManager>>,
     pub motor_driver: Mutex<MotorDriver>,
 }

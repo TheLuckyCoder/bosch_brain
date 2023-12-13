@@ -1,4 +1,5 @@
 pub use data::*;
+pub use gps::*;
 pub use imu::*;
 pub use manager::*;
 pub use motor_driver::*;

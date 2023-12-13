@@ -8,6 +8,8 @@ const ECHO: u8 = 23;
 pub struct UltrasonicSensor(HcSr04);
 
 impl UltrasonicSensor {
+    pub const NAME: &'static str = "Ultrasonic";
+
     pub fn new(temp: f32) -> Result<Self, String> {
         HcSr04::new(TRIGGER, ECHO, Some(temp))
             .map(Self)
@@ -34,7 +36,7 @@ impl UltrasonicSensor {
 
 impl BasicSensor for UltrasonicSensor {
     fn name(&self) -> &'static str {
-        "Ultrasonic"
+        Self::NAME
     }
 
     fn read_data(&mut self) -> SensorData {

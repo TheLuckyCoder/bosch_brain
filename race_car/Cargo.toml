@@ -29,6 +29,9 @@ serialport = { version = "4", default-features = false }
 # Error handling
 anyhow = { workspace = true }
 
+# Utils
+mint = { workspace = true }
+
 ### Sensors
 linux-embedded-hal = "0.3"
 # HC-SR04 Ultrasonic sensor
@@ -36,5 +39,3 @@ hc-sr04 = "0.1"
 bno055 = { version = "0.3", features = ["std"] }
 htu2xd = "0.1"
 pwm-pca9685 = "0.3"
-
-mint = { version = "0.5", features = ["serde"] }
