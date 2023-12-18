@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 use std::time::Duration;
 
-use serialport::{DataBits, Parity, StopBits, TTYPort};
+use serialport::{DataBits, Parity, SerialPort, StopBits, TTYPort};
 use tracing::{error, info};
 
 use crate::sensors::{BasicSensor, GpsCoordinates, SensorData};
@@ -9,13 +9,14 @@ use crate::sensors::{BasicSensor, GpsCoordinates, SensorData};
 pub struct Gps {
     serial: TTYPort,
     buffer: Vec<u8>,
+    initialized: bool,
 }
 
 impl Gps {
     pub const NAME: &'static str = "GPS";
 
     pub fn new() -> anyhow::Result<Gps> {
-        let mut serial = serialport::new(
+        let serial = serialport::new(
             "/dev/serial/by-id/usb-SEGGER_J-Link_000760170010-if00",
             115200,
         )
@@ -25,31 +26,24 @@ impl Gps {
         .timeout(Duration::from_millis(200))
         .open_native()?;
 
-        info!("Serial initialized");
-
-        while let Err(e) = serial.write_all(b"\n\n") {
-            error!("{e}");
-            std::thread::sleep(Duration::from_secs(1));
-        }
-        while let Err(e) = serial.write_all(b"les") {
-            error!("{e}");
-            std::thread::sleep(Duration::from_secs(1));
-        }
-
         Ok(Self {
             serial,
             buffer: vec![0; 4096],
+            initialized: false,
         })
     }
 
     pub fn get_coordinates(&mut self) -> GpsCoordinates {
+        if !self.initialized {
+            self.init();
+        }
+
         loop {
             let line = match self.read() {
                 Some(value) => value,
                 None => continue,
             };
 
-            info!("GPS: {line}");
             let values = match line
                 .rsplit_once(" est[")
                 .and_then(|(_, string)| string.split_once(']'))
@@ -67,12 +61,34 @@ impl Gps {
                 x: coordinates[0],
                 y: coordinates[1],
                 z: coordinates[2],
-                confidence: coordinates[4] as u8,
+                confidence: coordinates[3] as u8,
             };
         }
     }
 
+    fn init(&mut self) {
+        while let Err(e) = self.serial.write_all(b"\n\n") {
+            error!("{e}");
+            std::thread::sleep(Duration::from_secs(1));
+        }
+        while let Err(e) = self.serial.write_all(b"les") {
+            error!("{e}");
+            std::thread::sleep(Duration::from_secs(1));
+        }
+
+        self.initialized = true;
+    }
+
     fn read(&mut self) -> Option<String> {
+        let bytes_to_read = self.serial.bytes_to_read().ok()?;
+        if bytes_to_read < 137 {
+            std::thread::sleep(Duration::from_millis(10));
+            // if bytes_to_read <= 15 {
+            //     info!("Sleeping: {bytes_to_read}");
+            // }
+            return None;
+        }
+
         match self.serial.read(self.buffer.as_mut_slice()) {
             Ok(bytes_read) => {
                 if bytes_read == 0 {

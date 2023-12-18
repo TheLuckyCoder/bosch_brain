@@ -5,6 +5,7 @@ use tracing_subscriber::EnvFilter;
 use crate::http::GlobalState;
 use crate::sensors::{MotorDriver, SensorManager};
 
+mod files;
 mod http;
 mod sensors;
 

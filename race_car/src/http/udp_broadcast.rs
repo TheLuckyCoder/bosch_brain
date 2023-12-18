@@ -15,7 +15,7 @@ pub enum UdpActiveSensor {
 }
 
 #[derive(Default)]
-pub struct UdpManager {
+pub struct UdpBroadcast {
     active_sensors: Vec<UdpActiveSensor>,
     address: Option<String>,
 }
@@ -33,9 +33,9 @@ impl UdpData {
     }
 }
 
-impl UdpManager {
+impl UdpBroadcast {
     pub fn new(sensor_manager: Arc<Mutex<SensorManager>>) -> std::io::Result<Arc<Mutex<Self>>> {
-        let udp_manager = Arc::new(Mutex::new(UdpManager::default()));
+        let udp_manager = Arc::new(Mutex::new(UdpBroadcast::default()));
 
         let server = UdpSocket::bind("0.0.0.0:3000")?;
 

@@ -1,4 +1,4 @@
-use crate::http::udp_manager::UdpActiveSensor;
+use crate::http::udp_broadcast::UdpActiveSensor;
 use crate::http::GlobalState;
 use crate::sensors::{Gps, Imu, UltrasonicSensor};
 use axum::extract::{ConnectInfo, State};
@@ -9,11 +9,15 @@ use axum::{Json, Router};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tokio::sync::OwnedMutexGuard;
+use tokio::task;
 
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
         .route("/", get(get_all_available_sensors))
         .route("/active_udp", post(set_udp_sensor))
+        .route("/imu_calibration", get(is_imu_calibrated))
+        .route("/imu_calibration", post(calibrate_imu))
         .with_state(global_state)
 }
 
@@ -60,4 +64,21 @@ async fn set_udp_sensor(
     udp_manager.set_active_sensor(sensors, format!("{}:3001", addr.ip()));
 
     StatusCode::OK
+}
+
+async fn is_imu_calibrated(State(state): State<Arc<GlobalState>>) {
+    let sensor_manager = state.sensor_manager.clone();
+    let mut guard = sensor_manager.lock().await;
+    guard.imu().unwrap().check_is_calibrated().unwrap();
+}
+
+async fn calibrate_imu(State(state): State<Arc<GlobalState>>) {
+    let sensor_manager = state.sensor_manager.clone();
+    task::spawn_blocking(move || {
+        let mut imu = OwnedMutexGuard::map(sensor_manager.blocking_lock_owned(), |guard| {
+            guard.imu().unwrap()
+        });
+
+        imu.start_calibration().unwrap();
+    });
 }

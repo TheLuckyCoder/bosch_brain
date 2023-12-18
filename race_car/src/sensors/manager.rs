@@ -3,13 +3,12 @@ use std::sync::mpsc::TrySendError;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, info, warn};
 
-use crate::sensors::gps::Gps;
-use crate::sensors::{BasicSensor, Imu, TimedSensorData, UltrasonicSensor};
+use crate::sensors::{BasicSensor, Gps, Imu, TimedSensorData, UltrasonicSensor};
 
 enum ManagerState {
     Normal {
@@ -96,18 +95,22 @@ impl SensorManager {
         mut sensor: Box<dyn BasicSensor + Send>,
         is_active: Arc<AtomicBool>,
         sender: BroadcastSender<TimedSensorData>,
+        start_time: SystemTime,
     ) -> JoinHandle<()> {
         thread::spawn(move || {
             while is_active.load(Ordering::Acquire) {
                 let instant = Instant::now();
-                let sensor_data = sensor.read_data_timed();
+                let sensor_data = sensor.read_data_timed(start_time);
                 let time_elapsed = instant.elapsed();
 
-                info!(
-                    "{} elapsed time({}ms) data({sensor_data:?})",
-                    sensor.name(),
-                    time_elapsed.as_millis()
-                );
+                if sensor.name() == Gps::NAME {
+                    info!(
+                        "{} elapsed {}ms {:?}",
+                        sensor.name(),
+                        time_elapsed.as_millis(),
+                        sensor_data.data
+                    );
+                }
 
                 if !is_active.load(Ordering::Acquire) {
                     break;
@@ -129,7 +132,7 @@ impl SensorManager {
                     }
                 }
 
-                thread::sleep(Duration::from_millis(50)); // TODO Remove
+                thread::sleep(Duration::from_millis(20)); // TODO Remove
             }
         })
     }
@@ -146,13 +149,16 @@ impl SensorManager {
                 let is_active = Arc::new(AtomicBool::new(true));
                 let mut handles = vec![];
 
+                let start_time = SystemTime::now();
                 let mut spawn_thread = |sensor: Box<dyn BasicSensor + Send>| {
                     handles.push(Self::spawn_sensor_thread(
                         sensor,
                         is_active.clone(),
                         sender.clone(),
+                        start_time,
                     ));
                 };
+
                 if let Some(sensor) = imu.take() {
                     spawn_thread(sensor)
                 }

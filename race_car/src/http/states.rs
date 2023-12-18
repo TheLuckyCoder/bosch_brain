@@ -1,17 +1,18 @@
 use std::fs::File;
 use std::io::Write;
 use std::sync::Arc;
-use std::time::SystemTime;
 
+use crate::files::get_car_file;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 use tokio::task;
 
-use crate::http::{get_home_dir, GlobalState};
+use crate::http::GlobalState;
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum CarStates {
@@ -62,25 +63,21 @@ async fn set_current_state(
         CarStates::Config => sensor_manager.reset(),
         CarStates::RemoteControlled => {
             let receiver = sensor_manager.listen_to_all_sensors();
+            // return StatusCode::OK; // TODO
 
             task::spawn_blocking(move || {
-                let system_time = SystemTime::now();
-                let mut path = get_home_dir();
-                path.push(format!(
-                    "{}.log",
-                    system_time
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
-                ));
+                let date = Local::now();
+
+                let path = get_car_file(format!("{}.log", date.format("%Y.%m.%d_%H:%M:%S")));
                 let mut output_file = File::create(path).unwrap();
 
                 while let Ok(data) = receiver.recv() {
                     output_file
                         .write_all(serde_json::to_string(&data).unwrap().as_bytes())
                         .unwrap();
-                    output_file.write(&[b'\n']).unwrap();
+                    output_file.write_all(&[b'\n']).unwrap();
                 }
+                output_file.sync_data().unwrap();
             });
         } // TODO Do something with it
         CarStates::AutonomousControlled => {

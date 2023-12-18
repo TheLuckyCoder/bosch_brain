@@ -1,5 +1,6 @@
+use crate::files::get_car_dir;
 use crate::http::states::CarStates;
-use crate::http::{get_home_dir, GlobalState};
+use crate::http::GlobalState;
 use crate::sensors::{Motor, MotorParams};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -17,7 +18,7 @@ use tracing::{info, log};
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Acceleration];
 
 fn get_motor_params_file(motor: Motor) -> PathBuf {
-    let mut path = get_home_dir();
+    let mut path = get_car_dir();
     path.push(&format!("motor_params_{motor:?}.json"));
     path
 }

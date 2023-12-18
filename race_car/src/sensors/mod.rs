@@ -3,6 +3,7 @@ pub use gps::*;
 pub use imu::*;
 pub use manager::*;
 pub use motor_driver::*;
+use std::time::SystemTime;
 pub use ultrasonic::*;
 
 mod data;
@@ -17,7 +18,7 @@ pub trait BasicSensor {
 
     fn read_data(&mut self) -> SensorData;
 
-    fn read_data_timed(&mut self) -> TimedSensorData {
-        TimedSensorData::new(self.read_data())
+    fn read_data_timed(&mut self, start_time: SystemTime) -> TimedSensorData {
+        TimedSensorData::new(self.read_data(), start_time)
     }
 }

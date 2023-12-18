@@ -24,13 +24,12 @@ impl UltrasonicSensor {
     /// Returns the distance in centimeters.
     ///
     pub fn get_distance_cm(&mut self) -> Option<f32> {
-        match self.0.measure_distance(Unit::Centimeters) {
-            Ok(value) => value,
-            Err(e) => {
+        self.0
+            .measure_distance(Unit::Centimeters)
+            .unwrap_or_else(|e| {
                 tracing::error!("Failed to read distance sensor: {e}");
                 None
-            }
-        }
+            })
     }
 }
 
