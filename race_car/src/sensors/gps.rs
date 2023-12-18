@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 use std::time::Duration;
 
 use serialport::{DataBits, Parity, SerialPort, StopBits, TTYPort};
-use tracing::{error, info};
+use tracing::error;
 
 use crate::sensors::{BasicSensor, GpsCoordinates, SensorData};
 

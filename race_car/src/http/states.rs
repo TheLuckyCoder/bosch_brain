@@ -10,7 +10,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use chrono::Local;
 use serde::{Deserialize, Serialize};
-use tokio::task;
+use tracing::info;
 
 use crate::http::GlobalState;
 
@@ -26,8 +26,8 @@ pub enum CarStates {
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
         .route("/all", get(get_all_states))
-        .route("/current", get(get_current_state))
-        .route("/current/:new_state", post(set_current_state))
+        .route("/", get(get_current_state))
+        .route("/:new_state", post(set_current_state))
         .with_state(global_state)
 }
 
@@ -65,7 +65,7 @@ async fn set_current_state(
             let receiver = sensor_manager.listen_to_all_sensors();
             // return StatusCode::OK; // TODO
 
-            task::spawn_blocking(move || {
+            std::thread::spawn(move || {
                 let date = Local::now();
 
                 let path = get_car_file(format!("{}.log", date.format("%Y.%m.%d_%H:%M:%S")));
@@ -78,6 +78,7 @@ async fn set_current_state(
                     output_file.write_all(&[b'\n']).unwrap();
                 }
                 output_file.sync_data().unwrap();
+                info!("Stopping log thread")
             });
         } // TODO Do something with it
         CarStates::AutonomousControlled => {

@@ -42,7 +42,7 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
-        .nest("/motor", motor::router(global_state.clone()).await)
+        .nest("/motors", motor::router(global_state.clone()).await)
         .nest("/state", states::router(global_state.clone()))
         .nest("/sensors", sensor::router(global_state))
         .layer(

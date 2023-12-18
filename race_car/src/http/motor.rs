@@ -52,16 +52,17 @@ pub async fn router(global_state: Arc<GlobalState>) -> Router {
     read_params_from_files(&global_state).await;
 
     Router::new()
-        .route("/all", get(get_motors))
+        .route("/", get(get_motors))
         .route("/params/:motor", get(get_motor_parameters))
         .route("/params/:motor", post(set_motor_parameters))
         .route("/stop/:motor", post(stop_motor))
+        .route("/stop", post(stop_motor))
         .route("/set/:motor/:value", post(set_motor_value))
-        .route("/set_all", post(set_all_motors))
+        .route("/", post(set_all_motors))
         .route("/pause/:motor", post(pause_motor))
-        .route("/pause", post(pause_motors))
+        .route("/pause", post(pause_motor))
         .route("/resume/:motor", post(resume_motor))
-        .route("/resume", post(resume_motors))
+        .route("/resume", post(resume_motor))
         .route("/sweep/:motor", post(motor_sweep))
         .with_state(global_state)
 }
@@ -103,10 +104,16 @@ async fn set_motor_parameters(
     .unwrap();
 }
 
-async fn stop_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
+async fn stop_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<Motor>>) {
     let mut motor_driver = state.motor_driver.lock().await;
 
-    motor_driver.stop_motor(motor);
+    if let Some(Path(motor)) = motor {
+        motor_driver.stop_motor(motor);
+    } else {
+        for motor in ALL_MOTORS {
+            motor_driver.stop_motor(motor);
+        }
+    }
 }
 
 async fn set_motor_value(
@@ -118,42 +125,28 @@ async fn set_motor_value(
     motor_driver.set_motor_value(motor, value);
 }
 
-async fn pause_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
+async fn pause_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<Motor>>) {
     let mut motor_driver = state.motor_driver.lock().await;
 
-    motor_driver.pause_motor(motor);
-}
-
-async fn pause_motors(
-    State(state): State<Arc<GlobalState>>,
-    Json(motors): Json<Vec<Motor>>,
-) -> StatusCode {
-    let mut motor_driver = state.motor_driver.lock().await;
-
-    for motor in motors {
+    if let Some(Path(motor)) = motor {
         motor_driver.pause_motor(motor);
+    } else {
+        for motor in ALL_MOTORS {
+            motor_driver.pause_motor(motor);
+        }
     }
-
-    StatusCode::OK
 }
 
-async fn resume_motor(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
+async fn resume_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<Motor>>) {
     let mut motor_driver = state.motor_driver.lock().await;
 
-    motor_driver.resume_motor(motor);
-}
-
-async fn resume_motors(
-    State(state): State<Arc<GlobalState>>,
-    Json(motors): Json<Vec<Motor>>,
-) -> StatusCode {
-    let mut motor_driver = state.motor_driver.lock().await;
-
-    for motor in motors {
+    if let Some(Path(motor)) = motor {
         motor_driver.resume_motor(motor);
+    } else {
+        for motor in ALL_MOTORS {
+            motor_driver.resume_motor(motor);
+        }
     }
-
-    StatusCode::OK
 }
 
 async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
