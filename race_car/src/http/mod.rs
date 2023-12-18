@@ -7,11 +7,14 @@ use tokio::sync::Mutex;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
+use shared::math::pid::PidController;
+use crate::http::control::PidManager;
 
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
 use crate::sensors::{MotorDriver, SensorManager};
 
+mod control;
 mod motor;
 mod sensor;
 mod states;
@@ -22,6 +25,7 @@ pub struct GlobalState {
     pub udp_manager: Arc<Mutex<UdpBroadcast>>,
     pub sensor_manager: Arc<Mutex<SensorManager>>,
     pub motor_driver: Mutex<MotorDriver>,
+    pub pids: Arc<Mutex<PidManager>>,
 }
 
 impl GlobalState {
@@ -33,6 +37,9 @@ impl GlobalState {
                 .expect("Failed to initialize UDP Manager"),
             sensor_manager,
             motor_driver: Mutex::new(motor_driver),
+            pids: Arc::new(Mutex::new(PidManager {
+                steering: PidController::new(1.0, 0.0, 0.0)
+            })),
         }
     }
 }
@@ -44,7 +51,8 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
         .route("/", get(|| async { "Hello, World!" }))
         .nest("/motors", motor::router(global_state.clone()).await)
         .nest("/state", states::router(global_state.clone()))
-        .nest("/sensors", sensor::router(global_state))
+        .nest("/sensors", sensor::router(global_state.clone()))
+        .nest("/control", control::router(global_state))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))

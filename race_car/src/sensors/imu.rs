@@ -23,10 +23,7 @@ impl Imu {
         let mut delay = Delay {};
 
         imu.init(&mut delay).context("Failed to init IMU")?;
-        imu.set_mode(BNO055OperationMode::NDOF, &mut delay)
-            .context("Failed to set IMU mode")?;
 
-        // Read saved calibration profile from MCUs NVRAM
         if let Ok(file_buffer) = std::fs::read(get_car_file(Self::BNO_FILE)) {
             let buffer: [u8; BNO055_CALIB_SIZE] = vec_to_array(file_buffer);
 
@@ -37,62 +34,10 @@ impl Imu {
             info!("IMU Calibration was loaded");
         }
 
+        imu.set_mode(BNO055OperationMode::NDOF, &mut delay)
+            .context("Failed to set IMU mode")?;
+
         Ok(Self(imu))
-    }
-
-    pub fn check_is_calibrated(&mut self) -> anyhow::Result<bool> {
-        let calibration_status = self
-            .0
-            .get_calibration_status()
-            .context("Failed to get calibration status")?;
-
-        debug!("IMU Calibration Status: {:?}", calibration_status);
-
-        Ok(!(calibration_status.sys != 3
-            || calibration_status.gyr != 3
-            || calibration_status.acc != 3
-            || calibration_status.mag != 3))
-    }
-
-    pub fn start_calibration(&mut self) -> anyhow::Result<()> {
-        let mut delay = Delay {};
-        self.0
-            .set_mode(BNO055OperationMode::NDOF, &mut delay)
-            .context("Failed to set IMU Mode")?;
-
-        let file_path = get_car_file(Self::BNO_FILE);
-        info!("BNO FIle: {}", file_path.display());
-
-        // Start calibration and wait until it's complete.
-        loop {
-            let calibration_status = self
-                .0
-                .get_calibration_status()
-                .context("Failed to get calibration status")?;
-            info!("IMU Calibration Status: {:?}", calibration_status);
-
-            // Check if all three calibration values are 3 to indicate full calibration.
-            if calibration_status.sys == 3
-                && calibration_status.gyr == 3
-                && calibration_status.acc == 3
-                && calibration_status.mag == 3
-            {
-                let calibration = self
-                    .0
-                    .calibration_profile(&mut delay)
-                    .context("Failed to get calibration result")?;
-
-                std::fs::write(file_path, calibration.as_bytes())
-                    .context("Failed to save calibration")?;
-
-                info!("Sensor is fully calibrated.");
-                break; // Exit the loop once fully calibrated.
-            }
-
-            sleep(Duration::from_secs(1)); // Wait for a second before checking again.
-        }
-
-        Ok(())
     }
 
     pub fn get_acceleration(&mut self) -> mint::Vector3<f32> {
@@ -120,6 +65,33 @@ impl BasicSensor for Imu {
             quaternion: self.get_quaternion(),
             acceleration: self.get_acceleration(),
         })
+    }
+
+    fn read_config(&mut self) -> String {
+        let status = self
+            .0
+            .get_calibration_status()
+            .expect("Failed to get calibration status");
+
+        format!(
+            "IMU Calibration Status sys: {} gyr: {} acc: {} mag: {}",
+            status.sys, status.gyr, status.acc, status.mag
+        )
+    }
+
+    fn save_config(&mut self) -> anyhow::Result<()> {
+        let mut delay = Delay {};
+
+        let calibration = self
+            .0
+            .calibration_profile(&mut delay)
+            .context("Failed to get calibration result")?;
+
+        let file_path = get_car_file(Self::BNO_FILE);
+        std::fs::write(file_path, calibration.as_bytes()).context("Failed to save calibration")?;
+
+        info!("IMU calibration is saved");
+        Ok(())
     }
 }
 

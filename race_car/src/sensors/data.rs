@@ -1,3 +1,4 @@
+use std::fmt::{write, Display, Formatter};
 use std::time::{Duration, SystemTime};
 
 use mint::{Quaternion, Vector3};
@@ -24,6 +25,16 @@ pub enum SensorData {
     Imu(ImuData),
     Distance(f32),
     Gps(GpsCoordinates),
+}
+
+impl Display for SensorData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SensorData::Imu(imu) => write!(f, "{imu:?}"),
+            SensorData::Distance(distance) => write!(f, "Distance({distance})"),
+            SensorData::Gps(gps) => write!(f, "{gps:?}"),
+        }
+    }
 }
 
 #[serde_as]

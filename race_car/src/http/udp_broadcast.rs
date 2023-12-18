@@ -5,7 +5,7 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use tracing::warn;
 
-use crate::sensors::{GpsCoordinates, ImuData, SensorData, SensorManager};
+use crate::sensors::{BasicSensor, GpsCoordinates, ImuData, SensorData, SensorManager};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UdpActiveSensor {
@@ -18,6 +18,7 @@ pub enum UdpActiveSensor {
 pub struct UdpBroadcast {
     active_sensors: Vec<UdpActiveSensor>,
     address: Option<String>,
+    config_mode: bool,
 }
 
 #[derive(Default, serde::Serialize)]
@@ -35,66 +36,96 @@ impl UdpData {
 
 impl UdpBroadcast {
     pub fn new(sensor_manager: Arc<Mutex<SensorManager>>) -> std::io::Result<Arc<Mutex<Self>>> {
-        let udp_manager = Arc::new(Mutex::new(UdpBroadcast::default()));
+        let udp_broadcast = Arc::new(Mutex::new(UdpBroadcast::default()));
 
         let server = UdpSocket::bind("0.0.0.0:3000")?;
 
-        let udp_manager_clone = udp_manager.clone();
+        let udp_broadcast_clone = udp_broadcast.clone();
 
         std::thread::spawn(move || loop {
             std::thread::sleep(Duration::from_millis(100));
 
-            let guard = sensor_manager.blocking_lock();
-            let receiver = match guard.get_data_receiver() {
-                None => continue,
-                Some(receiver) => receiver,
+            let mut sensor_guard = sensor_manager.blocking_lock();
+            let udp_guard = udp_broadcast.blocking_lock();
+
+            let data = if udp_guard.config_mode {
+                Self::reader_mode(&sensor_guard, &udp_guard)
+            } else {
+                Self::config_mode(&mut sensor_guard, &udp_guard)
             };
-
-            let mut udp_data =
-                receiver
-                    .try_iter()
-                    .fold(UdpData::default(), |mut udp, sensor_data| {
-                        match sensor_data.data {
-                            SensorData::Imu(imu) => udp.imu = Some(imu),
-                            SensorData::Distance(distance) => udp.ultrasonic = Some(distance),
-                            SensorData::Gps(gps) => udp.gps = Some(gps),
-                        }
-                        udp
-                    });
-
-            let udp = udp_manager.blocking_lock();
-            let address = match &udp.address {
+            
+            let address = match &udp_guard.address {
                 None => continue,
                 Some(address) => address,
-            };
+            }; 
 
-            let active_sensors = &udp.active_sensors;
-
-            if !active_sensors.contains(&UdpActiveSensor::Imu) {
-                udp_data.imu = None;
-            }
-
-            if !active_sensors.contains(&UdpActiveSensor::Ultrasonic) {
-                udp_data.ultrasonic = None;
-            }
-
-            if !active_sensors.contains(&UdpActiveSensor::Gps) {
-                udp_data.gps = None;
-            }
-
-            if !udp_data.is_empty() {
-                let json = serde_json::to_string(&udp_data).expect("Failed to serialize udp data");
-                if let Err(err) = server.send_to(json.as_bytes(), address) {
+            if let Some(data) = data {
+                if let Err(err) = server.send_to(data.as_bytes(), address) {
                     warn!("Failed to send UDP Packet: {err}")
                 }
             }
         });
 
-        Ok(udp_manager_clone)
+        Ok(udp_broadcast_clone)
     }
 
-    pub fn set_active_sensor(&mut self, sensor: Vec<UdpActiveSensor>, address: String) {
+    pub fn set_active_sensor(
+        &mut self,
+        sensor: Vec<UdpActiveSensor>,
+        address: String,
+    ) {
         self.active_sensors = sensor;
         self.address = Some(address);
+    }
+    
+    pub fn set_config_mode(&mut self, config_mode: bool) {
+        self.config_mode = config_mode;
+    }
+
+    fn reader_mode(sensor_manager: &SensorManager, udp_broadcast: &UdpBroadcast) -> Option<String> {
+        let receiver = sensor_manager.get_data_receiver()?;
+
+        let mut udp_data = receiver
+            .try_iter()
+            .fold(UdpData::default(), |mut udp, sensor_data| {
+                match sensor_data.data {
+                    SensorData::Imu(imu) => udp.imu = Some(imu),
+                    SensorData::Distance(distance) => udp.ultrasonic = Some(distance),
+                    SensorData::Gps(gps) => udp.gps = Some(gps),
+                }
+                udp
+            });
+
+        let active_sensors = &udp_broadcast.active_sensors;
+
+        if !active_sensors.contains(&UdpActiveSensor::Imu) {
+            udp_data.imu = None;
+        }
+
+        if !active_sensors.contains(&UdpActiveSensor::Ultrasonic) {
+            udp_data.ultrasonic = None;
+        }
+
+        if !active_sensors.contains(&UdpActiveSensor::Gps) {
+            udp_data.gps = None;
+        }
+
+        if !udp_data.is_empty() {
+            Some(serde_json::to_string(&udp_data).expect("Failed to serialize UDP data"))
+        } else {
+            None
+        }
+    }
+    
+    fn config_mode(sensor_manager: &mut SensorManager, udp_broadcast: &UdpBroadcast) -> Option<String> {
+        let active_sensor = udp_broadcast.active_sensors.first()?;
+        
+        let sensor: &mut dyn BasicSensor = match active_sensor {
+            UdpActiveSensor::Imu => sensor_manager.imu()?,
+            UdpActiveSensor::Ultrasonic => sensor_manager.ultrasonic()?,
+            UdpActiveSensor::Gps => sensor_manager.gps()?,
+        };
+        
+        Some(sensor.read_config())
     }
 }

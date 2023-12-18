@@ -18,6 +18,14 @@ pub trait BasicSensor {
 
     fn read_data(&mut self) -> SensorData;
 
+    fn read_config(&mut self) -> String {
+        self.read_data().to_string()
+    }
+
+    fn save_config(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
     fn read_data_timed(&mut self, start_time: SystemTime) -> TimedSensorData {
         TimedSensorData::new(self.read_data(), start_time)
     }
