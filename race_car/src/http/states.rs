@@ -58,9 +58,19 @@ async fn set_current_state(
 
     let mut sensor_manager = state.sensor_manager.lock().await;
 
+    {
+        let mut udp = state.udp_manager.lock().await;
+        udp.save_sensor_config(&mut sensor_manager);
+        udp.set_config_mode(new_car_state == CarStates::Config);
+    }
+
     match new_car_state {
-        CarStates::Standby => sensor_manager.reset(),
-        CarStates::Config => sensor_manager.reset(),
+        CarStates::Standby => {
+            sensor_manager.reset();
+        }
+        CarStates::Config => {
+            sensor_manager.reset();
+        }
         CarStates::RemoteControlled => {
             let receiver = sensor_manager.listen_to_all_sensors();
             // return StatusCode::OK; // TODO
@@ -85,6 +95,8 @@ async fn set_current_state(
             sensor_manager.listen_to_all_sensors();
         }
     }
+
+    state.pids.reset().await;
 
     StatusCode::OK
 }

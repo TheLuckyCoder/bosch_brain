@@ -1,16 +1,17 @@
-use crate::http::udp_broadcast::UdpActiveSensor;
-use crate::http::GlobalState;
-use crate::sensors::{Gps, Imu, UltrasonicSensor};
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::Arc;
+
 use axum::extract::{ConnectInfo, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use std::collections::HashMap;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::sync::OwnedMutexGuard;
-use tokio::task;
+use tracing::info;
+
+use crate::http::udp_broadcast::UdpActiveSensor;
+use crate::http::GlobalState;
+use crate::sensors::{Gps, Imu, UltrasonicSensor};
 
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
@@ -56,9 +57,12 @@ async fn set_udp_sensor(
     }
 
     let sensors = sensors.into_iter().flatten().collect();
+    info!("Active Udp Sensors: {:?}", sensors);
 
+    let mut sensor_manager = state.sensor_manager.lock().await;
     let mut udp_manager = state.udp_manager.lock().await;
 
+    udp_manager.save_sensor_config(&mut sensor_manager);
     udp_manager.set_active_sensor(sensors, format!("{}:3001", addr.ip()));
 
     StatusCode::OK

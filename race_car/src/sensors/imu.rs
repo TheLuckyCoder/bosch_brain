@@ -1,13 +1,11 @@
 use std::convert::TryInto;
-use std::thread::sleep;
-use std::time::Duration;
 
-use crate::files::get_car_file;
 use anyhow::Context;
 use bno055::{BNO055Calibration, BNO055OperationMode, Bno055, BNO055_CALIB_SIZE};
 use linux_embedded_hal::{Delay, I2cdev};
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
+use crate::files::get_car_file;
 use crate::sensors::{BasicSensor, ImuData, SensorData};
 
 pub struct Imu(Bno055<I2cdev>);

@@ -1,14 +1,14 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::http::control::PidManager;
 use axum::routing::get;
 use axum::Router;
+use shared::math::pid::PidController;
 use tokio::sync::Mutex;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
-use shared::math::pid::PidController;
-use crate::http::control::PidManager;
 
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
@@ -24,8 +24,8 @@ pub struct GlobalState {
     pub car_state: Mutex<CarStates>,
     pub udp_manager: Arc<Mutex<UdpBroadcast>>,
     pub sensor_manager: Arc<Mutex<SensorManager>>,
-    pub motor_driver: Mutex<MotorDriver>,
-    pub pids: Arc<Mutex<PidManager>>,
+    pub motor_driver: Arc<Mutex<MotorDriver>>,
+    pub pids: Arc<PidManager>,
 }
 
 impl GlobalState {
@@ -36,10 +36,11 @@ impl GlobalState {
             udp_manager: UdpBroadcast::new(sensor_manager.clone())
                 .expect("Failed to initialize UDP Manager"),
             sensor_manager,
-            motor_driver: Mutex::new(motor_driver),
-            pids: Arc::new(Mutex::new(PidManager {
-                steering: PidController::new(1.0, 0.0, 0.0)
-            })),
+            motor_driver: Arc::new(Mutex::new(motor_driver)),
+            pids: Arc::new(PidManager::new(
+                PidController::new(1.0, 0.0, 0.0),
+                PidController::new(1.0, 0.0, 0.0),
+            )),
         }
     }
 }

@@ -1,4 +1,4 @@
-use std::fmt::{write, Display, Formatter};
+use std::fmt::{Display, Formatter};
 use std::time::{Duration, SystemTime};
 
 use mint::{Quaternion, Vector3};
@@ -25,6 +25,7 @@ pub enum SensorData {
     Imu(ImuData),
     Distance(f32),
     Gps(GpsCoordinates),
+    Velocity(f64),
 }
 
 impl Display for SensorData {
@@ -33,6 +34,7 @@ impl Display for SensorData {
             SensorData::Imu(imu) => write!(f, "{imu:?}"),
             SensorData::Distance(distance) => write!(f, "Distance({distance})"),
             SensorData::Gps(gps) => write!(f, "{gps:?}"),
+            SensorData::Velocity(velocity) => write!(f, "{velocity}"),
         }
     }
 }
