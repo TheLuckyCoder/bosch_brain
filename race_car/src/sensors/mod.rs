@@ -1,6 +1,7 @@
 pub use data::*;
 pub use gps::*;
 pub use imu::*;
+use linux_embedded_hal::gpio_cdev::{Chip, LineRequestFlags};
 pub use manager::*;
 pub use motor_driver::*;
 use std::time::SystemTime;
@@ -29,4 +30,13 @@ pub trait BasicSensor {
     fn read_data_timed(&mut self, start_time: SystemTime) -> TimedSensorData {
         TimedSensorData::new(self.read_data(), start_time)
     }
+}
+
+pub fn set_board_led_status(on: bool) {
+    let mut chip = Chip::new("/dev/gpiochip0").unwrap();
+    let output = chip.get_line(25).unwrap();
+
+    output
+        .request(LineRequestFlags::OUTPUT, on as u8, "blinky")
+        .unwrap();
 }

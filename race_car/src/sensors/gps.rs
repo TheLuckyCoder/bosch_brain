@@ -82,10 +82,7 @@ impl Gps {
     fn read(&mut self) -> Option<String> {
         let bytes_to_read = self.serial.bytes_to_read().ok()?;
         if bytes_to_read < 137 {
-            std::thread::sleep(Duration::from_millis(10));
-            // if bytes_to_read <= 15 {
-            //     info!("Sleeping: {bytes_to_read}");
-            // }
+            std::thread::sleep(Duration::from_millis(10)); // Tested to be stable, and has enough precision
             return None;
         }
 

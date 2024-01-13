@@ -3,7 +3,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
 use crate::http::GlobalState;
-use crate::sensors::{MotorDriver, SensorManager};
+use crate::sensors::{set_board_led_status, MotorDriver, SensorManager};
 
 mod files;
 mod http;
@@ -16,6 +16,8 @@ async fn main() -> Result<(), String> {
         .with(tracing_subscriber::fmt::layer().compact())
         .with(EnvFilter::from_default_env())
         .init();
+
+    set_board_led_status(false);
 
     let motor_driver = MotorDriver::new().unwrap();
 

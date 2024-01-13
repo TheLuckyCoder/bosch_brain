@@ -8,7 +8,9 @@ use std::time::{Instant, SystemTime};
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, info, warn};
 
-use crate::sensors::{BasicSensor, Gps, Imu, SensorData, TimedSensorData, UltrasonicSensor};
+use crate::sensors::{
+    set_board_led_status, BasicSensor, Gps, Imu, SensorData, TimedSensorData, UltrasonicSensor,
+};
 
 enum ManagerState {
     Normal {
@@ -97,67 +99,72 @@ impl SensorManager {
         sender: BroadcastSender<TimedSensorData>,
         start_time: SystemTime,
     ) -> JoinHandle<()> {
-        thread::Builder::new().name(sensor.name().to_string()).spawn(move || {
-            let mut since_last_read = Instant::now();
-            let mut previous_velocity = 0f64;
-            let mut previous_acceleration = 0f64;
+        thread::Builder::new()
+            .name(sensor.name().to_string())
+            .spawn(move || {
+                let mut since_last_read = Instant::now();
+                let mut previous_velocity = 0f64;
+                let mut previous_acceleration = 0f64;
 
-            while is_active.load(Ordering::Acquire) {
-                let instant = Instant::now();
-                let sensor_data = sensor.read_data_timed(start_time);
-                let time_elapsed = instant.elapsed();
+                while is_active.load(Ordering::Acquire) {
+                    let instant = Instant::now();
+                    let sensor_data = sensor.read_data_timed(start_time);
+                    let time_elapsed = instant.elapsed();
 
-                if let SensorData::Imu(data) = &sensor_data.data {
-                    let acceleration = data.acceleration.x as f64;
-                    let velocity = previous_velocity
-                        + 0.5f64
-                            * (acceleration + previous_acceleration)
-                            * since_last_read.elapsed().as_secs_f64();
+                    if let SensorData::Imu(data) = &sensor_data.data {
+                        let acceleration = data.acceleration.x as f64;
+                        let velocity = previous_velocity
+                            + 0.5f64
+                                * (acceleration + previous_acceleration)
+                                * since_last_read.elapsed().as_secs_f64();
 
-                    info!("Velocity: {velocity}");
-                    since_last_read = Instant::now();
-                    previous_acceleration = acceleration;
-                    previous_velocity = velocity;
+                        // info!("Velocity: {velocity}");
+                        since_last_read = Instant::now();
+                        previous_acceleration = acceleration;
+                        previous_velocity = velocity;
 
-                    if let Err(e) =
-                        sender.try_send(TimedSensorData::from(SensorData::Velocity(velocity)))
-                    {
-                        // error!("{e}")
-                    }
-                }
-
-                if sensor.name() == Gps::NAME {
-                    info!(
-                        "{} elapsed {}ms {:?}",
-                        sensor.name(),
-                        time_elapsed.as_millis(),
-                        sensor_data.data
-                    );
-                }
-
-                if !is_active.load(Ordering::Acquire) {
-                    break;
-                }
-
-                if let Err(e) = sender.try_send(sensor_data) {
-                    match e {
-                        TrySendError::Full(_) => {
-                            warn!(
-                                "{} channel is full, failed to send new sensor data",
-                                sensor.name()
-                            );
-                            continue;
-                        }
-                        TrySendError::Disconnected(_) => {
-                            error!("{} channel disconnected", sensor.name());
-                            break;
+                        if let Err(e) =
+                            sender.try_send(TimedSensorData::from(SensorData::Velocity(velocity)))
+                        {
+                            error!("{e}")
                         }
                     }
-                }
 
-                // thread::sleep(Duration::from_millis(20)); // TODO Remove
-            }
-        }).unwrap()
+                    if sensor.name() == Gps::NAME {
+                        info!(
+                            "{:?} {} elapsed {}ms",
+                            sensor_data.data,
+                            sensor.name(),
+                            time_elapsed.as_millis(),
+                        );
+                    }
+
+                    if !is_active.load(Ordering::Acquire) {
+                        break;
+                    }
+
+                    if let Err(e) = sender.try_send(sensor_data) {
+                        match e {
+                            TrySendError::Full(_) => {
+                                warn!(
+                                    "{} channel is full, failed to send new sensor data",
+                                    sensor.name()
+                                );
+                                continue;
+                            }
+                            TrySendError::Disconnected(_) => {
+                                error!("{} channel disconnected", sensor.name());
+                                break;
+                            }
+                        }
+                    }
+
+                    if sensor.name() != Gps::NAME {
+                        thread::sleep(std::time::Duration::from_millis(20));
+                    }
+                }
+            })
+            .unwrap()
     }
 
     pub fn listen_to_all_sensors(&mut self) -> BroadcastReceiver<TimedSensorData> {
@@ -172,6 +179,7 @@ impl SensorManager {
                 let is_active = Arc::new(AtomicBool::new(true));
                 let mut handles = vec![];
 
+                set_board_led_status(true);
                 let start_time = SystemTime::now();
                 let mut spawn_thread = |sensor: Box<dyn BasicSensor + Send>| {
                     handles.push(Self::spawn_sensor_thread(
@@ -234,5 +242,7 @@ impl SensorManager {
         }
 
         self.state = SensorManager::new().state;
+
+        set_board_led_status(false);
     }
 }

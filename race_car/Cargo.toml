@@ -36,7 +36,7 @@ chrono = "0.4"
 time = { version = "0.3", features = ["formatting", "macros"] }
 
 ### Sensors
-linux-embedded-hal = "0.3"
+linux-embedded-hal = { version = "0.3", default-features = false, features = ["gpio_cdev"] }
 # HC-SR04 Ultrasonic sensor
 hc-sr04 = "0.1"
 bno055 = { version = "0.3", features = ["std"] }
