@@ -20,12 +20,19 @@ pub struct GpsCoordinates {
     pub confidence: u8,
 }
 
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct AmbienceData {
+    pub temperature: f32,
+    pub humidity: f32,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub enum SensorData {
     Imu(ImuData),
     Distance(f32),
     Gps(GpsCoordinates),
     Velocity(f64),
+    Ambience(AmbienceData),
 }
 
 impl Display for SensorData {
@@ -35,6 +42,7 @@ impl Display for SensorData {
             SensorData::Distance(distance) => write!(f, "Distance({distance})"),
             SensorData::Gps(gps) => write!(f, "{gps:?}"),
             SensorData::Velocity(velocity) => write!(f, "{velocity}"),
+            SensorData::Ambience(ambience) => write!(f, "{ambience:?}"),
         }
     }
 }

@@ -5,13 +5,29 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
-use crate::sensors::{BasicSensor, GpsCoordinates, ImuData, SensorData, SensorManager};
+use crate::sensors::{
+    AmbienceData, BasicSensor, GpsCoordinates, ImuData, SensorData, SensorManager,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UdpActiveSensor {
     Imu,
     Ultrasonic,
     Gps,
+    Ambience,
+}
+
+impl UdpActiveSensor {
+    fn get_sensor(self, sensor_manager: &mut SensorManager) -> Option<&mut dyn BasicSensor> {
+        let sensor: &mut dyn BasicSensor = match self {
+            UdpActiveSensor::Imu => sensor_manager.imu()?,
+            UdpActiveSensor::Ultrasonic => sensor_manager.ultrasonic()?,
+            UdpActiveSensor::Gps => sensor_manager.gps()?,
+            UdpActiveSensor::Ambience => sensor_manager.ambience()?,
+        };
+
+        Some(sensor)
+    }
 }
 
 #[derive(Default)]
@@ -26,6 +42,7 @@ struct UdpData {
     imu: Option<ImuData>,
     ultrasonic: Option<f32>,
     gps: Option<GpsCoordinates>,
+    ambience: Option<AmbienceData>,
 }
 
 impl UdpData {
@@ -90,11 +107,7 @@ impl UdpBroadcast {
 
         let active_sensor = self.active_sensors.first()?;
 
-        let sensor: &mut dyn BasicSensor = match active_sensor {
-            UdpActiveSensor::Imu => sensor_manager.imu()?,
-            UdpActiveSensor::Ultrasonic => sensor_manager.ultrasonic()?,
-            UdpActiveSensor::Gps => sensor_manager.gps()?,
-        };
+        let sensor = active_sensor.get_sensor(sensor_manager)?;
 
         if let Err(e) = sensor.save_config() {
             error!("Failed to save error: {e}");
@@ -113,6 +126,7 @@ impl UdpBroadcast {
                     SensorData::Imu(imu) => udp.imu = Some(imu),
                     SensorData::Distance(distance) => udp.ultrasonic = Some(distance),
                     SensorData::Gps(gps) => udp.gps = Some(gps),
+                    SensorData::Ambience(ambience) => udp.ambience = Some(ambience),
                     _ => {}
                 }
                 udp
@@ -132,6 +146,10 @@ impl UdpBroadcast {
             udp_data.gps = None;
         }
 
+        if !active_sensors.contains(&UdpActiveSensor::Ambience) {
+            udp_data.ambience = None;
+        }
+
         if !udp_data.is_empty() {
             Some(serde_json::to_string(&udp_data).expect("Failed to serialize UDP data"))
         } else {
@@ -142,11 +160,7 @@ impl UdpBroadcast {
     fn config_mode(&self, sensor_manager: &mut SensorManager) -> Option<String> {
         let active_sensor = self.active_sensors.first()?;
 
-        let sensor: &mut dyn BasicSensor = match active_sensor {
-            UdpActiveSensor::Imu => sensor_manager.imu()?,
-            UdpActiveSensor::Ultrasonic => sensor_manager.ultrasonic()?,
-            UdpActiveSensor::Gps => sensor_manager.gps()?,
-        };
+        let sensor = active_sensor.get_sensor(sensor_manager)?;
 
         Some(sensor.read_config())
     }

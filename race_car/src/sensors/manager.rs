@@ -8,6 +8,7 @@ use std::time::{Instant, SystemTime};
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, info, warn};
 
+use crate::sensors::ambience::Ambience;
 use crate::sensors::{
     set_board_led_status, BasicSensor, Gps, Imu, SensorData, TimedSensorData, UltrasonicSensor,
 };
@@ -17,6 +18,7 @@ enum ManagerState {
         imu: Option<Box<Imu>>,
         ultrasonic: Option<Box<UltrasonicSensor>>,
         gps: Option<Box<Gps>>,
+        ambience: Option<Box<Ambience>>,
     },
     Reading {
         is_active: Arc<AtomicBool>,
@@ -43,11 +45,16 @@ impl SensorManager {
             .map(Box::new)
             .map_err(|e| error!("GPS failed to initialize: {e}"))
             .ok();
+        let ambience = Ambience::new()
+            .map(Box::new)
+            .map_err(|e| error!("GPS failed to initialize: {e}"))
+            .ok();
 
         let state = ManagerState::Normal {
             imu,
             ultrasonic,
             gps,
+            ambience,
         };
 
         Self { state }
@@ -74,24 +81,13 @@ impl SensorManager {
         }
     }
 
-    // pub fn get_active_sensors(&self) -> Vec<&dyn BasicSensor> {
-    //     match &self.state {
-    //         ManagerState::Normal {
-    //             imu,
-    //             ultrasonic,
-    //             gps,
-    //         } => {
-    //             let sensors = [
-    //                 imu.as_ref().map(|x| x.as as &Box<dyn BasicSensor>),
-    //                 ultrasonic.as_ref().map(|x| x as &dyn BasicSensor),
-    //                 gps.as_ref().map(|x| x as &dyn BasicSensor),
-    //             ];
-    //
-    //             sensors.into_iter().flatten().collect()
-    //         }
-    //         ManagerState::Reading { .. } => Vec::new(),
-    //     }
-    // }
+    pub(crate) fn ambience(&mut self) -> Option<&mut Ambience> {
+        if let ManagerState::Normal { ambience, .. } = &mut self.state {
+            ambience.as_deref_mut()
+        } else {
+            None
+        }
+    }
 
     fn spawn_sensor_thread(
         mut sensor: Box<dyn BasicSensor + Send>,
@@ -173,6 +169,7 @@ impl SensorManager {
                 imu,
                 ultrasonic,
                 gps,
+                ambience,
             } => {
                 let (sender, receiver) = broadcast_queue(32);
 
@@ -197,6 +194,9 @@ impl SensorManager {
                     spawn_thread(sensor)
                 }
                 if let Some(sensor) = gps.take() {
+                    spawn_thread(sensor)
+                }
+                if let Some(sensor) = ambience.take() {
                     spawn_thread(sensor)
                 }
 
@@ -224,10 +224,12 @@ impl SensorManager {
                 imu,
                 ultrasonic,
                 gps,
+                ambience,
             } => {
                 imu.take();
                 ultrasonic.take();
                 gps.take();
+                ambience.take();
             }
             ManagerState::Reading {
                 is_active, handles, ..

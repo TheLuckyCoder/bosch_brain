@@ -5,6 +5,7 @@ use linux_embedded_hal::gpio_cdev::{Chip, LineRequestFlags};
 pub use manager::*;
 pub use motor_driver::*;
 use std::time::SystemTime;
+pub use ambience::*;
 pub use ultrasonic::*;
 
 mod data;
@@ -12,6 +13,7 @@ mod gps;
 mod imu;
 mod manager;
 mod motor_driver;
+mod ambience;
 mod ultrasonic;
 
 pub trait BasicSensor {

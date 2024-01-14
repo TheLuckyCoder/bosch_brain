@@ -11,7 +11,7 @@ use tracing::info;
 
 use crate::http::udp_broadcast::UdpActiveSensor;
 use crate::http::GlobalState;
-use crate::sensors::{Gps, Imu, UltrasonicSensor};
+use crate::sensors::{Ambience, Gps, Imu, UltrasonicSensor};
 
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
@@ -30,7 +30,7 @@ async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> imp
             sensor_manager.ultrasonic().is_some(),
         ),
         ("Camera", false),
-        ("Temperature", false),
+        (Ambience::NAME, sensor_manager.ambience().is_some()),
         (Gps::NAME, sensor_manager.gps().is_some()),
     ]))
 }
@@ -47,6 +47,7 @@ async fn set_udp_sensor(
                 Imu::NAME => UdpActiveSensor::Imu,
                 UltrasonicSensor::NAME => UdpActiveSensor::Ultrasonic,
                 Gps::NAME => UdpActiveSensor::Gps,
+                Ambience::NAME => UdpActiveSensor::Ambience,
                 _ => return None,
             })
         })
