@@ -3,19 +3,20 @@ use anyhow::Context;
 use linux_embedded_hal::{Delay, I2cdev};
 use tracing::error;
 
-pub struct Ambience(htu21df_sensor::Sensor<I2cdev>);
+/// Wrapper for the HTU21DF sensor
+pub struct AmbienceSensor(htu21df_sensor::Sensor<I2cdev>);
 
-impl Ambience {
+impl AmbienceSensor {
     pub const NAME: &'static str = "Ambience";
 
-    pub fn new() -> anyhow::Result<Ambience> {
+    pub fn new() -> anyhow::Result<AmbienceSensor> {
         let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device")?;
         let mut delay = Delay {};
 
         let sensor = htu21df_sensor::Sensor::new(i2c, Some(&mut delay))
             .context("Failed to initialized ambience sensor")?;
 
-        Ok(Ambience(sensor))
+        Ok(AmbienceSensor(sensor))
     }
 
     pub fn read_temperature(&mut self) -> f32 {
@@ -43,9 +44,9 @@ impl Ambience {
     }
 }
 
-impl BasicSensor for Ambience {
+impl BasicSensor for AmbienceSensor {
     fn name(&self) -> &'static str {
-        Ambience::NAME
+        AmbienceSensor::NAME
     }
 
     fn read_data(&mut self) -> SensorData {

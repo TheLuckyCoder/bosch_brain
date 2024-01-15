@@ -8,17 +8,18 @@ use std::time::{Instant, SystemTime};
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, info, warn};
 
-use crate::sensors::ambience::Ambience;
+use crate::sensors::ambience::AmbienceSensor;
 use crate::sensors::{
     set_board_led_status, BasicSensor, Gps, Imu, SensorData, TimedSensorData, UltrasonicSensor,
 };
 
+#[doc(hidden)]
 enum ManagerState {
     Normal {
         imu: Option<Box<Imu>>,
         ultrasonic: Option<Box<UltrasonicSensor>>,
         gps: Option<Box<Gps>>,
-        ambience: Option<Box<Ambience>>,
+        ambience: Option<Box<AmbienceSensor>>,
     },
     Reading {
         is_active: Arc<AtomicBool>,
@@ -27,6 +28,7 @@ enum ManagerState {
     },
 }
 
+/// Manages all the sensors
 pub struct SensorManager {
     state: ManagerState,
 }
@@ -45,7 +47,7 @@ impl SensorManager {
             .map(Box::new)
             .map_err(|e| error!("GPS failed to initialize: {e}"))
             .ok();
-        let ambience = Ambience::new()
+        let ambience = AmbienceSensor::new()
             .map(Box::new)
             .map_err(|e| error!("GPS failed to initialize: {e}"))
             .ok();
@@ -60,6 +62,7 @@ impl SensorManager {
         Self { state }
     }
 
+    /// Gives a mutable reference to the IMU sensor if in the default state
     pub fn imu(&mut self) -> Option<&mut Imu> {
         match &mut self.state {
             ManagerState::Normal { imu, .. } => imu.as_deref_mut(),
@@ -67,6 +70,7 @@ impl SensorManager {
         }
     }
 
+    /// Gives a mutable reference to the Ultrasonic sensor if in the default state
     pub fn ultrasonic(&mut self) -> Option<&mut UltrasonicSensor> {
         match &mut self.state {
             ManagerState::Normal { ultrasonic, .. } => ultrasonic.as_deref_mut(),
@@ -74,6 +78,7 @@ impl SensorManager {
         }
     }
 
+    /// Gives a mutable reference to the GPS sensor if in the default state
     pub fn gps(&mut self) -> Option<&mut Gps> {
         match &mut self.state {
             ManagerState::Normal { gps, .. } => gps.as_deref_mut(),
@@ -81,7 +86,8 @@ impl SensorManager {
         }
     }
 
-    pub(crate) fn ambience(&mut self) -> Option<&mut Ambience> {
+    /// Gives a mutable reference to the Ambience sensor if in the default state
+    pub(crate) fn ambience(&mut self) -> Option<&mut AmbienceSensor> {
         if let ManagerState::Normal { ambience, .. } = &mut self.state {
             ambience.as_deref_mut()
         } else {
@@ -176,7 +182,7 @@ impl SensorManager {
                 let is_active = Arc::new(AtomicBool::new(true));
                 let mut handles = vec![];
 
-                set_board_led_status(true);
+                set_board_led_status(true).unwrap();
                 let start_time = SystemTime::now();
                 let mut spawn_thread = |sensor: Box<dyn BasicSensor + Send>| {
                     handles.push(Self::spawn_sensor_thread(
@@ -218,6 +224,7 @@ impl SensorManager {
         }
     }
 
+    /// Resets the internal state of the sensor manager
     pub fn reset(&mut self) {
         match &mut self.state {
             ManagerState::Normal {
@@ -245,6 +252,6 @@ impl SensorManager {
 
         self.state = SensorManager::new().state;
 
-        set_board_led_status(false);
+        set_board_led_status(false).unwrap();
     }
 }

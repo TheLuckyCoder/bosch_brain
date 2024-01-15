@@ -67,7 +67,7 @@ impl Gps {
     }
 
     fn init(&mut self) {
-        while let Err(e) = self.serial.write_all(b"\n\n") {
+        while let Err(e) = self.serial.write_all(b"\r\r") {
             error!("{e}");
             std::thread::sleep(Duration::from_secs(1));
         }

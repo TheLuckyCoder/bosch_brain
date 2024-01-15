@@ -8,10 +8,12 @@ use tracing::{error, info};
 use crate::files::get_car_file;
 use crate::sensors::{BasicSensor, ImuData, SensorData};
 
+/// Wrapper for the BNO055 sensor
 pub struct Imu(Bno055<I2cdev>);
 
 impl Imu {
     pub const NAME: &'static str = "IMU";
+
     const BNO_FILE: &'static str = "bno.bin";
 
     pub fn new() -> anyhow::Result<Self> {

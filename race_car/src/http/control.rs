@@ -1,3 +1,5 @@
+//! HTTP routes for controlling the car's PIDs.
+
 use std::sync::Arc;
 use std::thread::JoinHandle;
 
@@ -9,8 +11,10 @@ use tokio::sync::Mutex;
 use shared::math::pid::PidController;
 
 use crate::http::GlobalState;
-use crate::sensors::{Motor, SensorData};
+use crate::sensors::motor_driver::Motor;
+use crate::sensors::SensorData;
 
+/// Holds the PID controllers for the car.
 pub struct PidManager {
     pub acceleration: Mutex<PidController>,
     pub steering: Mutex<PidController>,
@@ -35,6 +39,7 @@ impl PidManager {
     }
 }
 
+/// Creates an object that manages all the PID routes
 pub fn router(state: Arc<GlobalState>) -> Router {
     Router::new()
         .route("/acceleration_pid/:value", post(acceleration_pid))
@@ -42,6 +47,7 @@ pub fn router(state: Arc<GlobalState>) -> Router {
         .with_state(state)
 }
 
+/// Sets the target value for the acceleration PID controller.
 async fn acceleration_pid(State(state): State<Arc<GlobalState>>, Path(value): Path<f64>) {
     {
         let mut thread = state.pids.acceleration_thread.lock().await;
@@ -84,6 +90,7 @@ async fn acceleration_pid(State(state): State<Arc<GlobalState>>, Path(value): Pa
     pid.target_value = value;
 }
 
+/// Sets the target value for the steering PID controller.
 async fn steering_pid(State(state): State<Arc<GlobalState>>, Path(value): Path<f64>) {
     let mut motor = state.motor_driver.lock().await;
 

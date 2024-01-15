@@ -1,3 +1,5 @@
+//! HTTP routes for interacting with the car's sensors.
+
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -11,15 +13,17 @@ use tracing::info;
 
 use crate::http::udp_broadcast::UdpActiveSensor;
 use crate::http::GlobalState;
-use crate::sensors::{Ambience, Gps, Imu, UltrasonicSensor};
+use crate::sensors::{AmbienceSensor, Gps, Imu, UltrasonicSensor};
 
+/// Creates an object that manages all the sensor routes
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
         .route("/", get(get_all_available_sensors))
-        .route("/active_udp", post(set_udp_sensor))
+        .route("/active_udp", post(set_udp_sensors))
         .with_state(global_state)
 }
 
+/// Returns a list of all available and initialized sensors
 async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let mut sensor_manager = state.sensor_manager.lock().await;
 
@@ -30,12 +34,21 @@ async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> imp
             sensor_manager.ultrasonic().is_some(),
         ),
         ("Camera", false),
-        (Ambience::NAME, sensor_manager.ambience().is_some()),
+        (AmbienceSensor::NAME, sensor_manager.ambience().is_some()),
         (Gps::NAME, sensor_manager.gps().is_some()),
     ]))
 }
 
-async fn set_udp_sensor(
+/// Sets the active UDP sensors from which data will be streamed on the UDP port.
+///
+/// This will do different things depending on the state the car is in:
+/// - Standby: Will do nothing
+/// - Config: Will send the config data of the sensors
+/// - RemoteControlled: Will send the data of the sensors
+///
+/// See [UdpActiveSensor] too see which sensors are available.
+///
+async fn set_udp_sensors(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(state): State<Arc<GlobalState>>,
     Json(sensor): Json<Vec<String>>,
@@ -47,7 +60,7 @@ async fn set_udp_sensor(
                 Imu::NAME => UdpActiveSensor::Imu,
                 UltrasonicSensor::NAME => UdpActiveSensor::Ultrasonic,
                 Gps::NAME => UdpActiveSensor::Gps,
-                Ambience::NAME => UdpActiveSensor::Ambience,
+                AmbienceSensor::NAME => UdpActiveSensor::Ambience,
                 _ => return None,
             })
         })

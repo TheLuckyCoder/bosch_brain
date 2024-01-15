@@ -1,3 +1,5 @@
+//! HTTP car server.
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -12,7 +14,8 @@ use tracing::Level;
 
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
-use crate::sensors::{MotorDriver, SensorManager};
+use crate::sensors::manager::SensorManager;
+use crate::sensors::motor_driver::MotorDriver;
 
 mod control;
 mod motor;
@@ -20,6 +23,8 @@ mod sensor;
 mod states;
 mod udp_broadcast;
 
+/// Global state for the HTTP server
+/// This is used to share state between the different routes
 pub struct GlobalState {
     pub car_state: Mutex<CarStates>,
     pub udp_manager: Arc<Mutex<UdpBroadcast>>,
@@ -45,6 +50,7 @@ impl GlobalState {
     }
 }
 
+/// Starts the HTTP server
 pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
     let global_state = Arc::new(global_state);
 

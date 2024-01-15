@@ -1,7 +1,9 @@
+//! HTTP routes for manually controlling the car's motors.
+
 use crate::files::get_car_dir;
 use crate::http::states::CarStates;
 use crate::http::GlobalState;
-use crate::sensors::{Motor, MotorParams};
+use crate::sensors::motor_driver::{Motor, MotorParams};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -15,14 +17,17 @@ use tokio::task;
 use tokio::time::sleep;
 use tracing::{info, log};
 
+#[doc(hidden)]
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Acceleration];
 
+#[doc(hidden)]
 fn get_motor_params_file(motor: Motor) -> PathBuf {
     let mut path = get_car_dir();
     path.push(&format!("motor_params_{motor:?}.json"));
     path
 }
 
+#[doc(hidden)]
 async fn read_params_from_files(global_state: &Arc<GlobalState>) {
     for motor in ALL_MOTORS {
         let file_path = get_motor_params_file(motor);
@@ -48,6 +53,7 @@ async fn read_params_from_files(global_state: &Arc<GlobalState>) {
     }
 }
 
+/// Creates an object that manages all the motor routes
 pub async fn router(global_state: Arc<GlobalState>) -> Router {
     read_params_from_files(&global_state).await;
 
@@ -67,10 +73,12 @@ pub async fn router(global_state: Arc<GlobalState>) -> Router {
         .with_state(global_state)
 }
 
+/// Returns a list of all motors
 async fn get_motors() -> impl IntoResponse {
     Json(ALL_MOTORS)
 }
 
+/// Returns the current parameters for the given motor
 async fn get_motor_parameters(
     State(state): State<Arc<GlobalState>>,
     Path(motor): Path<Motor>,
@@ -80,6 +88,7 @@ async fn get_motor_parameters(
     Json(motor_driver.get_params(motor))
 }
 
+/// Sets the parameters for the given motor
 async fn set_motor_parameters(
     State(state): State<Arc<GlobalState>>,
     Path(motor): Path<Motor>,
@@ -104,6 +113,7 @@ async fn set_motor_parameters(
     .unwrap();
 }
 
+/// Stops the given motor, or all motors if no motor is specified
 async fn stop_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<Motor>>) {
     let mut motor_driver = state.motor_driver.lock().await;
 
@@ -116,6 +126,7 @@ async fn stop_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<Mo
     }
 }
 
+/// Sets the value for the given motor
 async fn set_motor_value(
     State(state): State<Arc<GlobalState>>,
     Path((motor, value)): Path<(Motor, f64)>,
@@ -125,6 +136,7 @@ async fn set_motor_value(
     motor_driver.set_motor_value(motor, value);
 }
 
+/// Pauses the given motor, or all motors if no motor is specified
 async fn pause_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<Motor>>) {
     let mut motor_driver = state.motor_driver.lock().await;
 
@@ -137,6 +149,7 @@ async fn pause_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<M
     }
 }
 
+/// Resumes the given motor, or all motors if no motor is specified
 async fn resume_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<Motor>>) {
     let mut motor_driver = state.motor_driver.lock().await;
 
@@ -149,6 +162,7 @@ async fn resume_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<
     }
 }
 
+#[doc(hidden)]
 async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
     tokio::spawn(async move {
         let mut motor_driver = state.motor_driver.lock().await;
@@ -177,6 +191,7 @@ struct AccelerationAndSteering {
     pub steering: f64,
 }
 
+/// Sets the value for both the acceleration and steering motors at once
 async fn set_all_motors(
     State(state): State<Arc<GlobalState>>,
     Json(values): Json<AccelerationAndSteering>,

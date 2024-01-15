@@ -1,3 +1,5 @@
+//! Handles the UDP broadcast of the sensor data
+
 use std::net::UdpSocket;
 use std::sync::Arc;
 use std::time::Duration;
@@ -5,11 +7,11 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
-use crate::sensors::{
-    AmbienceData, BasicSensor, GpsCoordinates, ImuData, SensorData, SensorManager,
-};
+use crate::sensors::manager::SensorManager;
+use crate::sensors::{AmbienceData, BasicSensor, GpsCoordinates, ImuData, SensorData};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// All the sensors that can be active in the UDP broadcast
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UdpActiveSensor {
     Imu,
     Ultrasonic,
@@ -18,6 +20,7 @@ pub enum UdpActiveSensor {
 }
 
 impl UdpActiveSensor {
+    #[doc(hidden)]
     fn get_sensor(self, sensor_manager: &mut SensorManager) -> Option<&mut dyn BasicSensor> {
         let sensor: &mut dyn BasicSensor = match self {
             UdpActiveSensor::Imu => sensor_manager.imu()?,
@@ -30,13 +33,7 @@ impl UdpActiveSensor {
     }
 }
 
-#[derive(Default)]
-pub struct UdpBroadcast {
-    active_sensors: Vec<UdpActiveSensor>,
-    address: Option<String>,
-    config_mode: bool,
-}
-
+/// The data that is sent over UDP
 #[derive(Default, serde::Serialize)]
 struct UdpData {
     imu: Option<ImuData>,
@@ -46,12 +43,26 @@ struct UdpData {
 }
 
 impl UdpData {
+    /// Checks if the struct contains any data
     fn is_empty(&self) -> bool {
         self.imu.is_none() && self.ultrasonic.is_none() && self.gps.is_none()
     }
 }
 
+/// Handles the UDP broadcast of the sensor data
+#[derive(Default)]
+pub struct UdpBroadcast {
+    active_sensors: Vec<UdpActiveSensor>,
+    address: Option<String>,
+    config_mode: bool,
+}
+
 impl UdpBroadcast {
+    /// Creates a new UDP broadcaster, there should only exist one instance of this.
+    ///
+    /// This starts a background thread which periodically checks for new sensor data and sends it over UDP on port `3000`.
+    ///
+    /// This will only send data after the `address` has been set. See [UdpBroadcast::set_active_sensor] for more information.
     pub fn new(sensor_manager: Arc<Mutex<SensorManager>>) -> std::io::Result<Arc<Mutex<Self>>> {
         let udp_broadcast = Arc::new(Mutex::new(UdpBroadcast::default()));
 

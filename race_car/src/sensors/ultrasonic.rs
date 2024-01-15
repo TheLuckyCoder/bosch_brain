@@ -5,6 +5,7 @@ use crate::sensors::{BasicSensor, SensorData};
 const TRIGGER: u8 = 24;
 const ECHO: u8 = 23;
 
+/// Wrapper for the HC-SR04 sensor
 pub struct UltrasonicSensor(HcSr04);
 
 impl UltrasonicSensor {
@@ -16,13 +17,7 @@ impl UltrasonicSensor {
             .map_err(|e| e.to_string())
     }
 
-    // pub fn start_calibration(&self) {
-    //     debug!("Not yet implemented");
-    // }
-
-    ///
     /// Returns the distance in centimeters.
-    ///
     pub fn get_distance_cm(&mut self) -> Option<f32> {
         self.0
             .measure_distance(Unit::Centimeters)

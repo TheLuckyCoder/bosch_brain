@@ -1,9 +1,11 @@
+use anyhow::anyhow;
 use linux_embedded_hal::I2cdev;
 use pwm_pca9685::{Address, Pca9685};
 use serde::{Deserialize, Serialize};
 
-pub use pwm_pca9685::Channel;
+use pwm_pca9685::Channel;
 
+/// All the motors that can be controlled
 #[repr(usize)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Motor {
@@ -11,6 +13,7 @@ pub enum Motor {
     Steering,
 }
 
+/// The parameters for a motor
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MotorParams {
     pub min: f64,
@@ -19,24 +22,25 @@ pub struct MotorParams {
     pub max: f64,
 }
 
-const DEFAULT_DC_MOTOR: MotorParams = MotorParams {
+/// Default Params for [Motor::Acceleration]
+const DEFAULT_ACCELERATION_MOTOR: MotorParams = MotorParams {
     min: 8.2,
     lower_middle: 8.6,
     upper_middle: 9.05,
     max: 9.08,
 };
 
-const DEFAULT_STEPPER_MOTOR: MotorParams = MotorParams {
+/// Default Params for [Motor::Steering]
+const DEFAULT_STEERING_MOTOR: MotorParams = MotorParams {
     min: 7.2,
     lower_middle: 9.07,
     upper_middle: 9.07,
     max: 10.95,
 };
 
+/// Maps an input floating-point number that is between 0.0-100.0 (percentage) to 0-4096
 fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
-    tracing::info!("Final value %: {input}");
-    // Maps an input floating-point number that is between 0.0-100.0 (percentage) to 0-4096
-
+    // tracing::info!("Final value %: {input}");
     // Ensure input is within the 0.0-100.0 range
     let clamped_input = input.clamp(0.0, 100.0);
 
@@ -44,6 +48,7 @@ fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
     (clamped_input * 40.96) as u16
 }
 
+/// All the data needed for a motor
 struct MotorContents {
     params: MotorParams,
     bonnet_channel: Channel,
@@ -51,34 +56,35 @@ struct MotorContents {
     paused: bool,
 }
 
+/// Handles the motor control abstracting over the PCA9685 PWM driver
 pub struct MotorDriver {
     device: Pca9685<I2cdev>,
     contents: [MotorContents; 2],
 }
 
 impl MotorDriver {
-    pub fn new() -> Result<Self, String> {
-        let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| format!("{e:?}"))?;
+    pub fn new() -> anyhow::Result<Self> {
+        let i2c = I2cdev::new("/dev/i2c-1").map_err(|e| anyhow!("{e:?}"))?;
         let address = Address::default();
-        let mut pwm = Pca9685::new(i2c, address).map_err(|e| format!("{e:?}"))?;
+        let mut pwm = Pca9685::new(i2c, address).map_err(|e| anyhow!("{e:?}"))?;
 
         // This corresponds to a frequency of 60 Hz.
-        pwm.set_prescale(100).map_err(|e| format!("{e:?}"))?;
+        pwm.set_prescale(100).map_err(|e| anyhow!("{e:?}"))?;
 
         // It is necessary to enable the device.
-        pwm.enable().map_err(|e| format!("{e:?}"))?;
+        pwm.enable().map_err(|e| anyhow!("{e:?}"))?;
 
         Ok(Self {
             device: pwm,
             contents: [
                 MotorContents {
-                    params: DEFAULT_DC_MOTOR,
+                    params: DEFAULT_ACCELERATION_MOTOR,
                     bonnet_channel: Channel::C0,
                     last_value: f64::INFINITY,
                     paused: false,
                 },
                 MotorContents {
-                    params: DEFAULT_STEPPER_MOTOR,
+                    params: DEFAULT_STEERING_MOTOR,
                     bonnet_channel: Channel::C1,
                     last_value: f64::INFINITY,
                     paused: false,
