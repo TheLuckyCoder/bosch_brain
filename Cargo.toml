@@ -20,3 +20,4 @@ opt-level = 1
 
 [profile.release]
 incremental = true
+lto = false

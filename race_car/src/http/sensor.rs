@@ -1,6 +1,6 @@
 //! HTTP routes for interacting with the car's sensors.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
 async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let mut sensor_manager = state.sensor_manager.lock().await;
 
-    Json(HashMap::from([
+    Json(BTreeMap::from([
         (Imu::NAME, sensor_manager.imu().is_some()),
         (
             UltrasonicSensor::NAME,

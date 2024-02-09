@@ -185,7 +185,7 @@ async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mo
     });
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Default, serde::Deserialize)]
 struct AccelerationAndSteering {
     pub acceleration: f64,
     pub steering: f64,
@@ -194,11 +194,13 @@ struct AccelerationAndSteering {
 /// Sets the value for both the acceleration and steering motors at once
 async fn set_all_motors(
     State(state): State<Arc<GlobalState>>,
-    Json(values): Json<AccelerationAndSteering>,
+    values: Option<Json<AccelerationAndSteering>>,
 ) -> StatusCode {
     if *state.car_state.lock().await != CarStates::RemoteControlled {
         return StatusCode::BAD_REQUEST;
     }
+
+    let Json(values) = values.unwrap_or_default();
 
     let mut motor = state.motor_driver.lock().await;
 

@@ -91,7 +91,7 @@ impl UdpBroadcast {
                 };
 
                 if let Some(data) = data {
-                    info!("Udp: {data}");
+                    // info!("Udp: {data}");
                     if let Err(err) = server.send_to(data.as_bytes(), address) {
                         warn!("Failed to send UDP Packet: {err}")
                     }
@@ -173,6 +173,6 @@ impl UdpBroadcast {
 
         let sensor = active_sensor.get_sensor(sensor_manager)?;
 
-        Some(sensor.read_config())
+        Some(sensor.read_debug())
     }
 }

@@ -87,7 +87,7 @@ impl PidController {
 
         let base_output =
             self.k_p * error + self.k_i * self.cumulative_error + self.k_d * derivative;
-        let output = if base_output < 0.0001 {
+        let output = if base_output.abs() < 0.0001 {
             0.0
         } else {
             base_output

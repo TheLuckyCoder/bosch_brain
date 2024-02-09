@@ -17,10 +17,11 @@ impl Segment {
     pub fn get_slope(&self) -> f64 {
         let dx = self.1.x - self.0.x;
         let dy = self.1.y - self.0.y;
-        if dx == 0.0 { // mathematically this would be undefined but 1 is fine for us
+        if dx == 0.0 {
+            // mathematically this would be undefined but 1 is fine for us
             1.0
         } else {
-            dy/dx
+            dy / dx
         }
         // dy.atan2(dx)
     }

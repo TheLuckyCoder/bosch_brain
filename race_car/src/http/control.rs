@@ -7,6 +7,7 @@ use axum::extract::{Path, State};
 use axum::routing::post;
 use axum::Router;
 use tokio::sync::Mutex;
+use tracing::info;
 
 use shared::math::pid::PidController;
 
@@ -42,16 +43,16 @@ impl PidManager {
 /// Creates an object that manages all the PID routes
 pub fn router(state: Arc<GlobalState>) -> Router {
     Router::new()
-        .route("/acceleration_pid/:value", post(acceleration_pid))
+        .route("/velocity_pid/:value", post(velocity_pid))
         .route("/steering_pid/:value", post(steering_pid))
         .with_state(state)
 }
 
 /// Sets the target value for the acceleration PID controller.
-async fn acceleration_pid(State(state): State<Arc<GlobalState>>, Path(value): Path<f64>) {
+async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocity): Path<f64>) {
     {
         let mut thread = state.pids.acceleration_thread.lock().await;
-        if thread.is_some() {
+        if thread.is_none() {
             let receiver = state
                 .sensor_manager
                 .lock()
@@ -78,6 +79,7 @@ async fn acceleration_pid(State(state): State<Arc<GlobalState>>, Path(value): Pa
                         pid.compute(velocity)
                     };
 
+                    info!("Setting Motor Value: {value}");
                     motor_driver
                         .blocking_lock()
                         .set_motor_value(Motor::Acceleration, value);
@@ -87,14 +89,17 @@ async fn acceleration_pid(State(state): State<Arc<GlobalState>>, Path(value): Pa
     }
 
     let mut pid = state.pids.acceleration.lock().await;
-    pid.target_value = value;
+    pid.target_value = target_velocity;
 }
 
 /// Sets the target value for the steering PID controller.
-async fn steering_pid(State(state): State<Arc<GlobalState>>, Path(value): Path<f64>) {
+async fn steering_pid(State(state): State<Arc<GlobalState>>, Path(angle): Path<f64>) {
     let mut motor = state.motor_driver.lock().await;
 
     let mut pid = state.pids.steering.lock().await;
-    let motor_value = pid.compute(value);
+    // let angle = pid.compute(-value);
+    let motor_value = (-angle / 30.0f64).clamp(-1.0, 1.0);
+
+    info!("Receiving steering: {angle} ; Motor Value: {motor_value}");
     motor.set_motor_value(Motor::Steering, motor_value);
 }

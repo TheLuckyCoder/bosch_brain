@@ -13,7 +13,6 @@ use crate::sensors::{
     set_board_led_status, BasicSensor, Gps, Imu, SensorData, TimedSensorData, UltrasonicSensor,
 };
 
-#[doc(hidden)]
 enum ManagerState {
     Normal {
         imu: Option<Box<Imu>>,
@@ -28,7 +27,7 @@ enum ManagerState {
     },
 }
 
-/// Manages all the sensors
+/// Manages all the sensor instances
 pub struct SensorManager {
     state: ManagerState,
 }
@@ -37,26 +36,26 @@ impl SensorManager {
     pub fn new() -> Self {
         let imu = Imu::new()
             .map(Box::new)
-            .map_err(|e| error!("IMU failed to initialize: {e}"))
+            .map_err(|e| error!("IMU failed to initialize: {e:?}"))
             .ok();
-        let ultrasonic = UltrasonicSensor::new(21f32)
-            .map(Box::new)
-            .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e}"))
-            .ok();
+        // let ultrasonic = UltrasonicSensor::new(21f32)
+        //     .map(Box::new)
+        //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
+        //     .ok();
         let gps = Gps::new()
             .map(Box::new)
             .map_err(|e| error!("GPS failed to initialize: {e}"))
             .ok();
-        let ambience = AmbienceSensor::new()
-            .map(Box::new)
-            .map_err(|e| error!("GPS failed to initialize: {e}"))
-            .ok();
+        // let ambience = AmbienceSensor::new()
+        //     .map(Box::new)
+        //     .map_err(|e| error!("Ambience failed to initialize: {e:?}"))
+        //     .ok();
 
         let state = ManagerState::Normal {
             imu,
-            ultrasonic,
+            ultrasonic: None,
             gps,
-            ambience,
+            ambience: None,
         };
 
         Self { state }
@@ -107,6 +106,7 @@ impl SensorManager {
                 let mut since_last_read = Instant::now();
                 let mut previous_velocity = 0f64;
                 let mut previous_acceleration = 0f64;
+                let mut updated_count = 0usize;
 
                 while is_active.load(Ordering::Acquire) {
                     let instant = Instant::now();
@@ -115,15 +115,24 @@ impl SensorManager {
 
                     if let SensorData::Imu(data) = &sensor_data.data {
                         let acceleration = data.acceleration.x as f64;
+                        let acceleration = if acceleration < 0.005 {
+                            0.0
+                        } else {
+                            acceleration
+                        };
+
                         let velocity = previous_velocity
                             + 0.5f64
                                 * (acceleration + previous_acceleration)
                                 * since_last_read.elapsed().as_secs_f64();
 
-                        // info!("Velocity: {velocity}");
+                        if updated_count % 5 == 0 {
+                            info!("Velocity: {velocity}");
+                        }
                         since_last_read = Instant::now();
                         previous_acceleration = acceleration;
                         previous_velocity = velocity;
+                        updated_count += 1;
 
                         if let Err(e) =
                             sender.try_send(TimedSensorData::from(SensorData::Velocity(velocity)))
@@ -226,6 +235,8 @@ impl SensorManager {
 
     /// Resets the internal state of the sensor manager
     pub fn reset(&mut self) {
+        info!("Resetting");
+
         match &mut self.state {
             ManagerState::Normal {
                 imu,
@@ -247,10 +258,12 @@ impl SensorManager {
                 handles.into_iter().for_each(|handle| {
                     handle.join().unwrap();
                 });
+                info!("Finished closing sensor threads");
             }
         }
 
         self.state = SensorManager::new().state;
+        info!("Recreated SensorManager");
 
         set_board_led_status(false).unwrap();
     }

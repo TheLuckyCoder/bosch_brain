@@ -39,6 +39,6 @@ time = { version = "0.3", features = ["formatting", "macros"] }
 linux-embedded-hal = { version = "0.3", default-features = false, features = ["gpio_cdev"] }
 # HC-SR04 Ultrasonic sensor
 hc-sr04 = "0.1"
-bno055 = { version = "0.3", features = ["std"] }
-htu21df-sensor = { git = "https://gitlab.com/razvan.filea/htu21df-sensor", features = ["std"] }
-pwm-pca9685 = "0.3"
+bno055 = { version = "=0.3.3", features = ["std"] }
+htu21df-sensor = { version = "0.1.4", features = ["std"] }
+pwm-pca9685 = "0.3.1"

@@ -1,11 +1,22 @@
+use serde::Serialize;
 use std::io::{Read, Write};
 use std::time::Duration;
 
 use serialport::{DataBits, Parity, SerialPort, StopBits, TTYPort};
 use tracing::error;
 
-use crate::sensors::{BasicSensor, GpsCoordinates, SensorData};
+use crate::sensors::{BasicSensor, SensorData};
 
+/// Data from the GPS sensor
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct GpsCoordinates {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub confidence: u8,
+}
+
+/// GPS Sensor, wrapper for the J-Link
 pub struct Gps {
     serial: TTYPort,
     buffer: Vec<u8>,

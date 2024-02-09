@@ -1,7 +1,15 @@
-use crate::sensors::{AmbienceData, BasicSensor, SensorData};
+use crate::sensors::{BasicSensor, SensorData};
 use anyhow::Context;
 use linux_embedded_hal::{Delay, I2cdev};
+use serde::Serialize;
 use tracing::error;
+
+/// Data from the ambience sensor
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct AmbienceData {
+    pub temperature: f32,
+    pub humidity: f32,
+}
 
 /// Wrapper for the HTU21DF sensor
 pub struct AmbienceSensor(htu21df_sensor::Sensor<I2cdev>);

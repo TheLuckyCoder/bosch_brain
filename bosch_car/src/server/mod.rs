@@ -10,9 +10,9 @@ pub mod data;
 mod environment;
 mod localisation;
 mod moving_obstacle;
+pub mod steering_wheel;
 mod traffic_lights;
 mod utils;
-pub mod steering_wheel;
 
 #[derive(Debug)]
 pub enum ServerData {

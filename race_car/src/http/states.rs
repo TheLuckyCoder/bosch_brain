@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use tracing::info;
 
 use crate::http::GlobalState;
+use crate::sensors::motor_driver::Motor;
 
 /// The different states the car can be in.
 /// - Standby: The default state of the car.
@@ -75,6 +76,12 @@ async fn set_current_state(
     let mut sensor_manager = state.sensor_manager.lock().await;
 
     {
+        let mut motors = state.motor_driver.lock().await;
+        motors.stop_motor(Motor::Acceleration);
+        motors.stop_motor(Motor::Steering);
+    }
+
+    {
         let mut udp = state.udp_manager.lock().await;
         udp.save_sensor_config(&mut sensor_manager);
         udp.set_config_mode(new_car_state == CarStates::Config);
@@ -88,8 +95,8 @@ async fn set_current_state(
             sensor_manager.reset();
         }
         CarStates::RemoteControlled => {
+            let state = state.clone();
             let receiver = sensor_manager.listen_to_all_sensors();
-            // return StatusCode::OK; // TODO
 
             std::thread::spawn(move || {
                 let date = Local::now();
@@ -98,13 +105,16 @@ async fn set_current_state(
                 let mut output_file = File::create(path).unwrap();
 
                 while let Ok(data) = receiver.recv() {
+                    if *state.car_state.blocking_lock() != CarStates::RemoteControlled {
+                        break;
+                    }
                     output_file
                         .write_all(serde_json::to_string(&data).unwrap().as_bytes())
                         .unwrap();
                     output_file.write_all(&[b'\n']).unwrap();
                 }
                 output_file.sync_data().unwrap();
-                info!("Stopping log thread")
+                info!("Log thread stopped")
             });
         } // TODO Do something with it
         CarStates::AutonomousControlled => {

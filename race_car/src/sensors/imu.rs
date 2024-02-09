@@ -3,10 +3,20 @@ use std::convert::TryInto;
 use anyhow::Context;
 use bno055::{BNO055Calibration, BNO055OperationMode, Bno055, BNO055_CALIB_SIZE};
 use linux_embedded_hal::{Delay, I2cdev};
-use tracing::{error, info};
+use mint::{Quaternion, Vector3};
+use serde::Serialize;
+use shared::math::AlmostEquals;
+use tracing::{error, info, warn};
 
 use crate::files::get_car_file;
-use crate::sensors::{BasicSensor, ImuData, SensorData};
+use crate::sensors::{BasicSensor, SensorData};
+
+/// Data from the IMU sensor
+#[derive(Debug, Clone, Serialize)]
+pub struct ImuData {
+    pub quaternion: Quaternion<f32>,
+    pub acceleration: Vector3<f32>,
+}
 
 /// Wrapper for the BNO055 sensor
 pub struct Imu(Bno055<I2cdev>);
@@ -40,18 +50,31 @@ impl Imu {
         Ok(Self(imu))
     }
 
-    pub fn get_acceleration(&mut self) -> mint::Vector3<f32> {
+    pub fn get_acceleration(&mut self) -> Vector3<f32> {
         self.0.linear_acceleration().unwrap_or_else(|e| {
             error!("IMU probably not in fusion mode: {e}");
-            mint::Vector3::from([f32::NAN; 3])
+            Vector3::from([f32::NAN; 3])
         })
     }
 
-    pub fn get_quaternion(&mut self) -> mint::Quaternion<f32> {
-        self.0.quaternion().unwrap_or_else(|e| {
-            error!("IMU probably not in fusion mode: {e}");
-            mint::Quaternion::from([f32::NAN; 4])
-        })
+    pub fn get_quaternion(&mut self) -> Quaternion<f32> {
+        self.0
+            .quaternion()
+            .map(|q| {
+                let vec = &q.v;
+                if (vec.x.powi(2) + vec.y.powi(2) + vec.z.powi(2) + q.s.powi(2))
+                    .almost_equals(1.0, 0.1)
+                {
+                    q
+                } else {
+                    warn!("IMU reported wrong value");
+                    Quaternion::from([f32::NAN; 4])
+                }
+            })
+            .unwrap_or_else(|e| {
+                error!("IMU probably not in fusion mode: {e}");
+                Quaternion::from([f32::NAN; 4])
+            })
     }
 }
 
@@ -67,7 +90,7 @@ impl BasicSensor for Imu {
         })
     }
 
-    fn read_config(&mut self) -> String {
+    fn read_debug(&mut self) -> String {
         let status = self
             .0
             .get_calibration_status()
