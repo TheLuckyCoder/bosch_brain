@@ -18,7 +18,7 @@ use tokio::time::sleep;
 use tracing::{info, log};
 
 #[doc(hidden)]
-const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Velocity];
+const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Speed];
 
 #[doc(hidden)]
 fn get_motor_params_file(motor: Motor) -> PathBuf {
@@ -186,15 +186,15 @@ async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mo
 }
 
 #[derive(Default, serde::Deserialize)]
-struct VelocityAndSteering {
-    pub acceleration: f64,
+struct SpeedAndSteering {
+    pub speed: f64,
     pub steering: f64,
 }
 
 /// Sets the value for both the acceleration and steering motors at once
 async fn set_all_motors(
     State(state): State<Arc<GlobalState>>,
-    values: Option<Json<VelocityAndSteering>>,
+    values: Option<Json<SpeedAndSteering>>,
 ) -> StatusCode {
     if *state.car_state.lock().await != CarStates::RemoteControlled {
         return StatusCode::BAD_REQUEST;
@@ -205,11 +205,11 @@ async fn set_all_motors(
     let mut motor = state.motor_driver.lock().await;
 
     info!(
-        "Motor Values received: Acceleration({}) Steering({})",
-        values.acceleration, values.steering
+        "Motor Values received: Speed({}) Steering({})",
+        values.speed, values.steering
     );
 
-    motor.set_motor_value(Motor::Velocity, values.acceleration);
+    motor.set_motor_value(Motor::Speed, values.speed);
     motor.set_motor_value(Motor::Steering, values.steering);
 
     StatusCode::OK

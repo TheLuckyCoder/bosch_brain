@@ -126,9 +126,10 @@ impl SensorManager {
                                 * (acceleration + previous_acceleration)
                                 * since_last_read.elapsed().as_secs_f64();
 
-                        if updated_count % 5 == 0 {
+                        if updated_count % 10 == 0 {
                             info!("Velocity: {velocity}");
                         }
+
                         since_last_read = Instant::now();
                         previous_acceleration = acceleration;
                         previous_velocity = velocity;

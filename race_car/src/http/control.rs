@@ -82,7 +82,7 @@ async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocit
                     info!("Setting Motor Value: {value}");
                     motor_driver
                         .blocking_lock()
-                        .set_motor_value(Motor::Velocity, value);
+                        .set_motor_value(Motor::Speed, value);
                 }
             }));
         }
