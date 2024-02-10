@@ -77,7 +77,7 @@ async fn set_current_state(
 
     {
         let mut motors = state.motor_driver.lock().await;
-        motors.stop_motor(Motor::Acceleration);
+        motors.stop_motor(Motor::Velocity);
         motors.stop_motor(Motor::Steering);
     }
 

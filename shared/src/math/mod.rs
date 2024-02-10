@@ -10,7 +10,6 @@ pub use segment::*;
 mod almost_equals;
 mod angle_wrap;
 mod circle;
-pub mod kinematics;
 pub mod pid;
 mod point;
 mod segment;

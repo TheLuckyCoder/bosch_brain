@@ -9,7 +9,7 @@ use pwm_pca9685::Channel;
 #[repr(usize)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Motor {
-    Acceleration,
+    Velocity,
     Steering,
 }
 
@@ -22,8 +22,8 @@ pub struct MotorParams {
     pub max: f64,
 }
 
-/// Default Params for [Motor::Acceleration]
-const DEFAULT_ACCELERATION_MOTOR: MotorParams = MotorParams {
+/// Default Params for [Motor::Velocity]
+const DEFAULT_VELOCITY_MOTOR: MotorParams = MotorParams {
     min: 8.2,
     lower_middle: 8.6,
     upper_middle: 9.05,
@@ -78,7 +78,7 @@ impl MotorDriver {
             device: pwm,
             contents: [
                 MotorContents {
-                    params: DEFAULT_ACCELERATION_MOTOR,
+                    params: DEFAULT_VELOCITY_MOTOR,
                     bonnet_channel: Channel::C0,
                     last_value: f64::INFINITY,
                     paused: false,
@@ -123,7 +123,6 @@ impl MotorDriver {
             (params.lower_middle + params.upper_middle) / 2.0
         };
 
-        // println!("Params: {params:?}");
         self.device
             .set_channel_on_off(
                 bonnet_channel,
@@ -168,6 +167,6 @@ impl MotorDriver {
 
 impl Drop for MotorDriver {
     fn drop(&mut self) {
-        self.stop_motor(Motor::Acceleration);
+        self.stop_motor(Motor::Velocity);
     }
 }
