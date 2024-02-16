@@ -20,7 +20,6 @@ pub enum UdpActiveSensor {
 }
 
 impl UdpActiveSensor {
-    #[doc(hidden)]
     fn get_sensor(self, sensor_manager: &mut SensorManager) -> Option<&mut dyn BasicSensor> {
         let sensor: &mut dyn BasicSensor = match self {
             UdpActiveSensor::Imu => sensor_manager.imu()?,

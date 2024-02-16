@@ -86,7 +86,7 @@ impl SensorManager {
     }
 
     /// Gives a mutable reference to the Ambience sensor if in the default state
-    pub(crate) fn ambience(&mut self) -> Option<&mut AmbienceSensor> {
+    pub fn ambience(&mut self) -> Option<&mut AmbienceSensor> {
         if let ManagerState::Normal { ambience, .. } = &mut self.state {
             ambience.as_deref_mut()
         } else {
@@ -109,9 +109,9 @@ impl SensorManager {
                 let mut updated_count = 0usize;
 
                 while is_active.load(Ordering::Acquire) {
-                    let instant = Instant::now();
+                    // let instant = Instant::now();
                     let sensor_data = sensor.read_data_timed(start_time);
-                    let time_elapsed = instant.elapsed();
+                    // let time_elapsed = instant.elapsed();
 
                     if let SensorData::Imu(data) = &sensor_data.data {
                         let acceleration = data.acceleration.x as f64;
@@ -136,20 +136,20 @@ impl SensorManager {
                         updated_count += 1;
 
                         if let Err(e) =
-                            sender.try_send(TimedSensorData::from(SensorData::Velocity(velocity)))
+                            sender.try_send(TimedSensorData::new(SensorData::Velocity(velocity), start_time))
                         {
                             error!("{e}")
                         }
                     }
 
-                    if sensor.name() == Gps::NAME {
-                        info!(
-                            "{:?} {} elapsed {}ms",
-                            sensor_data.data,
-                            sensor.name(),
-                            time_elapsed.as_millis(),
-                        );
-                    }
+                    // if sensor.name() == Gps::NAME {
+                    //     info!(
+                    //         "{:?} {} elapsed {}ms",
+                    //         sensor_data.data,
+                    //         sensor.name(),
+                    //         time_elapsed.as_millis(),
+                    //     );
+                    // }
 
                     if !is_active.load(Ordering::Acquire) {
                         break;

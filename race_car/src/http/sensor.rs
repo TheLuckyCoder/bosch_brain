@@ -46,7 +46,7 @@ async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> imp
 /// - Config: Will send the config data of the sensors
 /// - RemoteControlled: Will send the data of the sensors
 ///
-/// See [UdpActiveSensor] too see which sensors are available.
+/// See [UdpActiveSensor] to see which sensors are available.
 ///
 async fn set_udp_sensors(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,

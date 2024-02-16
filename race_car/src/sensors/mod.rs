@@ -78,6 +78,7 @@ pub struct TimedSensorData {
     #[serde(flatten)]
     pub data: SensorData,
     #[serde_as(as = "DurationMilliSeconds<u64>")]
+    #[serde(rename = "timestamp_ms")]
     pub timestamp: Duration,
 }
 

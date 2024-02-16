@@ -97,21 +97,30 @@ async fn set_current_state(
         CarStates::RemoteControlled => {
             let state = state.clone();
             let receiver = sensor_manager.listen_to_all_sensors();
+            let motor_driver = state.motor_driver.clone();
 
             std::thread::spawn(move || {
                 let date = Local::now();
 
-                let path = get_car_file(format!("{}.log", date.format("%Y.%m.%d_%H:%M:%S")));
+                let path = get_car_file(format!("{}.log", date.format("%Y-%m-%d_%H-%M-%S")));
                 let mut output_file = File::create(path).unwrap();
+                let mut last_motor_value = 0f64;
 
                 while let Ok(data) = receiver.recv() {
                     if *state.car_state.blocking_lock() != CarStates::RemoteControlled {
                         break;
                     }
+                    let motor_value = motor_driver.blocking_lock().get_last_motor_value(Motor::Steering);
+                    if last_motor_value != motor_value {
+                        output_file
+                            .write_all(format!("{{ \"SteeringAngle\": {}, \"timestamp_ms\": {} }}\n", motor_value, data.timestamp.as_millis()).as_bytes())
+                            .unwrap();
+                    }
+                    last_motor_value = motor_value;
+
                     output_file
-                        .write_all(serde_json::to_string(&data).unwrap().as_bytes())
+                        .write_all(format!("{}\n", serde_json::to_string(&data).unwrap()).as_bytes())
                         .unwrap();
-                    output_file.write_all(&[b'\n']).unwrap();
                 }
                 output_file.sync_data().unwrap();
                 info!("Log thread stopped")
