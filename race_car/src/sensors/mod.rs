@@ -24,7 +24,7 @@ mod ultrasonic;
 mod velocity;
 
 /// Common set of functions each sensor class should implement
-pub trait BasicSensor {
+pub trait BasicSensor : Send {
     /// Unique name of the sensor
     fn name(&self) -> SensorName;
 
@@ -58,7 +58,7 @@ pub fn set_board_led_status(on: bool) -> anyhow::Result<()> {
         .context("Failed to set GPIO PIN 25")
 }
 
-#[derive(Clone, Copy, DeserializeFromStr, SerializeDisplay, PartialEq, Eq, Hash, EnumIter, IntoStaticStr, AsRefStr)]
+#[derive(Debug, Clone, Copy, DeserializeFromStr, SerializeDisplay, PartialEq, Eq, Hash, EnumIter, IntoStaticStr, AsRefStr)]
 pub enum SensorName {
     Imu,
     Ultrasonic,
@@ -71,12 +71,12 @@ impl FromStr for SensorName {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            Imu::NAME => Ok(SensorName::Imu),
-            UltrasonicSensor::NAME => Ok(SensorName::Ultrasonic),
-            Gps::NAME => Ok(SensorName::Gps),
-            "Velocity" => Ok(SensorName::Velocity),
-            AmbienceSensor::NAME => Ok(SensorName::Ambience),
+        match s.to_lowercase().as_str() {
+            "imu" => Ok(SensorName::Imu),
+            "ultrasonic" => Ok(SensorName::Ultrasonic),
+            "gps" => Ok(SensorName::Gps),
+            "velocity" => Ok(SensorName::Velocity),
+            "ambience" => Ok(SensorName::Ambience),
             _ => Err("No such Sensor exists"),
         }
     }

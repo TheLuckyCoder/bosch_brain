@@ -16,6 +16,7 @@ use tracing::info;
 
 use crate::http::GlobalState;
 use crate::sensors::motor_driver::Motor;
+use crate::sensors::set_board_led_status;
 
 /// The different states the car can be in.
 /// - Standby: The default state of the car.
@@ -86,15 +87,12 @@ async fn set_current_state(
     }
 
     match new_car_state {
-        CarStates::Standby => {
-            sensor_manager.reset();
-        }
-        CarStates::Config => {
-            sensor_manager.reset();
-        }
+        CarStates::Standby => sensor_manager.stop_listening_to_sensors(),
+        CarStates::Config => sensor_manager.stop_listening_to_sensors(),
         CarStates::RemoteControlled => {
             let state = state.clone();
             sensor_manager.listen_to_all_sensors();
+            set_board_led_status(true).unwrap();
             let receiver = sensor_manager.get_data_receiver().clone();
 
             std::thread::spawn(move || {

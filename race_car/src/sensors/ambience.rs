@@ -15,7 +15,6 @@ pub struct AmbienceData {
 pub struct AmbienceSensor(htu21df_sensor::Sensor<I2cdev>);
 
 impl AmbienceSensor {
-    pub const NAME: &'static str = "Ambience";
 
     pub fn new() -> anyhow::Result<AmbienceSensor> {
         let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device")?;

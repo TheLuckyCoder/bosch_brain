@@ -9,7 +9,6 @@ const ECHO: u8 = 23;
 pub struct UltrasonicSensor(HcSr04);
 
 impl UltrasonicSensor {
-    pub const NAME: &'static str = "Ultrasonic";
 
     pub fn new(temp: f32) -> Result<Self, String> {
         HcSr04::new(TRIGGER, ECHO, Some(temp))
