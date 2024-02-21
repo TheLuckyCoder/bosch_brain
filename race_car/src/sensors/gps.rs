@@ -24,7 +24,6 @@ pub struct Gps {
 }
 
 impl Gps {
-    pub const NAME: &'static str = "GPS";
 
     pub fn new() -> anyhow::Result<Gps> {
         let serial = serialport::new(

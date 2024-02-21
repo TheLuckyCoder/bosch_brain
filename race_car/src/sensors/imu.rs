@@ -22,8 +22,6 @@ pub struct ImuData {
 pub struct Imu(Bno055<I2cdev>);
 
 impl Imu {
-    pub const NAME: &'static str = "IMU";
-
     const BNO_FILE: &'static str = "bno.bin";
 
     pub fn new() -> anyhow::Result<Self> {
