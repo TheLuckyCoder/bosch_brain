@@ -1,117 +1,112 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::TrySendError;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::{Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, info, warn};
 
-use crate::sensors::ambience::AmbienceSensor;
-use crate::sensors::{
-    set_board_led_status, BasicSensor, Gps, Imu, SensorData, TimedSensorData, UltrasonicSensor,
-};
+use crate::sensors::{set_board_led_status, BasicSensor, Gps, Imu, SensorData, TimedSensorData, SensorName, UltrasonicSensor, AmbienceSensor};
 
-enum ManagerState {
-    Normal {
-        imu: Option<Box<Imu>>,
-        ultrasonic: Option<Box<UltrasonicSensor>>,
-        gps: Option<Box<Gps>>,
-        ambience: Option<Box<AmbienceSensor>>,
-    },
-    Reading {
-        is_active: Arc<AtomicBool>,
-        handles: Vec<JoinHandle<()>>,
-        receiver: BroadcastReceiver<TimedSensorData>,
-    },
+struct Shared {
+    actively_reading: AtomicBool,
+}
+
+struct SensorContainer {
+    sensor: Arc<Mutex<dyn BasicSensor + Send>>,
+    handle: JoinHandle<()>,
 }
 
 /// Manages all the sensor instances
 pub struct SensorManager {
-    state: ManagerState,
+    should_read: Arc<AtomicBool>,
+    sensors: HashMap<SensorName, SensorContainer>,
+    receiver: BroadcastReceiver<TimedSensorData>,
 }
 
 impl SensorManager {
     pub fn new() -> Self {
-        let imu = Imu::new()
-            .map(Box::new)
-            .map_err(|e| error!("IMU failed to initialize: {e:?}"))
-            .ok();
-        // let ultrasonic = UltrasonicSensor::new(21f32)
-        //     .map(Box::new)
-        //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
-        //     .ok();
-        let gps = Gps::new()
-            .map(Box::new)
-            .map_err(|e| error!("GPS failed to initialize: {e}"))
-            .ok();
-        // let ambience = AmbienceSensor::new()
-        //     .map(Box::new)
-        //     .map_err(|e| error!("Ambience failed to initialize: {e:?}"))
-        //     .ok();
+        let should_read = Arc::new(AtomicBool::new(true));
+        let (sender, receiver) = broadcast_queue(32);
 
-        let state = ManagerState::Normal {
-            imu,
-            ultrasonic: None,
-            gps,
-            ambience: None,
+        let mut manager = Self { should_read: should_read.clone(), sensors: HashMap::new(), receiver };
+
+        set_board_led_status(true).unwrap();
+        let start_time = SystemTime::now();
+
+        let mut spawn_thread = |sensor: Arc<Mutex<dyn BasicSensor + Send>>| {
+            let handle = Self::spawn_sensor_thread(
+                sensor.clone(),
+                should_read.clone(),
+                sender.clone(),
+                start_time,
+            );
+
+            let sensor_name = sensor.lock().unwrap().name();
+            manager.sensors.insert(sensor_name, SensorContainer { sensor, handle });
         };
 
-        Self { state }
+        fn cast_sensor(sensor: impl BasicSensor + Send + 'static) -> Arc<Mutex<dyn BasicSensor + Send>> {
+            Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn BasicSensor + Send>>
+        }
+
+        // Initialize the actual sensors
+        Imu::new()
+            .map(cast_sensor)
+            .map(&mut spawn_thread)
+            .map_err(|e| error!("IMU failed to initialize: {e:?}"))
+            .ok();
+        // UltrasonicSensor::new(21f32)
+        //     .map(cast_sensor)
+        //     .map(&mut spawn_thread)
+        //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
+        //     .ok();
+        Gps::new()
+            .map(cast_sensor)
+            .map(&mut spawn_thread)
+            .map_err(|e| error!("GPS failed to initialize: {e}"))
+            .ok();
+        // AmbienceSensor::new()
+        //     .map(cast_sensor)
+        //     .map(&mut spawn_thread)
+        //     .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
+        //     .ok();
+
+        manager
     }
 
-    /// Gives a mutable reference to the IMU sensor if in the default state
-    pub fn imu(&mut self) -> Option<&mut Imu> {
-        match &mut self.state {
-            ManagerState::Normal { imu, .. } => imu.as_deref_mut(),
-            ManagerState::Reading { .. } => None,
-        }
-    }
-
-    /// Gives a mutable reference to the Ultrasonic sensor if in the default state
-    pub fn ultrasonic(&mut self) -> Option<&mut UltrasonicSensor> {
-        match &mut self.state {
-            ManagerState::Normal { ultrasonic, .. } => ultrasonic.as_deref_mut(),
-            ManagerState::Reading { .. } => None,
-        }
-    }
-
-    /// Gives a mutable reference to the GPS sensor if in the default state
-    pub fn gps(&mut self) -> Option<&mut Gps> {
-        match &mut self.state {
-            ManagerState::Normal { gps, .. } => gps.as_deref_mut(),
-            ManagerState::Reading { .. } => None,
-        }
-    }
-
-    /// Gives a mutable reference to the Ambience sensor if in the default state
-    pub fn ambience(&mut self) -> Option<&mut AmbienceSensor> {
-        if let ManagerState::Normal { ambience, .. } = &mut self.state {
-            ambience.as_deref_mut()
-        } else {
-            None
-        }
+    pub fn get_sensor(&self, sensor_name: &SensorName) -> Option<&Mutex<dyn BasicSensor + Send>> {
+        self.sensors.get(sensor_name).map(|container| container.sensor.as_ref())
     }
 
     fn spawn_sensor_thread(
-        mut sensor: Box<dyn BasicSensor + Send>,
+        sensor: Arc<Mutex<dyn BasicSensor + Send>>,
         is_active: Arc<AtomicBool>,
         sender: BroadcastSender<TimedSensorData>,
         start_time: SystemTime,
     ) -> JoinHandle<()> {
+        let sensor_name = sensor.lock().unwrap().name();
         thread::Builder::new()
-            .name(sensor.name().to_string())
+            .name(sensor_name.as_ref().to_string())
             .spawn(move || {
                 let mut since_last_read = Instant::now();
                 let mut previous_velocity = 0f64;
                 let mut previous_acceleration = 0f64;
                 let mut updated_count = 0usize;
 
-                while is_active.load(Ordering::Acquire) {
-                    // let instant = Instant::now();
-                    let sensor_data = sensor.read_data_timed(start_time);
-                    // let time_elapsed = instant.elapsed();
+                loop {
+                    if !is_active.load(Ordering::Acquire) {
+                        thread::sleep(Duration::from_millis(10))
+                    }
+
+                    if sensor_name != SensorName::Gps {
+                        thread::sleep(Duration::from_millis(20));
+                    }
+
+                    let sensor_data = sensor.lock().unwrap().read_data_timed(start_time);
 
                     if let SensorData::Imu(data) = &sensor_data.data {
                         let acceleration = data.acceleration.x as f64;
@@ -123,8 +118,8 @@ impl SensorManager {
 
                         let velocity = previous_velocity
                             + 0.5f64
-                                * (acceleration + previous_acceleration)
-                                * since_last_read.elapsed().as_secs_f64();
+                            * (acceleration + previous_acceleration)
+                            * since_last_read.elapsed().as_secs_f64();
 
                         if updated_count % 10 == 0 {
                             info!("Velocity: {velocity}");
@@ -152,118 +147,40 @@ impl SensorManager {
                     // }
 
                     if !is_active.load(Ordering::Acquire) {
-                        break;
+                        continue;
                     }
 
                     if let Err(e) = sender.try_send(sensor_data) {
                         match e {
                             TrySendError::Full(_) => {
                                 warn!(
-                                    "{} channel is full, failed to send new sensor data",
-                                    sensor.name()
+                                    "{sensor_name} channel is full, failed to send new sensor data",
                                 );
                                 continue;
                             }
                             TrySendError::Disconnected(_) => {
-                                error!("{} channel disconnected", sensor.name());
+                                error!("{sensor_name} channel disconnected");
                                 break;
                             }
                         }
-                    }
-
-                    if sensor.name() != Gps::NAME {
-                        thread::sleep(std::time::Duration::from_millis(20));
                     }
                 }
             })
             .unwrap()
     }
 
-    pub fn listen_to_all_sensors(&mut self) -> BroadcastReceiver<TimedSensorData> {
-        match &mut self.state {
-            ManagerState::Normal {
-                imu,
-                ultrasonic,
-                gps,
-                ambience,
-            } => {
-                let (sender, receiver) = broadcast_queue(32);
-
-                let is_active = Arc::new(AtomicBool::new(true));
-                let mut handles = vec![];
-
-                set_board_led_status(true).unwrap();
-                let start_time = SystemTime::now();
-                let mut spawn_thread = |sensor: Box<dyn BasicSensor + Send>| {
-                    handles.push(Self::spawn_sensor_thread(
-                        sensor,
-                        is_active.clone(),
-                        sender.clone(),
-                        start_time,
-                    ));
-                };
-
-                if let Some(sensor) = imu.take() {
-                    spawn_thread(sensor)
-                }
-                if let Some(sensor) = ultrasonic.take() {
-                    spawn_thread(sensor)
-                }
-                if let Some(sensor) = gps.take() {
-                    spawn_thread(sensor)
-                }
-                if let Some(sensor) = ambience.take() {
-                    spawn_thread(sensor)
-                }
-
-                self.state = ManagerState::Reading {
-                    is_active,
-                    handles,
-                    receiver: receiver.add_stream(),
-                };
-                receiver
-            }
-            ManagerState::Reading { .. } => panic!("Wrong state!"),
-        }
+    pub fn listen_to_all_sensors(&mut self) {
+        self.should_read.store(true, Ordering::Release);
     }
 
-    pub fn get_data_receiver(&self) -> Option<&BroadcastReceiver<TimedSensorData>> {
-        match &self.state {
-            ManagerState::Normal { .. } => None,
-            ManagerState::Reading { receiver, .. } => Some(receiver),
-        }
+    pub fn get_data_receiver(&self) -> &BroadcastReceiver<TimedSensorData> {
+        &self.receiver
     }
 
     /// Resets the internal state of the sensor manager
     pub fn reset(&mut self) {
         info!("Resetting");
 
-        match &mut self.state {
-            ManagerState::Normal {
-                imu,
-                ultrasonic,
-                gps,
-                ambience,
-            } => {
-                imu.take();
-                ultrasonic.take();
-                gps.take();
-                ambience.take();
-            }
-            ManagerState::Reading {
-                is_active, handles, ..
-            } => {
-                is_active.store(false, Ordering::Release);
-
-                let handles = std::mem::take(handles);
-                handles.into_iter().for_each(|handle| {
-                    handle.join().unwrap();
-                });
-                info!("Finished closing sensor threads");
-            }
-        }
-
-        self.state = SensorManager::new().state;
         info!("Recreated SensorManager");
 
         set_board_led_status(false).unwrap();

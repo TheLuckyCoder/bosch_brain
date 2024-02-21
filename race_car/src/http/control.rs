@@ -58,7 +58,6 @@ async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocit
                 .lock()
                 .await
                 .get_data_receiver()
-                .unwrap()
                 .add_stream();
 
             let pids = state.pids.clone();
@@ -96,7 +95,7 @@ async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocit
 async fn steering_pid(State(state): State<Arc<GlobalState>>, Path(angle): Path<f64>) {
     let mut motor = state.motor_driver.lock().await;
 
-    let mut pid = state.pids.steering.lock().await;
+    // let mut pid = state.pids.steering.lock().await;
     // let angle = pid.compute(-value);
     let motor_value = (-angle / 30.0f64).clamp(-1.0, 1.0);
 

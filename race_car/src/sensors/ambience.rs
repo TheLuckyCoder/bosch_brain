@@ -1,4 +1,4 @@
-use crate::sensors::{BasicSensor, SensorData};
+use crate::sensors::{BasicSensor, SensorData, SensorName};
 use anyhow::Context;
 use linux_embedded_hal::{Delay, I2cdev};
 use serde::Serialize;
@@ -53,8 +53,8 @@ impl AmbienceSensor {
 }
 
 impl BasicSensor for AmbienceSensor {
-    fn name(&self) -> &'static str {
-        AmbienceSensor::NAME
+    fn name(&self) -> SensorName {
+        SensorName::Ambience
     }
 
     fn read_data(&mut self) -> SensorData {

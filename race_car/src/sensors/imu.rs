@@ -9,7 +9,7 @@ use shared::math::AlmostEquals;
 use tracing::{error, info, warn};
 
 use crate::files::get_car_file;
-use crate::sensors::{BasicSensor, SensorData};
+use crate::sensors::{BasicSensor, SensorData, SensorName};
 
 /// Data from the IMU sensor
 #[derive(Debug, Clone, Serialize)]
@@ -79,8 +79,8 @@ impl Imu {
 }
 
 impl BasicSensor for Imu {
-    fn name(&self) -> &'static str {
-        Self::NAME
+    fn name(&self) -> SensorName {
+        SensorName::Imu
     }
 
     fn read_data(&mut self) -> SensorData {

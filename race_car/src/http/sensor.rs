@@ -1,19 +1,19 @@
 //! HTTP routes for interacting with the car's sensors.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use axum::{Json, Router};
 use axum::extract::{ConnectInfo, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use axum::{Json, Router};
+use strum::IntoEnumIterator;
 use tracing::info;
 
-use crate::http::udp_broadcast::UdpActiveSensor;
 use crate::http::GlobalState;
-use crate::sensors::{AmbienceSensor, Gps, Imu, UltrasonicSensor};
+use crate::sensors::SensorName;
 
 /// Creates an object that manages all the sensor routes
 pub fn router(global_state: Arc<GlobalState>) -> Router {
@@ -25,18 +25,13 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
 
 /// Returns a list of all available and initialized sensors
 async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
-    let mut sensor_manager = state.sensor_manager.lock().await;
+    let sensor_manager = state.sensor_manager.lock().await;
 
-    Json(BTreeMap::from([
-        (Imu::NAME, sensor_manager.imu().is_some()),
-        (
-            UltrasonicSensor::NAME,
-            sensor_manager.ultrasonic().is_some(),
-        ),
-        ("Camera", false),
-        (AmbienceSensor::NAME, sensor_manager.ambience().is_some()),
-        (Gps::NAME, sensor_manager.gps().is_some()),
-    ]))
+    let map: BTreeMap<&str, bool> = SensorName::iter().map(|sensor_name| {
+        (sensor_name.into(), sensor_manager.get_sensor(&sensor_name).is_some())
+    }).collect();
+
+    Json(map)
 }
 
 /// Sets the active UDP sensors from which data will be streamed on the UDP port.
@@ -46,31 +41,13 @@ async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> imp
 /// - Config: Will send the config data of the sensors
 /// - RemoteControlled: Will send the data of the sensors
 ///
-/// See [UdpActiveSensor] to see which sensors are available.
+/// See [SensorName] to see which sensors are available.
 ///
 async fn set_udp_sensors(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(state): State<Arc<GlobalState>>,
-    Json(sensor): Json<Vec<String>>,
+    Json(sensors): Json<Vec<SensorName>>,
 ) -> StatusCode {
-    let sensors: Vec<_> = sensor
-        .into_iter()
-        .map(|sensor| {
-            Some(match sensor.as_str() {
-                Imu::NAME => UdpActiveSensor::Imu,
-                UltrasonicSensor::NAME => UdpActiveSensor::Ultrasonic,
-                Gps::NAME => UdpActiveSensor::Gps,
-                AmbienceSensor::NAME => UdpActiveSensor::Ambience,
-                _ => return None,
-            })
-        })
-        .collect();
-
-    if sensors.iter().any(|sensor| sensor.is_none()) {
-        return StatusCode::BAD_REQUEST;
-    }
-
-    let sensors = sensors.into_iter().flatten().collect();
     info!("Active Udp Sensors: {:?}", sensors);
 
     let mut sensor_manager = state.sensor_manager.lock().await;

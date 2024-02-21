@@ -2,14 +2,14 @@ use std::io::Read;
 use std::time::Duration;
 
 use tracing::warn;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
 
 use crate::http::GlobalState;
+use crate::sensors::{set_board_led_status};
 use crate::sensors::manager::SensorManager;
 use crate::sensors::motor_driver::{Motor, MotorDriver};
-use crate::sensors::{set_board_led_status, BasicSensor};
 
 mod files;
 mod http;
@@ -48,7 +48,7 @@ async fn main() -> Result<(), String> {
                     Ok(text) => println!("{}", text),
                     Err(e) => warn!("{e}"),
                 },
-                Err(e) => {
+                Err(_) => {
                     // error!("{e}")
                 }
             }
