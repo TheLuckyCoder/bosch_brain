@@ -1,6 +1,6 @@
 use hc_sr04::{HcSr04, Unit};
 
-use crate::sensors::{BasicSensor, SensorData};
+use crate::sensors::{BasicSensor, SensorData, SensorName};
 
 const TRIGGER: u8 = 24;
 const ECHO: u8 = 23;
@@ -29,8 +29,8 @@ impl UltrasonicSensor {
 }
 
 impl BasicSensor for UltrasonicSensor {
-    fn name(&self) -> &'static str {
-        Self::NAME
+    fn name(&self) -> SensorName {
+        SensorName::Ultrasonic
     }
 
     fn read_data(&mut self) -> SensorData {

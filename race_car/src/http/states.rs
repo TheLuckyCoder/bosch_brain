@@ -27,7 +27,6 @@ pub enum CarStates {
     Standby,
     Config,
     RemoteControlled,
-    AutonomousControlled,
 }
 
 /// Creates an object that manages all state related routes
@@ -47,7 +46,6 @@ async fn get_all_states() -> impl IntoResponse {
         CarStates::Standby,
         CarStates::Config,
         CarStates::RemoteControlled,
-        CarStates::AutonomousControlled,
     ])
 }
 
@@ -96,8 +94,8 @@ async fn set_current_state(
         }
         CarStates::RemoteControlled => {
             let state = state.clone();
-            let receiver = sensor_manager.listen_to_all_sensors();
-            let motor_driver = state.motor_driver.clone();
+            sensor_manager.listen_to_all_sensors();
+            let receiver = sensor_manager.get_data_receiver().clone();
 
             std::thread::spawn(move || {
                 let date = Local::now();
@@ -110,7 +108,7 @@ async fn set_current_state(
                     if *state.car_state.blocking_lock() != CarStates::RemoteControlled {
                         break;
                     }
-                    let motor_value = motor_driver.blocking_lock().get_last_motor_value(Motor::Steering);
+                    let motor_value = state.motor_driver.blocking_lock().get_last_motor_value(Motor::Steering);
                     if last_motor_value != motor_value {
                         output_file
                             .write_all(format!("{{ \"SteeringAngle\": {}, \"timestamp_ms\": {} }}\n", motor_value, data.timestamp.as_millis()).as_bytes())
@@ -125,9 +123,6 @@ async fn set_current_state(
                 output_file.sync_data().unwrap();
                 info!("Log thread stopped")
             });
-        } // TODO Do something with it
-        CarStates::AutonomousControlled => {
-            sensor_manager.listen_to_all_sensors();
         }
     }
 

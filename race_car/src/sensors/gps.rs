@@ -5,7 +5,7 @@ use std::time::Duration;
 use serialport::{DataBits, Parity, SerialPort, StopBits, TTYPort};
 use tracing::error;
 
-use crate::sensors::{BasicSensor, SensorData};
+use crate::sensors::{BasicSensor, SensorData, SensorName};
 
 /// Data from the GPS sensor
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -121,8 +121,8 @@ impl Gps {
 }
 
 impl BasicSensor for Gps {
-    fn name(&self) -> &'static str {
-        Self::NAME
+    fn name(&self) -> SensorName {
+        SensorName::Gps
     }
 
     fn read_data(&mut self) -> SensorData {

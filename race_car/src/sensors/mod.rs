@@ -3,10 +3,12 @@
 use anyhow::Context;
 use linux_embedded_hal::gpio_cdev::{Chip, LineRequestFlags};
 use serde::Serialize;
-use serde_with::serde_as;
+use serde_with::{DeserializeFromStr, serde_as, SerializeDisplay};
 use serde_with::DurationMilliSeconds;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use std::time::{Duration, SystemTime};
+use strum::{AsRefStr, EnumIter, IntoStaticStr};
 
 pub use ambience::*;
 pub use gps::*;
@@ -19,11 +21,12 @@ mod imu;
 pub mod manager;
 pub mod motor_driver;
 mod ultrasonic;
+mod velocity;
 
 /// Common set of functions each sensor class should implement
 pub trait BasicSensor {
     /// Unique name of the sensor
-    fn name(&self) -> &'static str;
+    fn name(&self) -> SensorName;
 
     /// Reads data from the sensor, returning a generic [SensorData] enum
     fn read_data(&mut self) -> SensorData;
@@ -53,6 +56,36 @@ pub fn set_board_led_status(on: bool) -> anyhow::Result<()> {
         .request(LineRequestFlags::OUTPUT, on as u8, "blinky")
         .map(|_| ())
         .context("Failed to set GPIO PIN 25")
+}
+
+#[derive(Clone, Copy, DeserializeFromStr, SerializeDisplay, PartialEq, Eq, Hash, EnumIter, IntoStaticStr, AsRefStr)]
+pub enum SensorName {
+    Imu,
+    Ultrasonic,
+    Gps,
+    Velocity,
+    Ambience,
+}
+
+impl FromStr for SensorName {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            Imu::NAME => Ok(SensorName::Imu),
+            UltrasonicSensor::NAME => Ok(SensorName::Ultrasonic),
+            Gps::NAME => Ok(SensorName::Gps),
+            "Velocity" => Ok(SensorName::Velocity),
+            AmbienceSensor::NAME => Ok(SensorName::Ambience),
+            _ => Err("No such Sensor exists"),
+        }
+    }
+}
+
+impl Display for SensorName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.into())
+    }
 }
 
 /// Enum containing all possible sensor data
