@@ -93,53 +93,6 @@ impl MotorDriver {
         })
     }
 
-    fn interpolate(speed: f64) -> f64 {
-        let size = 25;
-
-        let speed_values_p = [
-            4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0,
-            19.0, 20.0, 21.0, 22.0, 26.0, 30.0, 35.0, 40.0, 45.0, 50.0,
-        ];
-        let speed_values_n = [
-            -4.0, -5.0, -6.0, -7.0, -8.0, -9.0, -10.0, -11.0, -12.0, -13.0, -14.0, -15.0, -16.0,
-            -17.0, -18.0, -19.0, -20.0, -21.0, -22.0, -26.0, -30.0, -35.0, -40.0, -45.0, -50.0,
-        ];
-        let step_values = [
-            0.00107, 0.00088, 0.00076, 0.00067, 0.0006, 0.00055, 0.00051, 0.00047, 0.00043,
-            0.00041, 0.00039, 0.00037, 0.00035, 0.00034, 0.00033, 0.00032, 0.0003, 0.00029,
-            0.00028, 0.00025, 0.00024, 0.00021, 0.00019, 0.00018, 0.00017,
-        ];
-        if (speed <= speed_values_p[0]) {
-            if (speed >= speed_values_n[0]) {
-                return step_values[0];
-            } else {
-                for i in 1..size {
-                    if (speed >= speed_values_n[i]) {
-                        let slope = (step_values[i] - step_values[i - 1])
-                            / (speed_values_n[i] - speed_values_n[i - 1]);
-                        return step_values[i - 1] + slope * (speed - speed_values_n[i - 1]);
-                    }
-                }
-            }
-        }
-        if (speed >= speed_values_p[size - 1]) {
-            return step_values[size - 1];
-        }
-        if (speed <= speed_values_n[size - 1]) {
-            return step_values[size - 1];
-        }
-
-        for i in 1..size {
-            if (speed <= speed_values_p[i]) {
-                let slope = (step_values[i] - step_values[i - 1])
-                    / (speed_values_p[i] - speed_values_p[i - 1]);
-                return step_values[i - 1] + slope * (speed - speed_values_p[i - 1]);
-            }
-        }
-
-        return -1f64;
-    }
-
     pub fn set_motor_value(&mut self, motor: Motor, input: f64) {
         let input = input.clamp(-1.0, 1.0);
         let contents = &mut self.contents[motor as usize];
@@ -157,17 +110,6 @@ impl MotorDriver {
 
         let params = &contents.params;
         let bonnet_channel = contents.bonnet_channel;
-
-        if motor == Motor::Speed {
-            let zero_default = 0.074568;
-            let step_value = Self::interpolate(-input);
-            let out = step_value * input + zero_default;
-
-            self.device
-                .set_channel_on_off(bonnet_channel, 0, map_from_percentage_to_12_bit_int(out))
-                .expect("Failed to set motor input");
-            return;
-        }
 
         // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
         // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)

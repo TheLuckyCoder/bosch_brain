@@ -19,9 +19,9 @@ pub struct ImuData {
 }
 
 /// Wrapper for the BNO055 sensor
-pub struct Imu(Bno055<I2cdev>);
+pub struct ImuSensor(Bno055<I2cdev>);
 
-impl Imu {
+impl ImuSensor {
     const BNO_FILE: &'static str = "bno.bin";
 
     pub fn new() -> anyhow::Result<Self> {
@@ -76,7 +76,7 @@ impl Imu {
     }
 }
 
-impl BasicSensor for Imu {
+impl BasicSensor for ImuSensor {
     fn name(&self) -> SensorName {
         SensorName::Imu
     }

@@ -17,15 +17,15 @@ pub struct GpsCoordinates {
 }
 
 /// GPS Sensor, wrapper for the J-Link
-pub struct Gps {
+pub struct GpsSensor {
     serial: TTYPort,
     buffer: Vec<u8>,
     initialized: bool,
 }
 
-impl Gps {
+impl GpsSensor {
 
-    pub fn new() -> anyhow::Result<Gps> {
+    pub fn new() -> anyhow::Result<GpsSensor> {
         let serial = serialport::new(
             "/dev/serial/by-id/usb-SEGGER_J-Link_000760170010-if00",
             115200,
@@ -119,7 +119,7 @@ impl Gps {
     }
 }
 
-impl BasicSensor for Gps {
+impl BasicSensor for GpsSensor {
     fn name(&self) -> SensorName {
         SensorName::Gps
     }
