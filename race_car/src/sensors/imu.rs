@@ -8,8 +8,8 @@ use serde::Serialize;
 use shared::math::AlmostEquals;
 use tracing::{error, info, warn};
 
-use crate::files::get_car_file;
 use crate::sensors::{BasicSensor, SensorData, SensorName};
+use crate::utils::files::get_car_file;
 
 /// Data from the IMU sensor
 #[derive(Debug, Clone, Serialize)]

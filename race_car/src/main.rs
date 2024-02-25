@@ -11,9 +11,9 @@ use crate::sensors::{set_board_led_status};
 use crate::sensors::manager::SensorManager;
 use crate::sensors::motor_driver::{Motor, MotorDriver};
 
-mod files;
 mod http;
 mod sensors;
+mod utils;
 
 /// Entrypoint of the program
 ///
