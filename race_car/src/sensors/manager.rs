@@ -3,13 +3,12 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::TrySendError;
 use std::thread;
-use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime};
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, warn};
 
-use crate::sensors::{AmbienceSensor, BasicSensor, Gps, Imu, SensorData, SensorName, set_board_led_status, TimedSensorData, UltrasonicSensor};
+use crate::sensors::{AmbienceSensor, BasicSensor, GpsSensor, ImuSensor, SensorData, SensorName, set_board_led_status, TimedSensorData, UltrasonicSensor};
 use crate::sensors::velocity::VelocitySensor;
 
 struct Shared {
@@ -28,15 +27,10 @@ impl Default for Shared {
     }
 }
 
-struct SensorContainer {
-    sensor: Arc<Mutex<dyn BasicSensor + Send>>,
-    handle: JoinHandle<()>,
-}
-
 /// Manages all the sensor instances
 pub struct SensorManager {
     shared_data: Arc<Shared>,
-    sensors: HashMap<SensorName, SensorContainer>,
+    sensors: HashMap<SensorName, Arc<Mutex<dyn BasicSensor + Send>>>,
     receiver: BroadcastReceiver<TimedSensorData>,
 }
 
@@ -48,14 +42,14 @@ impl SensorManager {
 
         let mut spawn_thread = |sensor: Arc<Mutex<dyn BasicSensor + Send>>| {
             let sensor_name = sensor.lock().unwrap().name();
-            let handle = Self::spawn_sensor_thread(
+            Self::spawn_sensor_thread(
                 sensor_name,
                 sensor.clone(),
                 shared_data.clone(),
                 sender.clone(),
             );
 
-            sensors.insert(sensor_name, SensorContainer { sensor, handle });
+            sensors.insert(sensor_name, sensor);
         };
 
         fn cast_sensor(sensor: impl BasicSensor + 'static) -> Arc<Mutex<dyn BasicSensor + Send>> {
@@ -63,7 +57,7 @@ impl SensorManager {
         }
 
         // Initialize the actual sensors
-        Imu::new()
+        ImuSensor::new()
             .map(cast_sensor)
             .map(&mut spawn_thread)
             .map_err(|e| error!("IMU failed to initialize: {e:?}"))
@@ -74,7 +68,7 @@ impl SensorManager {
         //     .map(&mut spawn_thread)
         //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
         //     .ok();
-        Gps::new()
+        GpsSensor::new()
             .map(cast_sensor)
             .map(&mut spawn_thread)
             .map_err(|e| error!("GPS failed to initialize: {e}"))
@@ -89,7 +83,7 @@ impl SensorManager {
     }
 
     pub fn get_sensor(&self, sensor_name: &SensorName) -> Option<&Mutex<dyn BasicSensor + Send>> {
-        self.sensors.get(sensor_name).map(|container| container.sensor.as_ref())
+        self.sensors.get(sensor_name).map(|sensor| sensor.as_ref())
     }
 
     fn spawn_sensor_thread(
@@ -97,7 +91,7 @@ impl SensorManager {
         sensor: Arc<Mutex<dyn BasicSensor + Send>>,
         shared_data: Arc<Shared>,
         sender: BroadcastSender<TimedSensorData>,
-    ) -> JoinHandle<()> {
+    ) {
         thread::spawn(move || {
             let mut start_time = SystemTime::now();
 
@@ -119,7 +113,7 @@ impl SensorManager {
 
                 let sensor_data = sensor.lock().unwrap().read_data_timed(start_time);
 
-                // if sensor.name() == Gps::NAME {
+                // if sensor_name == Gps::NAME {
                 //     info!(
                 //         "{:?} {} elapsed {}ms",
                 //         sensor_data.data,
@@ -145,7 +139,7 @@ impl SensorManager {
                     }
                 }
             }
-        })
+        });
     }
 
     pub fn start_listening_to_sensors(&mut self) {
