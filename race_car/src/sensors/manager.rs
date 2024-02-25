@@ -1,15 +1,16 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::TrySendError;
-use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, SystemTime};
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
-use crate::sensors::{set_board_led_status, BasicSensor, Gps, Imu, SensorData, TimedSensorData, SensorName, UltrasonicSensor, AmbienceSensor};
+use crate::sensors::{AmbienceSensor, BasicSensor, Gps, Imu, SensorData, SensorName, set_board_led_status, TimedSensorData, UltrasonicSensor};
+use crate::sensors::velocity::VelocitySensor;
 
 struct Shared {
     should_read: AtomicBool,
@@ -20,8 +21,9 @@ struct Shared {
 impl Default for Shared {
     fn default() -> Self {
         Self {
+            should_read: Default::default(),
             start_time: Mutex::new(SystemTime::now()),
-            ..Default::default()
+            cond: Default::default(),
         }
     }
 }
@@ -40,22 +42,20 @@ pub struct SensorManager {
 
 impl SensorManager {
     pub fn new() -> Self {
-        set_board_led_status(true).unwrap();
-
         let shared_data = Arc::new(Shared::default());
+        let mut sensors = HashMap::new();
         let (sender, receiver) = broadcast_queue(32);
 
-        let mut manager = Self { shared_data: shared_data.clone(), sensors: HashMap::new(), receiver };
-
         let mut spawn_thread = |sensor: Arc<Mutex<dyn BasicSensor + Send>>| {
+            let sensor_name = sensor.lock().unwrap().name();
             let handle = Self::spawn_sensor_thread(
+                sensor_name,
                 sensor.clone(),
                 shared_data.clone(),
                 sender.clone(),
             );
 
-            let sensor_name = sensor.lock().unwrap().name();
-            manager.sensors.insert(sensor_name, SensorContainer { sensor, handle });
+            sensors.insert(sensor_name, SensorContainer { sensor, handle });
         };
 
         fn cast_sensor(sensor: impl BasicSensor + 'static) -> Arc<Mutex<dyn BasicSensor + Send>> {
@@ -68,6 +68,7 @@ impl SensorManager {
             .map(&mut spawn_thread)
             .map_err(|e| error!("IMU failed to initialize: {e:?}"))
             .ok();
+        spawn_thread(cast_sensor(VelocitySensor::new(receiver.clone())));
         // UltrasonicSensor::new(21f32)
         //     .map(cast_sensor)
         //     .map(&mut spawn_thread)
@@ -84,7 +85,7 @@ impl SensorManager {
         //     .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
         //     .ok();
 
-        manager
+        Self { shared_data, sensors, receiver }
     }
 
     pub fn get_sensor(&self, sensor_name: &SensorName) -> Option<&Mutex<dyn BasicSensor + Send>> {
@@ -92,16 +93,12 @@ impl SensorManager {
     }
 
     fn spawn_sensor_thread(
+        sensor_name: SensorName,
         sensor: Arc<Mutex<dyn BasicSensor + Send>>,
         shared_data: Arc<Shared>,
         sender: BroadcastSender<TimedSensorData>,
     ) -> JoinHandle<()> {
-        let sensor_name = sensor.lock().unwrap().name();
         thread::spawn(move || {
-            let mut since_last_read = Instant::now();
-            let mut previous_velocity = 0f64;
-            let mut previous_acceleration = 0f64;
-            let mut updated_count = 0usize;
             let mut start_time = SystemTime::now();
 
             loop {
@@ -112,8 +109,8 @@ impl SensorManager {
                     }
 
                     // Now is the start of a new reading session
-                    since_last_read = Instant::now();
                     start_time = *lock;
+                    sensor.lock().unwrap().prepare_read();
                 }
 
                 if sensor_name != SensorName::Gps {
@@ -121,35 +118,6 @@ impl SensorManager {
                 }
 
                 let sensor_data = sensor.lock().unwrap().read_data_timed(start_time);
-
-                if let SensorData::Imu(data) = &sensor_data.data {
-                    let acceleration = data.acceleration.x as f64;
-                    let acceleration = if acceleration < 0.005 {
-                        0.0
-                    } else {
-                        acceleration
-                    };
-
-                    let velocity = previous_velocity
-                        + 0.5f64
-                        * (acceleration + previous_acceleration)
-                        * since_last_read.elapsed().as_secs_f64();
-
-                    if updated_count % 10 == 0 {
-                        info!("Velocity: {velocity}");
-                    }
-
-                    since_last_read = Instant::now();
-                    previous_acceleration = acceleration;
-                    previous_velocity = velocity;
-                    updated_count += 1;
-
-                    if let Err(e) =
-                        sender.try_send(TimedSensorData::new(SensorData::Velocity(velocity), start_time))
-                    {
-                        error!("{e}")
-                    }
-                }
 
                 // if sensor.name() == Gps::NAME {
                 //     info!(
@@ -167,9 +135,7 @@ impl SensorManager {
                 if let Err(e) = sender.try_send(sensor_data) {
                     match e {
                         TrySendError::Full(_) => {
-                            warn!(
-                                    "{sensor_name} channel is full, failed to send new sensor data",
-                                );
+                            warn!("{sensor_name} channel is full, failed to send new sensor data");
                             continue;
                         }
                         TrySendError::Disconnected(_) => {
@@ -182,7 +148,7 @@ impl SensorManager {
         })
     }
 
-    pub fn listen_to_all_sensors(&mut self) {
+    pub fn start_listening_to_sensors(&mut self) {
         self.shared_data.should_read.store(true, Ordering::Release);
         self.shared_data.cond.notify_all();
     }

@@ -4,7 +4,6 @@ use std::fs::File;
 use std::io::Write;
 use std::sync::Arc;
 
-use crate::files::get_car_file;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -17,6 +16,7 @@ use tracing::info;
 use crate::http::GlobalState;
 use crate::sensors::motor_driver::Motor;
 use crate::sensors::set_board_led_status;
+use crate::utils::files::get_car_file;
 
 /// The different states the car can be in.
 /// - Standby: The default state of the car.
@@ -86,12 +86,14 @@ async fn set_current_state(
         udp.set_config_mode(new_car_state == CarStates::Config);
     }
 
+    set_board_led_status(false).unwrap();
+    
     match new_car_state {
         CarStates::Standby => sensor_manager.stop_listening_to_sensors(),
         CarStates::Config => sensor_manager.stop_listening_to_sensors(),
         CarStates::RemoteControlled => {
             let state = state.clone();
-            sensor_manager.listen_to_all_sensors();
+            sensor_manager.start_listening_to_sensors();
             set_board_led_status(true).unwrap();
             let receiver = sensor_manager.get_data_receiver().clone();
 

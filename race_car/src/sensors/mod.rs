@@ -27,6 +27,9 @@ mod velocity;
 pub trait BasicSensor : Send {
     /// Unique name of the sensor
     fn name(&self) -> SensorName;
+    
+    /// Called right before a reading session begins
+    fn prepare_read(&mut self) {}
 
     /// Reads data from the sensor, returning a generic [SensorData] enum
     fn read_data(&mut self) -> SensorData;
