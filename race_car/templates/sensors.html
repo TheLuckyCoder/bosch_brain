@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %} Sensors {% endblock %}
+
+{% block content %}
+
+<h1>Sensors</h1>
+<div id="sensors">
+    {% for sensor in sensors %}
+        <div id="sensor-{{ sensor.name }}">
+            {{ sensor.name }}<br>
+            Enabled: {{ sensor.enabled }}
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

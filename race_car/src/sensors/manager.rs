@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime};
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, warn};
 
-use crate::sensors::{AmbienceSensor, BasicSensor, GpsSensor, ImuSensor, SensorData, SensorName, set_board_led_status, TimedSensorData, UltrasonicSensor};
+use crate::sensors::{AmbienceSensor, BasicSensor, GpsSensor, ImuSensor, SensorName, TimedSensorData, UltrasonicSensor};
 use crate::sensors::velocity::VelocitySensor;
 
 struct Shared {

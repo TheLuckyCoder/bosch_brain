@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::time::Duration;
 
-use tracing::warn;
+use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -14,6 +14,7 @@ use crate::sensors::motor_driver::{Motor, MotorDriver};
 mod http;
 mod sensors;
 mod utils;
+mod frontend;
 
 /// Entrypoint of the program
 ///
@@ -26,7 +27,7 @@ async fn main() -> Result<(), String> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    set_board_led_status(false).unwrap();
+    set_board_led_status(false).inspect_err(|e| error!("Failed to set board led: {e}")).ok();
 
     let mut motor_driver = MotorDriver::new().unwrap();
 

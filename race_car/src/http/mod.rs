@@ -11,6 +11,7 @@ use tokio::sync::Mutex;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
+use crate::frontend;
 
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
@@ -55,11 +56,11 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
     let global_state = Arc::new(global_state);
 
     let app = Router::new()
-        .route("/", get(|| async { "Hello, World!" }))
-        .nest("/motors", motor::router(global_state.clone()).await)
-        .nest("/state", states::router(global_state.clone()))
-        .nest("/sensors", sensor::router(global_state.clone()))
-        .nest("/control", control::router(global_state))
+        .merge(frontend::router(global_state.clone()))
+        .nest("/api/motors", motor::router(global_state.clone()).await)
+        .nest("/api/state", states::router(global_state.clone()))
+        .nest("/api/sensors", sensor::router(global_state.clone()))
+        .nest("/api/control", control::router(global_state))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))

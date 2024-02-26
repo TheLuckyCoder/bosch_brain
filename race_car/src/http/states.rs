@@ -11,7 +11,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use chrono::Local;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{error, info};
 
 use crate::http::GlobalState;
 use crate::sensors::motor_driver::Motor;
@@ -86,7 +86,7 @@ async fn set_current_state(
         udp.set_config_mode(new_car_state == CarStates::Config);
     }
 
-    set_board_led_status(false).unwrap();
+    set_board_led_status(false).inspect_err(|e| error!("Failed to set board led: {e}")).ok();
     
     match new_car_state {
         CarStates::Standby => sensor_manager.stop_listening_to_sensors(),
@@ -94,7 +94,7 @@ async fn set_current_state(
         CarStates::RemoteControlled => {
             let state = state.clone();
             sensor_manager.start_listening_to_sensors();
-            set_board_led_status(true).unwrap();
+            set_board_led_status(false).inspect_err(|e| error!("Failed to set board led: {e}")).ok();
             let receiver = sensor_manager.get_data_receiver().clone();
 
             std::thread::spawn(move || {

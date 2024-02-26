@@ -11,9 +11,11 @@ tokio = { workspace = true }
 multiqueue2 = "0.1.7"
 
 # HTTP
-axum = "0.7"
+axum = { version = "0.7", features = ["http2"] }
 tower = "0.4"
-tower-http = { version = "0.5", features = ["trace"] }
+tower-http = { version = "0.5", features = ["trace", "fs"] }
+askama = { version = "0.12.1", features = ["with-axum"] }
+askama_axum = "0.4.0"
 
 # Logging
 tracing = { workspace = true }
