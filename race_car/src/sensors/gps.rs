@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::time::Duration;
 
 use serialport::{DataBits, Parity, SerialPort, StopBits, TTYPort};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::sensors::{BasicSensor, SensorData, SensorName};
 
@@ -24,7 +24,6 @@ pub struct GpsSensor {
 }
 
 impl GpsSensor {
-
     pub fn new() -> anyhow::Result<GpsSensor> {
         let serial = serialport::new(
             "/dev/serial/by-id/usb-SEGGER_J-Link_000760170010-if00",
@@ -77,11 +76,12 @@ impl GpsSensor {
     }
 
     fn init(&mut self) {
-        while let Err(e) = self.serial.write_all(b"\r\r") {
-            error!("{e}");
-            std::thread::sleep(Duration::from_secs(1));
-        }
-        while let Err(e) = self.serial.write_all(b"les") {
+        self.serial.write_all(b"\r").unwrap();
+        self.serial.flush().unwrap();
+        self.serial.write_all(b"\r").unwrap();
+        self.serial.flush().unwrap();
+        std::thread::sleep(Duration::from_secs(1));
+        while let Err(e) = self.serial.write_all(b"les\r") {
             error!("{e}");
             std::thread::sleep(Duration::from_secs(1));
         }
@@ -92,21 +92,26 @@ impl GpsSensor {
     fn read(&mut self) -> Option<String> {
         let bytes_to_read = self.serial.bytes_to_read().ok()?;
         if bytes_to_read < 137 {
+            // info!("Only has {bytes_to_read} bytes");
             std::thread::sleep(Duration::from_millis(10)); // Tested to be stable, and has enough precision
             return None;
         }
 
         match self.serial.read(self.buffer.as_mut_slice()) {
             Ok(bytes_read) => {
+                // info!(
+                //     "String read: {}",
+                //     String::from_utf8(self.buffer[..bytes_read].to_vec()).unwrap()
+                // );
                 if bytes_read == 0 {
-                    self.serial.write_all(b"\n").unwrap();
+                    self.serial.write_all(b"\r\r").unwrap();
                     None
                 } else {
                     String::from_utf8(self.buffer[..bytes_read].to_vec()).ok()
                 }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
-                if let Err(err) = self.serial.write_all(b"\n") {
+                if let Err(err) = self.serial.write_all(b"\r\r") {
                     error!("Write error: {err}");
                 }
                 None

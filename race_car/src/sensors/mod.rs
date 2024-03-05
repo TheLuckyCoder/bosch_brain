@@ -3,11 +3,11 @@
 use anyhow::Context;
 use linux_embedded_hal::gpio_cdev::{Chip, LineRequestFlags};
 use serde::Serialize;
-use serde_with::{DeserializeFromStr, serde_as, SerializeDisplay};
-use serde_with::DurationMilliSeconds;
+use serde_with::TimestampMilliSeconds;
+use serde_with::{serde_as, DeserializeFromStr, SerializeDisplay};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 use strum::{AsRefStr, EnumIter, IntoStaticStr};
 
 pub use ambience::*;
@@ -24,10 +24,10 @@ mod ultrasonic;
 mod velocity;
 
 /// Common set of functions each sensor class should implement
-pub trait BasicSensor : Send {
+pub trait BasicSensor: Send {
     /// Unique name of the sensor
     fn name(&self) -> SensorName;
-    
+
     /// Called right before a reading session begins
     fn prepare_read(&mut self) {}
 
@@ -45,8 +45,8 @@ pub trait BasicSensor : Send {
     }
 
     /// Reads data, and returns it with a timestamp
-    fn read_data_timed(&mut self, start_time: SystemTime) -> TimedSensorData {
-        TimedSensorData::new(self.read_data(), start_time)
+    fn read_data_timed(&mut self) -> TimedSensorData {
+        TimedSensorData::from(self.read_data())
     }
 }
 
@@ -61,7 +61,19 @@ pub fn set_board_led_status(on: bool) -> anyhow::Result<()> {
         .context("Failed to set GPIO PIN 25")
 }
 
-#[derive(Debug, Clone, Copy, DeserializeFromStr, SerializeDisplay, PartialEq, Eq, Hash, EnumIter, IntoStaticStr, AsRefStr)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    DeserializeFromStr,
+    SerializeDisplay,
+    PartialEq,
+    Eq,
+    Hash,
+    EnumIter,
+    IntoStaticStr,
+    AsRefStr,
+)]
 pub enum SensorName {
     Imu,
     Ultrasonic,
@@ -113,19 +125,14 @@ impl Display for SensorData {
 pub struct TimedSensorData {
     #[serde(flatten)]
     pub data: SensorData,
-    #[serde_as(as = "DurationMilliSeconds<u64>")]
+    #[serde_as(as = "TimestampMilliSeconds<i64>")]
     #[serde(rename = "timestamp_ms")]
-    pub timestamp: Duration,
+    pub timestamp: SystemTime,
 }
 
 impl TimedSensorData {
-    pub fn new(data: SensorData, start_time: SystemTime) -> Self {
-        Self {
-            data,
-            timestamp: SystemTime::now()
-                .duration_since(start_time)
-                .expect("This is really bad"),
-        }
+    pub fn new(data: SensorData, timestamp: SystemTime) -> Self {
+        Self { data, timestamp }
     }
 }
 

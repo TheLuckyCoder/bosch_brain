@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::Mutex;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::sensors::manager::SensorManager;
 use crate::sensors::{AmbienceData, GpsCoordinates, ImuData, SensorData, SensorName};
@@ -13,16 +13,24 @@ use crate::sensors::{AmbienceData, GpsCoordinates, ImuData, SensorData, SensorNa
 /// The data that is sent over UDP
 #[derive(Default, serde::Serialize)]
 struct UdpData {
+    #[serde(flatten)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     imu: Option<ImuData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     ultrasonic: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     gps: Option<GpsCoordinates>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     ambience: Option<AmbienceData>,
 }
 
 impl UdpData {
     /// Checks if the struct contains any data
     fn is_empty(&self) -> bool {
-        self.imu.is_none() && self.ultrasonic.is_none() && self.gps.is_none()
+        self.imu.is_none()
+            && self.ultrasonic.is_none()
+            && self.gps.is_none()
+            && self.ambience.is_none()
     }
 }
 

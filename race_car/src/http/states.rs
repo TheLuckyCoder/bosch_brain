@@ -3,6 +3,7 @@
 use std::fs::File;
 use std::io::Write;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -87,7 +88,7 @@ async fn set_current_state(
     }
 
     set_board_led_status(false).unwrap();
-    
+
     match new_car_state {
         CarStates::Standby => sensor_manager.stop_listening_to_sensors(),
         CarStates::Config => sensor_manager.stop_listening_to_sensors(),
@@ -95,7 +96,8 @@ async fn set_current_state(
             let state = state.clone();
             sensor_manager.start_listening_to_sensors();
             set_board_led_status(true).unwrap();
-            let receiver = sensor_manager.get_data_receiver().clone();
+            let start_time = SystemTime::now();
+            let receiver = sensor_manager.get_data_receiver().add_stream();
 
             std::thread::spawn(move || {
                 let date = Local::now();
@@ -104,20 +106,41 @@ async fn set_current_state(
                 let mut output_file = File::create(path).unwrap();
                 let mut last_motor_value = 0f64;
 
+                output_file
+                    .write_all(
+                        format!(
+                            "{}\n",
+                            start_time.duration_since(UNIX_EPOCH).unwrap().as_millis()
+                        )
+                        .as_bytes(),
+                    )
+                    .unwrap();
+
                 while let Ok(data) = receiver.recv() {
                     if *state.car_state.blocking_lock() != CarStates::RemoteControlled {
                         break;
                     }
-                    let motor_value = state.motor_driver.blocking_lock().get_last_motor_value(Motor::Steering);
+                    let motor_value = state
+                        .motor_driver
+                        .blocking_lock()
+                        .get_last_motor_value(Motor::Steering);
                     if last_motor_value != motor_value {
-                        output_file
-                            .write_all(format!("{{ \"SteeringAngle\": {}, \"timestamp_ms\": {} }}\n", motor_value, data.timestamp.as_millis()).as_bytes())
-                            .unwrap();
+                        let motor_line = format!(
+                            "{{\"SteeringAngle\": {},\"timestamp_ms\":{}}}\n",
+                            motor_value,
+                            data.timestamp
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap()
+                                .as_millis()
+                        );
+                        output_file.write_all(motor_line.as_bytes()).unwrap();
                     }
                     last_motor_value = motor_value;
 
                     output_file
-                        .write_all(format!("{}\n", serde_json::to_string(&data).unwrap()).as_bytes())
+                        .write_all(
+                            format!("{}\n", serde_json::to_string(&data).unwrap()).as_bytes(),
+                        )
                         .unwrap();
                 }
                 output_file.sync_data().unwrap();

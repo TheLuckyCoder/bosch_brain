@@ -3,6 +3,7 @@
 use crate::http::states::CarStates;
 use crate::http::GlobalState;
 use crate::sensors::motor_driver::{Motor, MotorParams};
+use crate::utils::files::get_car_dir;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -15,7 +16,6 @@ use std::time::Duration;
 use tokio::task;
 use tokio::time::sleep;
 use tracing::{info, log};
-use crate::utils::files::get_car_dir;
 
 #[doc(hidden)]
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Speed];
@@ -197,7 +197,7 @@ async fn set_all_motors(
     values: Option<Json<SpeedAndSteering>>,
 ) -> StatusCode {
     if *state.car_state.lock().await != CarStates::RemoteControlled {
-        return StatusCode::BAD_REQUEST;
+        return StatusCode::UNAUTHORIZED;
     }
 
     let Json(values) = values.unwrap_or_default();

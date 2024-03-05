@@ -2,15 +2,14 @@ use hc_sr04::{HcSr04, Unit};
 
 use crate::sensors::{BasicSensor, SensorData, SensorName};
 
-const TRIGGER: u8 = 24;
-const ECHO: u8 = 23;
-
 /// Wrapper for the HC-SR04 sensor
 pub struct UltrasonicSensor(HcSr04);
 
 impl UltrasonicSensor {
-
     pub fn new(temp: f32) -> Result<Self, String> {
+        const TRIGGER: u8 = 24;
+        const ECHO: u8 = 23;
+
         HcSr04::new(TRIGGER, ECHO, Some(temp))
             .map(Self)
             .map_err(|e| e.to_string())

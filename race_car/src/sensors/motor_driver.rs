@@ -133,7 +133,12 @@ impl MotorDriver {
     }
 
     pub fn get_last_motor_value(&mut self, motor: Motor) -> f64 {
-        self.contents[motor as usize].last_value
+        let value = self.contents[motor as usize].last_value;
+        if value.is_infinite() {
+            0.0
+        } else {
+            value
+        }
     }
 
     pub fn stop_motor(&mut self, motor: Motor) {

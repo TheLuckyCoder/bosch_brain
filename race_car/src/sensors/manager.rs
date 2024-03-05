@@ -1,30 +1,24 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::TrySendError;
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, warn};
 
-use crate::sensors::{AmbienceSensor, BasicSensor, GpsSensor, ImuSensor, SensorData, SensorName, set_board_led_status, TimedSensorData, UltrasonicSensor};
 use crate::sensors::velocity::VelocitySensor;
+use crate::sensors::{
+    AmbienceSensor, BasicSensor, GpsSensor, ImuSensor, SensorData, SensorName, TimedSensorData,
+    UltrasonicSensor,
+};
 
+#[derive(Default)]
 struct Shared {
     should_read: AtomicBool,
-    start_time: Mutex<SystemTime>,
+    lock: Mutex<()>,
     cond: Condvar,
-}
-
-impl Default for Shared {
-    fn default() -> Self {
-        Self {
-            should_read: Default::default(),
-            start_time: Mutex::new(SystemTime::now()),
-            cond: Default::default(),
-        }
-    }
 }
 
 /// Manages all the sensor instances
@@ -62,7 +56,7 @@ impl SensorManager {
             .map(&mut spawn_thread)
             .map_err(|e| error!("IMU failed to initialize: {e:?}"))
             .ok();
-        spawn_thread(cast_sensor(VelocitySensor::new(receiver.clone())));
+        spawn_thread(cast_sensor(VelocitySensor::new(receiver.add_stream())));
         // UltrasonicSensor::new(21f32)
         //     .map(cast_sensor)
         //     .map(&mut spawn_thread)
@@ -79,7 +73,11 @@ impl SensorManager {
         //     .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
         //     .ok();
 
-        Self { shared_data, sensors, receiver }
+        Self {
+            shared_data,
+            sensors,
+            receiver,
+        }
     }
 
     pub fn get_sensor(&self, sensor_name: &SensorName) -> Option<&Mutex<dyn BasicSensor + Send>> {
@@ -93,17 +91,14 @@ impl SensorManager {
         sender: BroadcastSender<TimedSensorData>,
     ) {
         thread::spawn(move || {
-            let mut start_time = SystemTime::now();
-
             loop {
                 if !shared_data.should_read.load(Ordering::Acquire) {
-                    let mut lock = shared_data.start_time.lock().unwrap();
+                    let mut lock = shared_data.lock.lock().unwrap();
                     while !shared_data.should_read.load(Ordering::Acquire) {
                         lock = shared_data.cond.wait(lock).unwrap();
                     }
 
                     // Now is the start of a new reading session
-                    start_time = *lock;
                     sensor.lock().unwrap().prepare_read();
                 }
 
@@ -111,16 +106,9 @@ impl SensorManager {
                     thread::sleep(Duration::from_millis(20));
                 }
 
-                let sensor_data = sensor.lock().unwrap().read_data_timed(start_time);
+                let sensor_data = sensor.lock().unwrap().read_data_timed();
 
-                // if sensor_name == Gps::NAME {
-                //     info!(
-                //         "{:?} {} elapsed {}ms",
-                //         sensor_data.data,
-                //         sensor.name(),
-                //         time_elapsed.as_millis(),
-                //     );
-                // }
+                // info!("{:?}: {}", sensor_data.data, sensor_name);
 
                 if !shared_data.should_read.load(Ordering::Acquire) {
                     continue;
