@@ -17,17 +17,14 @@ use tokio::task;
 use tokio::time::sleep;
 use tracing::{info, log};
 
-#[doc(hidden)]
 const ALL_MOTORS: [Motor; 2] = [Motor::Steering, Motor::Speed];
 
-#[doc(hidden)]
 fn get_motor_params_file(motor: Motor) -> PathBuf {
     let mut path = get_car_dir();
     path.push(&format!("motor_params_{motor:?}.json"));
     path
 }
 
-#[doc(hidden)]
 async fn read_params_from_files(global_state: &Arc<GlobalState>) {
     for motor in ALL_MOTORS {
         let file_path = get_motor_params_file(motor);
@@ -162,8 +159,11 @@ async fn resume_motor(State(state): State<Arc<GlobalState>>, motor: Option<Path<
     }
 }
 
-#[doc(hidden)]
 async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Motor>) {
+    if *state.car_state.lock().await != CarStates::Config {
+        return;
+    }
+
     tokio::spawn(async move {
         let mut motor_driver = state.motor_driver.lock().await;
 

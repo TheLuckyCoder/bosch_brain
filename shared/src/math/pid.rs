@@ -1,9 +1,9 @@
 use std::time::Instant;
 
 pub struct PidController {
-    k_p: f64,
-    k_i: f64,
-    k_d: f64,
+    pub k_p: f64,
+    pub k_i: f64,
+    pub k_d: f64,
 
     first_run: bool,
     previous_time: Instant,
@@ -33,28 +33,26 @@ impl PidController {
         }
     }
 
-    pub fn set_input_range(&mut self, min: f64, max: f64) {
+    pub fn set_input_range(mut self, min: f64, max: f64) -> PidController {
         assert!(min < max);
-        self.input_bounds = Some((min, max))
+        self.input_bounds = Some((min, max));
+        self
     }
 
-    pub fn set_output_range(&mut self, min: f64, max: f64) {
+    pub fn set_output_range(mut self, min: f64, max: f64) -> PidController {
         assert!(min < max);
-        self.output_bounds = Some((min, max))
+        self.output_bounds = Some((min, max));
+        self
     }
 
     fn get_error(&self, input: f64) -> f64 {
-        let mut error = self.target_value - input;
+        let clamped_input = if let Some((min_input, max_input)) = self.input_bounds {
+            input.clamp(min_input, max_input)
+        } else {
+            input
+        };
 
-        if let Some((min_input, max_input)) = self.input_bounds {
-            let input_range = max_input - min_input;
-
-            while error.abs() > input_range / 2.0 {
-                error -= error.signum() * input_range
-            }
-        }
-
-        error
+        self.target_value - clamped_input
     }
 
     pub fn compute(&mut self, input: f64) -> f64 {
@@ -74,6 +72,7 @@ impl PidController {
         }
 
         {
+            // Conditional Integration (Anti-Windup)
             let (min, max) = self.output_bounds.unwrap_or((0.0, 0.0));
 
             if (min <= self.last_output && self.last_output <= max)

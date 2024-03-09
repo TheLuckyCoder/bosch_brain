@@ -44,7 +44,9 @@ impl GlobalState {
             motor_driver: Arc::new(Mutex::new(motor_driver)),
             pids: Arc::new(PidManager::new(
                 PidController::new(1.0, 0.0, 0.0),
-                PidController::new(2.0, 0.0, 0.0),
+                PidController::new(1.0, 0.0, 0.1)
+                    .set_input_range(-90.0, 90.0)
+                    .set_output_range(-27.0, 27.0),
             )),
         }
     }

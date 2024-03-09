@@ -94,7 +94,9 @@ impl MotorDriver {
     }
 
     pub fn set_motor_value(&mut self, motor: Motor, input: f64) {
-        let input = input.clamp(-1.0, 1.0);
+        // Steering motor should turn right when given a positive value
+        let input = input.clamp(-1.0, 1.0) * if motor == Motor::Steering { -1.0 } else { 1.0 };
+
         let contents = &mut self.contents[motor as usize];
         let last_value = &mut contents.last_value;
 

@@ -2,14 +2,14 @@ use std::io::Read;
 use std::time::Duration;
 
 use tracing::warn;
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
 use crate::http::GlobalState;
-use crate::sensors::{set_board_led_status};
 use crate::sensors::manager::SensorManager;
 use crate::sensors::motor_driver::{Motor, MotorDriver};
+use crate::sensors::set_board_led_status;
 
 mod http;
 mod sensors;
@@ -22,7 +22,7 @@ mod utils;
 async fn main() -> Result<(), String> {
     std::env::set_var("RUST_LOG", "info");
     tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().compact())
+        .with(tracing_subscriber::fmt::layer().compact().without_time())
         .with(EnvFilter::from_default_env())
         .init();
 
