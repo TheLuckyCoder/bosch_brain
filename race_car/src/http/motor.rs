@@ -9,6 +9,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use serde::{Deserialize, Serialize};
 use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -185,7 +186,7 @@ async fn motor_sweep(State(state): State<Arc<GlobalState>>, Path(motor): Path<Mo
     });
 }
 
-#[derive(Default, serde::Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 struct SpeedAndSteering {
     pub speed: f64,
     pub steering: f64,
@@ -199,6 +200,7 @@ async fn set_all_motors(
     if *state.car_state.lock().await != CarStates::RemoteControlled {
         return StatusCode::UNAUTHORIZED;
     }
+    let mut motor_file = state.motor_file.lock().await;
 
     let Json(values) = values.unwrap_or_default();
 
@@ -211,6 +213,9 @@ async fn set_all_motors(
 
     motor.set_motor_value(Motor::Speed, values.speed);
     motor.set_motor_value(Motor::Steering, values.steering);
+    motor_file
+        .write_all(serde_json::to_string(&values).unwrap().as_ref())
+        .expect("Failed to write to file");
 
     StatusCode::OK
 }

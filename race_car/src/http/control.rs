@@ -54,11 +54,12 @@ pub fn router(state: Arc<GlobalState>) -> Router {
 
 #[derive(Debug, Deserialize)]
 enum ControlAction {
-    ResetState,
     LaneKeeping,
     Pause,
     Pause3Seconds,
     Resume,
+    RightTurn,
+    LeftTurn,
 }
 
 #[derive(Debug, Deserialize)]
@@ -71,8 +72,8 @@ struct ControlData {
 
 async fn set_control_data(State(state): State<Arc<GlobalState>>, Json(data): Json<ControlData>) {
     const MAX_MOTOR_DEGREES: f64 = 30.0;
-    const HEADING_ERROR_WEIGHT: f64 = 0.4;
-    const LATERAL_OFFSET_WEIGHT: f64 = 1.5;
+    const HEADING_ERROR_WEIGHT: f64 = 0.2;
+    const LATERAL_OFFSET_WEIGHT: f64 = 1.2;
 
     // info!("{:?}", data);
     let mut motor_driver = match state.motor_driver.try_lock() {
@@ -107,10 +108,11 @@ async fn set_control_data(State(state): State<Arc<GlobalState>>, Json(data): Jso
     }
 
     match data.action {
-        ControlAction::ResetState => state.pids.steering.lock().await.reset(),
         ControlAction::LaneKeeping => {}
         ControlAction::Pause => motor_driver.pause_motor(Motor::Speed),
         ControlAction::Pause3Seconds => {
+            info!("Taking 3 seconds pause");
+            let current_speed = motor_driver.get_last_motor_value(Motor::Speed);
             motor_driver.pause_motor(Motor::Speed);
 
             let motor_driver = state.motor_driver.clone();
@@ -118,9 +120,13 @@ async fn set_control_data(State(state): State<Arc<GlobalState>>, Json(data): Jso
                 let mut motor_driver = motor_driver.blocking_lock();
                 std::thread::sleep(Duration::from_secs(3));
                 motor_driver.resume_motor(Motor::Speed);
+                motor_driver.set_motor_value(Motor::Speed, current_speed);
+                info!("Finished taking 3 seconds pause");
             });
         }
         ControlAction::Resume => motor_driver.resume_motor(Motor::Speed),
+        ControlAction::RightTurn => {}
+        ControlAction::LeftTurn => {}
     }
 }
 

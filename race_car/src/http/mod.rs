@@ -1,11 +1,13 @@
 //! HTTP car server.
 
+use std::fs::File;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::http::control::PidManager;
 use axum::routing::get;
 use axum::Router;
+use chrono::Local;
 use shared::math::pid::PidController;
 use tokio::sync::Mutex;
 use tower_http::trace;
@@ -16,6 +18,7 @@ use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
 use crate::sensors::manager::SensorManager;
 use crate::sensors::motor_driver::MotorDriver;
+use crate::utils::files::get_car_file;
 
 mod control;
 mod motor;
@@ -31,10 +34,12 @@ pub struct GlobalState {
     pub sensor_manager: Arc<Mutex<SensorManager>>,
     pub motor_driver: Arc<Mutex<MotorDriver>>,
     pub pids: Arc<PidManager>,
+    pub motor_file: Mutex<File>,
 }
 
 impl GlobalState {
     pub fn new(sensor_manager: SensorManager, motor_driver: MotorDriver) -> Self {
+        let date = Local::now();
         let sensor_manager = Arc::new(Mutex::new(sensor_manager));
         Self {
             car_state: Mutex::default(),
@@ -44,10 +49,13 @@ impl GlobalState {
             motor_driver: Arc::new(Mutex::new(motor_driver)),
             pids: Arc::new(PidManager::new(
                 PidController::new(1.0, 0.0, 0.0),
-                PidController::new(1.0, 0.0, 0.1)
-                    .set_input_range(-90.0, 90.0)
+                PidController::new(1.0, 0.0, 0.3)
+                    .set_input_range(-60.0, 60.0)
                     .set_output_range(-27.0, 27.0),
             )),
+            motor_file: Mutex::new(
+                File::create(get_car_file(format!("{}.motor", date.format("%H-%M-%S")))).unwrap(),
+            ),
         }
     }
 }
