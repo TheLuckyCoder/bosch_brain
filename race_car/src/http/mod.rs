@@ -50,8 +50,8 @@ impl GlobalState {
             pids: Arc::new(PidManager::new(
                 PidController::new(1.0, 0.0, 0.0),
                 PidController::new(1.0, 0.0, 0.3)
-                    .set_input_range(-60.0, 60.0)
-                    .set_output_range(-27.0, 27.0),
+                    .set_input_range(-1.0, 1.0)
+                    .set_output_range(-0.9, 0.9),
             )),
             motor_file: Mutex::new(
                 File::create(get_car_file(format!("{}.motor", date.format("%H-%M-%S")))).unwrap(),

@@ -71,9 +71,9 @@ struct ControlData {
 }
 
 async fn set_control_data(State(state): State<Arc<GlobalState>>, Json(data): Json<ControlData>) {
-    const MAX_MOTOR_DEGREES: f64 = 30.0;
-    const HEADING_ERROR_WEIGHT: f64 = 0.2;
-    const LATERAL_OFFSET_WEIGHT: f64 = 1.2;
+    const MAX_HEADING_ANGLE: f64 = 90.0;
+    const HEADING_ERROR_WEIGHT: f64 = 0.75;
+    const LATERAL_OFFSET_WEIGHT: f64 = 1.35;
 
     // info!("{:?}", data);
     let mut motor_driver = match state.motor_driver.try_lock() {
@@ -82,10 +82,10 @@ async fn set_control_data(State(state): State<Arc<GlobalState>>, Json(data): Jso
     };
 
     if let Some(heading_error) = data.heading_error_degrees {
-        let lateral_error = data.lateral_error.unwrap_or_default();
+        let lateral_error = data.lateral_error.unwrap_or_default().clamp(-1.0, 1.0);
 
         // 1. Normalize heading value
-        let normalized_heading_error = heading_error / MAX_MOTOR_DEGREES;
+        let normalized_heading_error = heading_error / MAX_HEADING_ANGLE;
 
         // 2. Lateral Offset Correction
         // positive value means car is on the right side of the road
@@ -101,7 +101,7 @@ async fn set_control_data(State(state): State<Arc<GlobalState>>, Json(data): Jso
             .await
             .compute(corrected_heading_error);
 
-        info!("Heading: {heading_error:.03}; Lateral {lateral_error:.03}; Input: {corrected_heading_error:.03}; Output {pid_output:.03}");
+        info!("Heading: {:.03}; Lateral {lateral_error:.03}; Input: {corrected_heading_error:.03}; Output {pid_output:.03}", normalized_heading_error * HEADING_ERROR_WEIGHT);
 
         let car_direction = motor_driver.get_last_motor_value(Motor::Speed).signum();
         motor_driver.set_motor_value(Motor::Steering, car_direction * pid_output);
