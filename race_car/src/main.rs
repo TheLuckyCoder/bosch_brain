@@ -15,6 +15,7 @@ mod http;
 mod sensors;
 mod utils;
 mod frontend;
+mod actuator;
 
 /// Entrypoint of the program
 ///
