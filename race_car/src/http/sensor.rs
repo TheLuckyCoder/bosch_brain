@@ -1,6 +1,5 @@
 //! HTTP routes for interacting with the car's sensors.
 
-use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -18,20 +17,20 @@ use crate::sensors::SensorName;
 /// Creates an object that manages all the sensor routes
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
-        .route("/", get(get_all_available_sensors))
+        .route("/", get(get_sensors))
         .route("/active_udp", post(set_udp_sensors))
         .with_state(global_state)
 }
 
 /// Returns a list of all available and initialized sensors
-async fn get_all_available_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
+async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let sensor_manager = state.sensor_manager.lock().await;
 
-    let map: BTreeMap<&str, bool> = SensorName::iter().map(|sensor_name| {
+    let sensors: Vec<(&'static str, bool)> = SensorName::iter().map(|sensor_name| {
         (sensor_name.into(), sensor_manager.get_sensor(&sensor_name).is_some())
     }).collect();
 
-    Json(map)
+    Json(sensors)
 }
 
 /// Sets the active UDP sensors from which data will be streamed on the UDP port.
