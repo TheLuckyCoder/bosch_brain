@@ -1,5 +1,5 @@
 //! HTTP routes for controlling the car's PIDs.
-
+/*
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -199,3 +199,4 @@ async fn steering_pid(State(state): State<Arc<GlobalState>>, Path(angle): Path<f
     info!("Receiving steering: {angle} ; Motor Value: {motor_value}");
     motor.set_motor_value(Motor::Steering, motor_value);
 }
+*/

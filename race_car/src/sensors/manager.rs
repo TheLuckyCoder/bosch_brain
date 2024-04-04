@@ -13,6 +13,7 @@ use crate::sensors::{
     AmbienceSensor, BasicSensor, GpsSensor, ImuSensor, SensorData, SensorName, TimedSensorData,
     UltrasonicSensor,
 };
+use crate::sensors::mock::{MockGps, MockImuSensor, MockUltrasonicSensor, MockVelocitySensor};
 
 #[derive(Default)]
 struct Shared {
@@ -50,23 +51,27 @@ impl SensorManager {
             Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn BasicSensor + Send>>
         }
 
+        spawn_thread(cast_sensor(MockImuSensor));
+        spawn_thread(cast_sensor(MockUltrasonicSensor));
+        spawn_thread(cast_sensor(MockGps));
+        spawn_thread(cast_sensor(MockVelocitySensor));
         // Initialize the actual sensors
-        ImuSensor::new()
-            .map(cast_sensor)
-            .map(&mut spawn_thread)
-            .map_err(|e| error!("IMU failed to initialize: {e:?}"))
-            .ok();
-        spawn_thread(cast_sensor(VelocitySensor::new(receiver.add_stream())));
+        // ImuSensor::new()
+        //     .map(cast_sensor)
+        //     .map(&mut spawn_thread)
+        //     .map_err(|e| error!("IMU failed to initialize: {e:?}"))
+        //     .ok();
+        // spawn_thread(cast_sensor(VelocitySensor::new(receiver.add_stream())));
         // UltrasonicSensor::new(21f32)
         //     .map(cast_sensor)
         //     .map(&mut spawn_thread)
         //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
         //     .ok();
-        GpsSensor::new()
-            .map(cast_sensor)
-            .map(&mut spawn_thread)
-            .map_err(|e| error!("GPS failed to initialize: {e}"))
-            .ok();
+        // GpsSensor::new()
+        //     .map(cast_sensor)
+        //     .map(&mut spawn_thread)
+        //     .map_err(|e| error!("GPS failed to initialize: {e}"))
+        //     .ok();
         // AmbienceSensor::new()
         //     .map(cast_sensor)
         //     .map(&mut spawn_thread)
@@ -102,9 +107,7 @@ impl SensorManager {
                     sensor.lock().unwrap().prepare_read();
                 }
 
-                if sensor_name != SensorName::Gps {
-                    thread::sleep(Duration::from_millis(20));
-                }
+                thread::sleep(Duration::from_millis(20));
 
                 let sensor_data = sensor.lock().unwrap().read_data_timed();
 

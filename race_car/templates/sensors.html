@@ -3,14 +3,30 @@
 {% block title %} Sensors {% endblock %}
 
 {% block content %}
+<div class="flex flex-col h-screen justify-between">
+    <header>
+        <div class="flex flex-row h-8">
+            <div>State: OFFLINE</div>
+            <div>Connection</div>
+        </div>
 
-<h1>Sensors</h1>
-<div id="sensors">
-    {% for sensor in sensors %}
+        <h1>Sensors</h1>
+    </header>
+
+    <main id="sensors">
+        {% for sensor in sensors %}
         <div id="sensor-{{ sensor.name }}">
             {{ sensor.name }}<br>
             Enabled: {{ sensor.enabled }}
         </div>
-    {% endfor %}
+        {% endfor %}
+    </main>
+
+    <footer id="menu" class="bg-blue-500">
+        <div id="menu-sensors" class="m-6 flex flex-col w-32">
+            <span class="scale-175 material-symbols-outlined">sensors</span>
+            <div>Sensors</div>
+        </div>
+    </footer>
 </div>
 {% endblock %}

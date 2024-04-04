@@ -75,11 +75,11 @@ async fn set_current_state(
 
     let mut sensor_manager = state.sensor_manager.lock().await;
 
-    {
+    /*{
         let mut motors = state.motor_driver.lock().await;
         motors.stop_motor(Motor::Speed);
         motors.stop_motor(Motor::Steering);
-    }
+    }*/
 
     {
         let mut udp = state.udp_manager.lock().await;
@@ -100,12 +100,11 @@ async fn set_current_state(
             let receiver = sensor_manager.get_data_receiver().add_stream();
             set_board_led_status(false).inspect_err(|e| error!("Failed to set board led: {e}")).ok();
 
-            std::thread::spawn(move || {
+            /*std::thread::spawn(move || {
                 let date = Local::now();
 
                 let path = get_car_file(format!("{}.log", date.format("%Y-%m-%d_%H-%M-%S")));
                 let mut output_file = File::create(path).unwrap();
-                let mut last_motor_value = 0f64;
 
                 output_file
                     .write_all(
@@ -121,22 +120,6 @@ async fn set_current_state(
                     if *state.car_state.blocking_lock() != CarStates::RemoteControlled {
                         break;
                     }
-                    let motor_value = state
-                        .motor_driver
-                        .blocking_lock()
-                        .get_last_motor_value(Motor::Steering);
-                    if last_motor_value != motor_value {
-                        let motor_line = format!(
-                            "{{\"SteeringAngle\": {},\"timestamp_ms\":{}}}\n",
-                            motor_value,
-                            data.timestamp
-                                .duration_since(UNIX_EPOCH)
-                                .unwrap()
-                                .as_millis()
-                        );
-                        output_file.write_all(motor_line.as_bytes()).unwrap();
-                    }
-                    last_motor_value = motor_value;
 
                     output_file
                         .write_all(
@@ -146,11 +129,11 @@ async fn set_current_state(
                 }
                 output_file.sync_data().unwrap();
                 info!("Log thread stopped")
-            });
+            });*/
         }
     }
 
-    state.pids.reset().await;
+    // state.pids.reset().await;
 
     StatusCode::OK
 }

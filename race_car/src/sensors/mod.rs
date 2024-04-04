@@ -22,6 +22,7 @@ pub mod manager;
 pub mod motor_driver;
 mod ultrasonic;
 mod velocity;
+mod mock;
 
 /// Common set of functions each sensor class should implement
 pub trait BasicSensor: Send {

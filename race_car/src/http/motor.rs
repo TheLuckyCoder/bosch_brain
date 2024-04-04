@@ -1,5 +1,5 @@
 //! HTTP routes for manually controlling the car's motors.
-
+/*
 use crate::http::states::CarStates;
 use crate::http::GlobalState;
 use crate::sensors::motor_driver::{Motor, MotorParams};
@@ -200,8 +200,6 @@ async fn set_all_motors(
     if *state.car_state.lock().await != CarStates::RemoteControlled {
         return StatusCode::UNAUTHORIZED;
     }
-    let mut motor_file = state.motor_file.lock().await;
-
     let Json(values) = values.unwrap_or_default();
 
     let mut motor = state.motor_driver.lock().await;
@@ -213,9 +211,7 @@ async fn set_all_motors(
 
     motor.set_motor_value(Motor::Speed, values.speed);
     motor.set_motor_value(Motor::Steering, values.steering);
-    motor_file
-        .write_all(serde_json::to_string(&values).unwrap().as_ref())
-        .expect("Failed to write to file");
 
     StatusCode::OK
 }
+*/
