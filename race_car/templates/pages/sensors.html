@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %} UDP {% endblock %}
+
+{% block content %}
+
+
+<main id="main-content" class="p-4">
+    <form id="active-udp-sensors" hx-get="active_sensors" hx-target="#status" hx-swap="innerHTML"
+          class="bg-gray-200 rounded-lg p-4">
+        Active UDP Sensors:
+        {% for sensor in sensors %}
+        <div class="py-2">
+            <label class="p-2 select-none">
+                <input id="checkbox-{{ sensor.name }}" type="checkbox" name="{{ sensor.name }}"
+                       {% if sensor.enabled -%}checked{% endif -%}>
+                {{ sensor.name }}
+            </label>
+        </div>
+        {% endfor %}
+        <button class="text-white p-4 bg-blue-400 rounded-xl">Apply</button>
+    </form>
+
+    <div id="status">Please select sensors</div>
+
+    <div id="sensors-data" hx-ext="ws" ws-connect="/sensor_data">
+        <ul id="messages"></ul>
+    </div>
+</main>
+
+{% endblock %}

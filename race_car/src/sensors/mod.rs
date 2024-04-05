@@ -76,11 +76,11 @@ pub fn set_board_led_status(on: bool) -> anyhow::Result<()> {
     AsRefStr,
 )]
 pub enum SensorName {
+    Ambience,
+    Gps,
     Imu,
     Ultrasonic,
-    Gps,
     Velocity,
-    Ambience,
 }
 
 impl FromStr for SensorName {

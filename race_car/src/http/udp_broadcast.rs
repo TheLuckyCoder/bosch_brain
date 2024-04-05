@@ -47,7 +47,7 @@ impl UdpBroadcast {
     ///
     /// This starts a background thread which periodically checks for new sensor data and sends it over UDP on port `3000`.
     ///
-    /// This will only send data after the `address` has been set. See [UdpBroadcast::set_active_sensor] for more information.
+    /// This will only send data after the `address` has been set. See [UdpBroadcast::set_active_sensors] for more information.
     pub fn new(sensor_manager: Arc<Mutex<SensorManager>>) -> std::io::Result<Arc<Mutex<Self>>> {
         let udp_broadcast = Arc::new(Mutex::new(UdpBroadcast::default()));
 
@@ -86,9 +86,13 @@ impl UdpBroadcast {
 
         Ok(udp_broadcast_clone)
     }
+    
+    pub fn get_active_sensors(&self) -> &Vec<SensorName> {
+        &self.active_sensors
+    }
 
-    pub fn set_active_sensor(&mut self, sensor: Vec<SensorName>, address: String) {
-        self.active_sensors = sensor;
+    pub fn set_active_sensors(&mut self, sensors: Vec<SensorName>, address: String) {
+        self.active_sensors = sensors;
         self.address = Some(address);
     }
 

@@ -7,18 +7,20 @@ use axum::Router;
 use tokio::sync::Mutex;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
+use tower_livereload::LiveReloadLayer;
 use tracing::Level;
 
-use crate::frontend;
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
 use crate::sensors::manager::SensorManager;
+use crate::sensors::SensorName;
 
 mod control;
 mod motor;
 mod sensor;
 mod states;
 mod udp_broadcast;
+mod frontend;
 
 /// Global state for the HTTP server
 /// This is used to share state between the different routes
@@ -28,6 +30,7 @@ pub struct GlobalState {
     pub sensor_manager: Arc<Mutex<SensorManager>>,
     // pub motor_driver: Arc<Mutex<MotorDriver>>,
     // pub pids: Arc<PidManager>,
+    pub active_sensors: Arc<Mutex<Vec<SensorName>>>,
 }
 
 impl GlobalState {
@@ -45,6 +48,7 @@ impl GlobalState {
             //         .set_input_range(-1.0, 1.0)
             //         .set_output_range(-0.9, 0.9),
             // )),
+            active_sensors: Arc::default(),
         }
     }
 }
@@ -59,6 +63,7 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
         .nest("/api/state", states::router(global_state.clone()))
         .nest("/api/sensors", sensor::router(global_state.clone()))
         // .nest("/api/control", control::router(global_state))
+        .layer(LiveReloadLayer::new())
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))

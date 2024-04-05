@@ -1,29 +1,37 @@
 //! HTTP routes for reading and changing the car's state.
 
-use std::fs::File;
-use std::io::Write;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{UNIX_EPOCH};
 
+use axum::{Json, Router};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use axum::{Json, Router};
-use chrono::Local;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use strum::{AsRefStr, EnumIter, IntoStaticStr};
+use tracing::{error};
 
 use crate::http::GlobalState;
-use crate::sensors::motor_driver::Motor;
 use crate::sensors::set_board_led_status;
-use crate::utils::files::get_car_file;
 
 /// The different states the car can be in.
 /// - Standby: The default state of the car.
 /// - Config: The car is in config mode. This means that the car will not drive and the sensors will be configured.
 /// - RemoteControlled: The car is controlled by a remote.
-#[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    EnumIter,
+    IntoStaticStr,
+    AsRefStr,
+)]
 pub enum CarStates {
     #[default]
     Standby,
@@ -87,18 +95,22 @@ async fn set_current_state(
         udp.set_config_mode(new_car_state == CarStates::Config);
     }
 
-    set_board_led_status(false).inspect_err(|e| error!("Failed to set board led: {e}")).ok();
-    
+    set_board_led_status(false)
+        .inspect_err(|e| error!("Failed to set board led: {e}"))
+        .ok();
+
     match new_car_state {
         CarStates::Standby => sensor_manager.stop_listening_to_sensors(),
         CarStates::Config => sensor_manager.stop_listening_to_sensors(),
         CarStates::RemoteControlled => {
-            let state = state.clone();
+            // let state = state.clone();
             sensor_manager.start_listening_to_sensors();
             set_board_led_status(true).unwrap();
-            let start_time = SystemTime::now();
-            let receiver = sensor_manager.get_data_receiver().add_stream();
-            set_board_led_status(false).inspect_err(|e| error!("Failed to set board led: {e}")).ok();
+            // let start_time = SystemTime::now();
+            // let receiver = sensor_manager.get_data_receiver().add_stream();
+            set_board_led_status(false)
+                .inspect_err(|e| error!("Failed to set board led: {e}"))
+                .ok();
 
             /*std::thread::spawn(move || {
                 let date = Local::now();

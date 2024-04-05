@@ -107,11 +107,11 @@ impl SensorManager {
                     sensor.lock().unwrap().prepare_read();
                 }
 
-                thread::sleep(Duration::from_millis(20));
+                thread::sleep(Duration::from_millis(50));
 
                 let sensor_data = sensor.lock().unwrap().read_data_timed();
 
-                // info!("{:?}: {}", sensor_data.data, sensor_name);
+                // println!("{:?}: {}", sensor_data.data, sensor_name);
 
                 if !shared_data.should_read.load(Ordering::Acquire) {
                     continue;

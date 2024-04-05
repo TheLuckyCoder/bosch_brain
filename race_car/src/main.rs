@@ -14,7 +14,6 @@ use crate::sensors::set_board_led_status;
 mod http;
 mod sensors;
 mod utils;
-mod frontend;
 mod actuator;
 
 /// Entrypoint of the program

@@ -53,7 +53,7 @@ async fn set_udp_sensors(
     let mut udp_manager = state.udp_manager.lock().await;
 
     udp_manager.save_sensor_config(&mut sensor_manager);
-    udp_manager.set_active_sensor(sensors, format!("{}:3001", addr.ip()));
+    udp_manager.set_active_sensors(sensors, format!("{}:3001", addr.ip()));
 
     StatusCode::OK
 }
