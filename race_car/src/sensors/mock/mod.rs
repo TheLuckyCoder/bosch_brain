@@ -41,7 +41,7 @@ impl BasicSensor for MockUltrasonicSensor {
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Ultrasonic(rand::random())
+        SensorData::Ultrasonic(rand::random::<f32>() * 10_f32)
     }
 }
 

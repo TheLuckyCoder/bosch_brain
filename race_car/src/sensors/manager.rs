@@ -33,7 +33,7 @@ impl SensorManager {
     pub fn new() -> Self {
         let shared_data = Arc::new(Shared::default());
         let mut sensors = HashMap::new();
-        let (sender, receiver) = broadcast_queue(32);
+        let (sender, receiver) = broadcast_queue(64);
 
         let mut spawn_thread = |sensor: Arc<Mutex<dyn BasicSensor + Send>>| {
             let sensor_name = sensor.lock().unwrap().name();
