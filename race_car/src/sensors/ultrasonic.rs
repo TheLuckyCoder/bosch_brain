@@ -32,6 +32,6 @@ impl BasicSensor for UltrasonicSensor {
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Distance(self.get_distance_cm().unwrap_or(f32::INFINITY))
+        SensorData::Ultrasonic(self.get_distance_cm().unwrap_or(f32::INFINITY))
     }
 }

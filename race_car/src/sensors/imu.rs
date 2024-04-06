@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::fmt::{Display, Formatter};
 
 use anyhow::Context;
 use bno055::{BNO055Calibration, BNO055OperationMode, Bno055, BNO055_CALIB_SIZE};
@@ -16,6 +17,12 @@ use crate::utils::files::get_car_file;
 pub struct ImuData {
     pub quaternion: Quaternion<f32>,
     pub acceleration: Vector3<f32>,
+}
+
+impl Display for ImuData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "quaternion: {:?}, acceleration: {:?}", self.quaternion.as_ref(), self.acceleration.as_ref())
+    }
 }
 
 /// Wrapper for the BNO055 sensor

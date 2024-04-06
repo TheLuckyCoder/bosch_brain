@@ -28,7 +28,7 @@ impl BasicSensor for MockGps {
             x: rand::random(),
             y: rand::random(),
             z: rand::random(),
-            confidence: rand::random(),
+            confidence: rand::random::<u8>() % 100,
         })
     }
 }
@@ -41,7 +41,7 @@ impl BasicSensor for MockUltrasonicSensor {
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Distance(rand::random())
+        SensorData::Ultrasonic(rand::random())
     }
 }
 

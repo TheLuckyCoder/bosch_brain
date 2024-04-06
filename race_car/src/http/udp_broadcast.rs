@@ -124,7 +124,7 @@ impl UdpBroadcast {
             .fold(UdpData::default(), |mut udp, sensor_data| {
                 match sensor_data.data {
                     SensorData::Imu(imu) => udp.imu = Some(imu),
-                    SensorData::Distance(distance) => udp.ultrasonic = Some(distance),
+                    SensorData::Ultrasonic(distance) => udp.ultrasonic = Some(distance),
                     SensorData::Gps(gps) => udp.gps = Some(gps),
                     SensorData::Ambience(ambience) => udp.ambience = Some(ambience),
                     _ => {}

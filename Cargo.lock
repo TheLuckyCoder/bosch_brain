@@ -1460,6 +1460,7 @@ dependencies = [
  "axum-extra",
  "bno055",
  "chrono",
+ "futures-util",
  "hc-sr04",
  "htu21df-sensor",
  "linux-embedded-hal",

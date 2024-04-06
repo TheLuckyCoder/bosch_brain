@@ -4,27 +4,40 @@
 
 {% block content %}
 
+<main id="main-content" class="p-4 flex flex-col gap-6" hx-ext="ws" ws-connect="/sensor_data">
 
-<main id="main-content" class="p-4">
-    <form id="active-udp-sensors" hx-get="active_sensors" hx-target="#status" hx-swap="innerHTML"
-          class="bg-gray-200 rounded-lg p-4">
-        Active UDP Sensors:
-        {% for sensor in sensors %}
-        <div class="py-2">
-            <label class="p-2 select-none">
-                <input id="checkbox-{{ sensor.name }}" type="checkbox" name="{{ sensor.name }}"
-                       {% if sensor.enabled -%}checked{% endif -%}>
-                {{ sensor.name }}
-            </label>
+    <div class="flex flex-row flex-wrap gap-8">
+        <form id="active-sensors"
+              class="card min-w-96 max-w-full p-4 shadow-xl bg-base-200">
+            <div class="card-title">Active Sensors:</div>
+            <div class="card-body">
+                {% for sensor in sensors %}
+                <label class="cursor-pointer label">
+                    <span class="label-text">{{ sensor }}</span>
+                    <input id="checkbox-{{ sensor }}" name="{{ sensor }}"
+                           type="checkbox" class="toggle toggle-secondary"
+                           ws-send/>
+                </label>
+                {% endfor %}
+            </div>
+        </form>
+
+        <div class="card bg-base-200 shadow-xl grow">
+            <div id="status" class="card-body">
+                <div class="card-title">Please select sensors</div>
+            </div>
         </div>
-        {% endfor %}
-        <button class="text-white p-4 bg-blue-400 rounded-xl">Apply</button>
-    </form>
+    </div>
 
-    <div id="status">Please select sensors</div>
-
-    <div id="sensors-data" hx-ext="ws" ws-connect="/sensor_data">
-        <ul id="messages"></ul>
+    <div class="collapse bg-base-200 collapse-arrow py-4">
+        <input type="checkbox"/>
+        <div class="collapse-title text-xl font-medium">
+            History
+        </div>
+        <div class="collapse-content">
+            <ul id="messages">
+            </ul>
+        </div>
     </div>
 </main>
 

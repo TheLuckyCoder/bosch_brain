@@ -9,6 +9,7 @@ shared = { path = "../shared" }
 # Async
 tokio = { workspace = true }
 multiqueue2 = "0.1.7"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 
 # HTTP
 axum = { version = "0.7", features = ["http2", "ws"] }

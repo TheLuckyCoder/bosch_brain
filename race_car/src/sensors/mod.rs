@@ -70,6 +70,8 @@ pub fn set_board_led_status(on: bool) -> anyhow::Result<()> {
     SerializeDisplay,
     PartialEq,
     Eq,
+    PartialOrd,
+    Ord,
     Hash,
     EnumIter,
     IntoStaticStr,
@@ -108,7 +110,7 @@ impl Display for SensorName {
 #[derive(Debug, Clone, Serialize)]
 pub enum SensorData {
     Imu(ImuData),
-    Distance(f32),
+    Ultrasonic(f32),
     Gps(GpsCoordinates),
     Velocity(f64),
     Ambience(AmbienceData),
@@ -116,7 +118,25 @@ pub enum SensorData {
 
 impl Display for SensorData {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            SensorData::Imu(imu_data) => write!(f, "Imu: {imu_data}"),
+            SensorData::Ultrasonic(distance) => write!(f, "Ultrasonic: {distance:.4}"),
+            SensorData::Gps(coordinates) => write!(f, "{coordinates:?}"),
+            SensorData::Velocity(velocity) => write!(f, "Velocity: {velocity:.4}"),
+            SensorData::Ambience(ambience) => write!(f, "Ambience: {ambience:?}"),
+        }
+    }
+}
+
+impl SensorData {
+    pub fn get_sensor_name(&self) -> SensorName {
+        match self {
+            SensorData::Imu(_) => SensorName::Imu,
+            SensorData::Ultrasonic(_) => SensorName::Ultrasonic,
+            SensorData::Gps(_) => SensorName::Gps,
+            SensorData::Velocity(_) => SensorName::Velocity,
+            SensorData::Ambience(_) => SensorName::Ambience,
+        }
     }
 }
 

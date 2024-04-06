@@ -13,7 +13,6 @@ use tracing::Level;
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
 use crate::sensors::manager::SensorManager;
-use crate::sensors::SensorName;
 
 mod control;
 mod motor;
@@ -30,7 +29,6 @@ pub struct GlobalState {
     pub sensor_manager: Arc<Mutex<SensorManager>>,
     // pub motor_driver: Arc<Mutex<MotorDriver>>,
     // pub pids: Arc<PidManager>,
-    pub active_sensors: Arc<Mutex<Vec<SensorName>>>,
 }
 
 impl GlobalState {
@@ -48,7 +46,6 @@ impl GlobalState {
             //         .set_input_range(-1.0, 1.0)
             //         .set_output_range(-0.9, 0.9),
             // )),
-            active_sensors: Arc::default(),
         }
     }
 }
