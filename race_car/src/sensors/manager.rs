@@ -27,62 +27,33 @@ pub struct SensorManager {
     shared_data: Arc<Shared>,
     sensors: HashMap<SensorName, Arc<Mutex<dyn BasicSensor + Send>>>,
     receiver: BroadcastReceiver<TimedSensorData>,
+    sender: BroadcastSender<TimedSensorData>,
 }
 
 impl SensorManager {
     pub fn new() -> Self {
-        let shared_data = Arc::new(Shared::default());
-        let mut sensors = HashMap::new();
         let (sender, receiver) = broadcast_queue(64);
-
-        let mut spawn_thread = |sensor: Arc<Mutex<dyn BasicSensor + Send>>| {
-            let sensor_name = sensor.lock().unwrap().name();
-            Self::spawn_sensor_thread(
-                sensor_name,
-                sensor.clone(),
-                shared_data.clone(),
-                sender.clone(),
-            );
-
-            sensors.insert(sensor_name, sensor);
-        };
-
-        fn cast_sensor(sensor: impl BasicSensor + 'static) -> Arc<Mutex<dyn BasicSensor + Send>> {
-            Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn BasicSensor + Send>>
-        }
-
-        spawn_thread(cast_sensor(MockImuSensor));
-        spawn_thread(cast_sensor(MockUltrasonicSensor));
-        spawn_thread(cast_sensor(MockGps));
-        spawn_thread(cast_sensor(MockVelocitySensor));
-        // Initialize the actual sensors
-        // ImuSensor::new()
-        //     .map(cast_sensor)
-        //     .map(&mut spawn_thread)
-        //     .map_err(|e| error!("IMU failed to initialize: {e:?}"))
-        //     .ok();
-        // spawn_thread(cast_sensor(VelocitySensor::new(receiver.add_stream())));
-        // UltrasonicSensor::new(21f32)
-        //     .map(cast_sensor)
-        //     .map(&mut spawn_thread)
-        //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
-        //     .ok();
-        // GpsSensor::new()
-        //     .map(cast_sensor)
-        //     .map(&mut spawn_thread)
-        //     .map_err(|e| error!("GPS failed to initialize: {e}"))
-        //     .ok();
-        // AmbienceSensor::new()
-        //     .map(cast_sensor)
-        //     .map(&mut spawn_thread)
-        //     .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
-        //     .ok();
-
         Self {
-            shared_data,
-            sensors,
+            shared_data: Arc::new(Shared::default()),
+            sensors: HashMap::new(),
             receiver,
+            sender,
         }
+    }
+    
+    pub fn add_sensor(&mut self, sensor: impl BasicSensor) {
+        let sensor = 
+            Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn BasicSensor + Send>>;
+        
+        let sensor_name = sensor.lock().unwrap().name();
+        Self::spawn_sensor_thread(
+            sensor_name,
+            sensor.clone(),
+            self.shared_data.clone(),
+            self.sender.clone(),
+        );
+
+        self.sensors.insert(sensor_name, sensor);
     }
 
     pub fn get_sensor(&self, sensor_name: &SensorName) -> Option<&Mutex<dyn BasicSensor + Send>> {

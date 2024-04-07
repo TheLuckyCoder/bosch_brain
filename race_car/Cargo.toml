@@ -50,6 +50,3 @@ bno055 = { version = "=0.3.3", features = ["std"] }
 htu21df-sensor = { version = "0.1.4", features = ["std"] }
 pwm-pca9685 = "0.3.1"
 tower-livereload = "0.9.2"
-
-[profile.dev.package.askama_derive]
-opt-level = 3

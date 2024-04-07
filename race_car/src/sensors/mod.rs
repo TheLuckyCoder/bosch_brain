@@ -14,6 +14,8 @@ pub use ambience::*;
 pub use gps::*;
 pub use imu::*;
 pub use ultrasonic::*;
+pub use velocity::*;
+pub use mock::*;
 
 mod ambience;
 mod gps;
@@ -25,7 +27,7 @@ mod velocity;
 mod mock;
 
 /// Common set of functions each sensor class should implement
-pub trait BasicSensor: Send {
+pub trait BasicSensor: Send + 'static {
     /// Unique name of the sensor
     fn name(&self) -> SensorName;
 

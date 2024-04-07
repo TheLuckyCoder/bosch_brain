@@ -9,7 +9,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use crate::http::GlobalState;
 use crate::sensors::manager::SensorManager;
 use crate::sensors::motor_driver::{Motor, MotorDriver};
-use crate::sensors::set_board_led_status;
+use crate::sensors::{MockGps, MockImuSensor, MockUltrasonicSensor, MockVelocitySensor, set_board_led_status};
 
 mod http;
 mod sensors;
@@ -31,7 +31,31 @@ async fn main() -> Result<(), String> {
 
     // let mut motor_driver = MotorDriver::new().unwrap();
 
-    let sensor_manager = SensorManager::new();
+    let mut sensor_manager = SensorManager::new();
+
+    sensor_manager.add_sensor(MockImuSensor);
+    sensor_manager.add_sensor(MockUltrasonicSensor);
+    sensor_manager.add_sensor(MockGps);
+    sensor_manager.add_sensor(MockVelocitySensor);
+    // Initialize the actual sensors
+    // ImuSensor::new()
+    //     .map(|sensor| sensor_manager.add_sensor(sensor))
+    //     .map_err(|e| error!("IMU failed to initialize: {e:?}"))
+    //     .ok();
+    // sensor_manager.add_sensor(VelocitySensor::new(receiver.add_stream()));
+    // UltrasonicSensor::new(21f32)
+    //     .map(|sensor| sensor_manager.add_sensor(sensor))
+    //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
+    //     .ok();
+    // GpsSensor::new()
+    //     .map(|sensor| sensor_manager.add_sensor(sensor))
+    //     .map_err(|e| error!("GPS failed to initialize: {e}"))
+    //     .ok();
+    // AmbienceSensor::new()
+    //     .map(|sensor| sensor_manager.add_sensor(sensor))
+    //     .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
+    //     .ok();
+    
     let global_state = GlobalState::new(sensor_manager);
 
     http::http_server(global_state).await.unwrap();
