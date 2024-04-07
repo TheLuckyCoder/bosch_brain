@@ -1,7 +1,6 @@
 //! HTTP routes for reading and changing the car's state.
 
 use std::sync::Arc;
-use std::time::{UNIX_EPOCH};
 
 use axum::{Json, Router};
 use axum::extract::{Path, State};

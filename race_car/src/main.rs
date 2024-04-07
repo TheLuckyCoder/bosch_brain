@@ -1,6 +1,3 @@
-use std::io::Read;
-use std::time::Duration;
-
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -8,7 +5,6 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::http::GlobalState;
 use crate::sensors::manager::SensorManager;
-use crate::sensors::motor_driver::{Motor, MotorDriver};
 use crate::sensors::{MockGps, MockImuSensor, MockUltrasonicSensor, MockVelocitySensor, set_board_led_status};
 
 mod http;

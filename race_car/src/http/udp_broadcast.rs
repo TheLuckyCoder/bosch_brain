@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::Mutex;
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 use crate::sensors::manager::SensorManager;
 use crate::sensors::{AmbienceData, GpsCoordinates, ImuData, SensorData, SensorName};
