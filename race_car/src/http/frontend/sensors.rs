@@ -40,7 +40,7 @@ pub async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResp
     }
 }
 
-pub async fn sensor_data_ws_handler(
+pub async fn sensors_ws(
     State(state): State<Arc<GlobalState>>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
@@ -120,9 +120,6 @@ async fn handle_socket(socket: WebSocket, who: SocketAddr, global_state: Arc<Glo
                     return;
                 }
             }
-
-            println!("Finished processing messages");
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
     });
 
@@ -155,7 +152,6 @@ struct WsMessage {
     sensors: HashMap<String, String>,
 }
 
-/// helper to print contents of messages to stdout. Has special treatment for Close.
 fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<Vec<SensorName>>> {
     match msg {
         Message::Text(t) => {
@@ -172,7 +168,7 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<Vec<
                 .filter_map(|(sensor_name, _)| SensorName::from_str(&sensor_name).ok())
                 .collect();
 
-            return ControlFlow::Continue(Some(active_sensors));
+            ControlFlow::Continue(Some(active_sensors))
         }
         Message::Close(c) => {
             if let Some(cf) = c {
@@ -183,14 +179,8 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<Vec<
             } else {
                 info!(">>> {who} somehow sent close message without CloseFrame");
             }
-            return ControlFlow::Break(());
+            ControlFlow::Break(())
         }
-        // Message::Pong(v) => info!(">>> {who} sent pong with {v:?}"),
-        // You should never need to manually handle Message::Ping, as axum's websocket library
-        // will do so for you automagically by replying with Pong and copying the v according to
-        // spec. But if you need the contents of the pings you can see them here.
-        // Message::Ping(v) => info!(">>> {who} sent ping with {v:?}"),
-        _ => {}
+        _ => ControlFlow::Continue(None)
     }
-    ControlFlow::Continue(None)
 }

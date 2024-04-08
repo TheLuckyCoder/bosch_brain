@@ -9,6 +9,7 @@ use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tower_livereload::LiveReloadLayer;
 use tracing::Level;
+use crate::actuator::manager::ActuatorManager;
 
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
@@ -27,18 +28,20 @@ pub struct GlobalState {
     pub car_state: Mutex<CarStates>,
     pub udp_manager: Arc<Mutex<UdpBroadcast>>,
     pub sensor_manager: Arc<Mutex<SensorManager>>,
+    pub actuator_manager: Arc<ActuatorManager>,
     // pub motor_driver: Arc<Mutex<MotorDriver>>,
     // pub pids: Arc<PidManager>,
 }
 
 impl GlobalState {
-    pub fn new(sensor_manager: SensorManager) -> Self {
+    pub fn new(sensor_manager: SensorManager, actuator_manager: ActuatorManager) -> Self {
         let sensor_manager = Arc::new(Mutex::new(sensor_manager));
         Self {
             car_state: Mutex::default(),
             udp_manager: UdpBroadcast::new(sensor_manager.clone())
                 .expect("Failed to initialize UDP Manager"),
             sensor_manager,
+            actuator_manager: Arc::new(actuator_manager),
             // motor_driver: Arc::new(Mutex::new(motor_driver)),
             // pids: Arc::new(PidManager::new(
             //     PidController::new(1.0, 0.0, 0.0),

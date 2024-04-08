@@ -7,13 +7,7 @@ use std::time::Duration;
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{error, warn};
-
-use crate::sensors::velocity::VelocitySensor;
-use crate::sensors::{
-    AmbienceSensor, BasicSensor, GpsSensor, ImuSensor, SensorData, SensorName, TimedSensorData,
-    UltrasonicSensor,
-};
-use crate::sensors::mock::{MockGps, MockImuSensor, MockUltrasonicSensor, MockVelocitySensor};
+use crate::sensors::{BasicSensor, SensorName, TimedSensorData};
 
 #[derive(Default)]
 struct Shared {
@@ -42,8 +36,7 @@ impl SensorManager {
     }
     
     pub fn add_sensor(&mut self, sensor: impl BasicSensor) {
-        let sensor = 
-            Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn BasicSensor + Send>>;
+        let sensor = Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn BasicSensor + Send>>;
         
         let sensor_name = sensor.lock().unwrap().name();
         Self::spawn_sensor_thread(
@@ -104,12 +97,13 @@ impl SensorManager {
         });
     }
 
-    pub fn start_listening_to_sensors(&mut self) {
+    pub fn start_listening_to_sensors(&self) {
+        let _lock = self.shared_data.lock.lock();
         self.shared_data.should_read.store(true, Ordering::Release);
         self.shared_data.cond.notify_all();
     }
 
-    pub fn stop_listening_to_sensors(&mut self) {
+    pub fn stop_listening_to_sensors(&self) {
         self.shared_data.should_read.store(false, Ordering::Release)
     }
 

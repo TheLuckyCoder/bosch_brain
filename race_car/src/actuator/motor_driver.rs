@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use crate::actuator::{Actuator, Pwm};
+use crate::actuator::{Actuator, ActuatorName, Pwm};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct MotorParams {
     pub min: f64,
     pub lower_middle: f64,
@@ -11,6 +11,7 @@ pub struct MotorParams {
 
 pub struct MotorDriver<P: Pwm> {
     pwm: P,
+    actuator_name: ActuatorName,
     params: MotorParams,
     last_value: f64,
     paused: bool,
@@ -18,9 +19,10 @@ pub struct MotorDriver<P: Pwm> {
 }
 
 impl<P: Pwm> MotorDriver<P> {
-    pub fn new(pwm: P, params: MotorParams, inverse_direction: bool) -> Self {
+    pub fn new(pwm: P, actuator_name: ActuatorName, params: MotorParams, inverse_direction: bool) -> Self {
         Self {
             pwm,
+            actuator_name,
             params,
             last_value: f64::INFINITY,
             paused: false,
@@ -30,11 +32,15 @@ impl<P: Pwm> MotorDriver<P> {
 }
 
 impl<P: Pwm> Actuator for MotorDriver<P> {
+    fn name(&self) -> ActuatorName {
+        self.actuator_name
+    }
+
     fn set_value(&mut self, value: f64) {
         // Steering motor should turn right when given a positive value
         let input = value.clamp(-1.0, 1.0) * if self.inverse_direction { -1.0 } else { 1.0 };
 
-        if self.paused && (input - self.last_value).abs() < 10e-6 {
+        if self.paused || (input - self.last_value).abs() < 10e-6 {
             return;
         }
 
@@ -68,6 +74,10 @@ impl<P: Pwm> Actuator for MotorDriver<P> {
 
     fn resume(&mut self) {
         self.paused = false;
+    }
+
+    fn is_paused(&self) -> bool {
+        self.paused
     }
 }
 

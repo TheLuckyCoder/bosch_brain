@@ -1,16 +1,22 @@
+use crate::actuator::manager::ActuatorManager;
+use crate::actuator::motor_driver::{MotorDriver, MotorParams};
+use crate::actuator::pca9685_pwm::Pca9685Pwm;
+use crate::actuator::{ActuatorName, MockPwm};
 use tracing::{error, warn};
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
 use crate::http::GlobalState;
 use crate::sensors::manager::SensorManager;
-use crate::sensors::{MockGps, MockImuSensor, MockUltrasonicSensor, MockVelocitySensor, set_board_led_status};
+use crate::sensors::{
+    set_board_led_status, MockGps, MockImuSensor, MockUltrasonicSensor, MockVelocitySensor,
+};
 
+mod actuator;
 mod http;
 mod sensors;
 mod utils;
-mod actuator;
 
 /// Entrypoint of the program
 ///
@@ -23,9 +29,9 @@ async fn main() -> Result<(), String> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    set_board_led_status(false).inspect_err(|e| error!("Failed to set board led: {e}")).ok();
-
-    // let mut motor_driver = MotorDriver::new().unwrap();
+    set_board_led_status(false)
+        .inspect_err(|e| error!("Failed to set board led: {e}"))
+        .ok();
 
     let mut sensor_manager = SensorManager::new();
 
@@ -51,8 +57,23 @@ async fn main() -> Result<(), String> {
     //     .map(|sensor| sensor_manager.add_sensor(sensor))
     //     .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
     //     .ok();
-    
-    let global_state = GlobalState::new(sensor_manager);
+
+    let mut actuator_manager = ActuatorManager::new();
+
+    actuator_manager.add_actuator(MotorDriver::new(
+        MockPwm,
+        ActuatorName::SteeringMotor,
+        MotorParams::default(),
+        false,
+    ));
+    actuator_manager.add_actuator(MotorDriver::new(
+        MockPwm,
+        ActuatorName::SpeedMotor,
+        MotorParams::default(),
+        false,
+    ));
+
+    let global_state = GlobalState::new(sensor_manager, actuator_manager);
 
     http::http_server(global_state).await.unwrap();
 

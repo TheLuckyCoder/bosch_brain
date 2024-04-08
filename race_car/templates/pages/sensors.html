@@ -4,13 +4,13 @@
 
 {% block content %}
 
-<main id="main-content" class="p-4 flex flex-col gap-6" hx-ext="ws" ws-connect="/sensor_data">
+<main id="main-content" class="p-4 flex flex-col gap-6" hx-ext="ws" ws-connect="/sensor_ws">
 
     <div class="flex flex-row flex-wrap gap-8">
         <form id="active-sensors"
-              class="card min-w-64 w-96 max-w-full p-4 shadow-xl bg-base-200">
-            <div class="card-title">Active Sensors:</div>
+              class="card min-w-64 w-96 max-w-full shadow-xl bg-base-200">
             <div class="card-body">
+                <div class="card-title">Active Sensors:</div>
                 {% for sensor in sensors %}
                 <label class="cursor-pointer label">
                     <span class="label-text">{{ sensor }}</span>

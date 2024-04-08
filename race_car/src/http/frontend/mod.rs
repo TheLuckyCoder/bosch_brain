@@ -1,25 +1,25 @@
 use std::sync::Arc;
-
 use askama::Template;
+use askama_axum::IntoResponse;
 use axum::extract::State;
-use axum::response::IntoResponse;
 use axum::Router;
 use axum::routing::get;
 use strum::IntoEnumIterator;
-
-use crate::http::frontend::sensors::{get_sensors, sensor_data_ws_handler};
+use crate::http::frontend::sensors::{get_sensors, sensors_ws};
 use crate::http::GlobalState;
 use crate::sensors::SensorName;
 
 mod sensors;
+mod actuators;
 
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
         .nest_service("/assets", tower_http::services::ServeDir::new("assets"))
         .route("/", get(get_home))
         .route("/sensors", get(get_sensors))
-        .route("/sensor_data", get(sensor_data_ws_handler))
-        .with_state(global_state)
+        .route("/sensor_ws", get(sensors_ws))
+        .with_state(global_state.clone())
+        .merge(actuators::actuators_router(global_state))
 }
 
 struct HomeSensor {
@@ -59,5 +59,3 @@ async fn get_home(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
         sensors,
     }
 }
-
-
