@@ -1,0 +1,5 @@
+<button class="btn btn-error grow basis-0"
+    hx-put="/stop_actuator/{{ actuator.name }}"
+    hx-swap="outerHTML"
+    hx-target="#btn-pause-resume-{{ actuator.name }}"
+    {% if !actuator.active -%}disabled{% endif -%}>Stop</button>

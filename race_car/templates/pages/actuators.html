@@ -6,21 +6,20 @@
 
 <h1>Actuators</h1>
 
-<div class="flex flex-row flex-wrap gap-6" hx-ext="ws" ws-connect="/actuators_ws">
+<div class="flex flex-row flex-wrap gap-6 max-w-full" hx-ext="ws" ws-connect="/actuators_ws">
     {% for actuator in actuators %}
-    <div class="card bg-base-200 min-w-52 w-96">
+    <div class="card bg-base-200 min-w-52 w-96 max-w-full grow">
         <div class="card-body" hx-vals='{"name": "{{ actuator.name }}"}'>
             <h2 class="card-title">{{ actuator.name }}</h2>
             <label>
                 <span class="label-text">Value:</span>
                 <br>
-                <input name="value" type="range" min="0" max="1" value="0" step="0.01" class="range range-accent"
-                       {% if !actuator.active -%} disabled{% endif -%} ws-send/>
+                {% include "../components/actuator_motor_value_input.html" %}
             </label>
 
             <div class="card-actions">
-                {% include "../components/ws_pause_resume_response.html" %}
-                <button class="btn btn-error grow basis-0" {% if !actuator.active -%}disabled{% endif -%}>Stop</button>
+                {% include "../components/actuators_pause_resume_btn.html" %}
+                {% include "../components/actuators_stop_btn.html" %}
             </div>
         </div>
     </div>

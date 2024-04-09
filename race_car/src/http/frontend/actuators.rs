@@ -56,7 +56,7 @@ async fn get_actuators(State(state): State<Arc<GlobalState>>) -> impl IntoRespon
 }
 
 #[derive(Template)]
-#[template(path = "components/ws_pause_resume_response.html")]
+#[template(path = "responses/pause_resume_actuators_response.html")]
 struct PauseResumeResponse {
     actuator: ActuatorTemplateContent,
 }
@@ -97,10 +97,22 @@ async fn resume_actuator(
     }
 }
 
-async fn stop_actuator(State(state): State<Arc<GlobalState>>, Path(name): Path<ActuatorName>) {
+async fn stop_actuator(
+    State(state): State<Arc<GlobalState>>,
+    Path(name): Path<ActuatorName>,
+) -> impl IntoResponse {
     let actuator = state.actuator_manager.get_actuator_ref(name);
 
-    actuator.unwrap().lock().unwrap().stop();
+    let mut actuator = actuator.unwrap().lock().unwrap();
+    actuator.stop();
+
+    PauseResumeResponse {
+        actuator: ActuatorTemplateContent {
+            name: actuator.name().into(),
+            active: true,
+            paused: actuator.is_paused(),
+        },
+    }
 }
 
 async fn actuators_ws(
