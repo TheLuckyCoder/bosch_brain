@@ -24,6 +24,48 @@
         </div>
     </div>
     {% endfor %}
+
 </div>
+<div>
+    <div id="joystick" class="w-40 h-40 bg-gray-700 rounded-full flex items-center justify-center relative">
+        <div id="knob" class="w-20 h-20 bg-gray-400 rounded-full cursor-pointer"></div>
+    </div>
+</div>
+
+<script>
+    const joystick = document.getElementById('joystick');
+    const knob = document.getElementById('knob');
+
+    let isDragging = false;
+
+    knob.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isDragging = true;
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            knob.style.transition = 'transform 0.2s ease-out'; // Smooth return transition
+            knob.style.transform = 'translate(0px, 0px)'; // Reset position
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            // Reset transition to none to make dragging look immediate
+            knob.style.transition = 'none';
+
+            const rect = joystick.getBoundingClientRect();
+            let x = e.clientX - rect.left - rect.width / 2;
+            let y = e.clientY - rect.top - rect.height / 2;
+            const distance = Math.sqrt(x * x + y * y);
+            if (distance < rect.width / 2) { // Keep the knob within the joystick
+                knob.style.transform = `translate(${x}px, ${y}px)`;
+            }
+        }
+    });
+</script>
+
 
 {% endblock %}

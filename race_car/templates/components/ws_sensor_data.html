@@ -6,7 +6,7 @@
     </div>
     {% endfor %}
 </div>
-<ul hx-swap-oob="beforeend:#messages">
+<ul hx-swap-oob="afterbegin:#messages">
     {% for data in sensors_data %}
     <li>
         {{ data.to_string() }}

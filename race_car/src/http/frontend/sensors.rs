@@ -85,7 +85,7 @@ async fn handle_socket(socket: WebSocket, who: SocketAddr, global_state: Arc<Glo
 
             let sensors_data: Vec<_> = collected_sensors.into_values().collect();
 
-            println!("Sending");
+            // println!("Sending");
             if !sensors_data.is_empty()
                 && ws_sender
                     .send(Message::Text(
