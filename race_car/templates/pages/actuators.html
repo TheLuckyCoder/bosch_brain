@@ -4,68 +4,65 @@
 
 {% block content %}
 
-<h1>Actuators</h1>
-
 <div class="flex flex-row flex-wrap gap-6 max-w-full" hx-ext="ws" ws-connect="/actuators_ws">
     {% for actuator in actuators %}
     <div class="card bg-base-200 min-w-52 w-96 max-w-full grow">
         <div class="card-body" hx-vals='{"name": "{{ actuator.name }}"}'>
             <h2 class="card-title">{{ actuator.name }}</h2>
-            <label>
-                <span class="label-text">Value:</span>
-                <br>
-                {% include "../components/actuator_motor_value_input.html" %}
-            </label>
+
+            {% include "../components/actuator_motor_value_input.html" %}
+
+            <div class="flex flex-row gap-4">
+                <input type="number" id="min-value-{{ actuator.name }}"
+                       name="min" min="-1" max="1" value="-1"
+                       class="input input-bordered input-sm grow">
+                <input type="number" id="max-value-{{ actuator.name }}"
+                       name="max" min="-1" max="1" value="1"
+                       class="input input-bordered input-sm grow">
+            </div>
+
 
             <div class="card-actions">
                 {% include "../components/actuators_pause_resume_btn.html" %}
                 {% include "../components/actuators_stop_btn.html" %}
             </div>
+
+            <script>
+                const value_input_{{ actuator.name }} = document.getElementById('value-{{ actuator.name }}');
+                const range_input_{{ actuator.name }} = document.getElementById('range-{{ actuator.name }}');
+                const min_value_{{ actuator.name }} = document.getElementById('min-value-{{ actuator.name }}');
+                const max_value_{{ actuator.name }} = document.getElementById('max-value-{{ actuator.name }}');
+
+                function {{ actuator.name }}ResetValue() {
+                    value_input_{{ actuator.name }}.innerHTML = "0";
+                    range_input_{{ actuator.name }}.value = 0;
+                    console.log("Value was reset {{ actuator.name }}")
+                }
+
+                min_value_{{ actuator.name }}.addEventListener('change', function () {
+                    range_input_{{ actuator.name }}.min = this.value;
+                    max_value_{{ actuator.name }}.min = this.value;
+                    const max_value = max_value_{{ actuator.name }}.value;
+                    if (parseInt(this.value) > parseInt(max_value)) {
+                        this.value = max_value;
+                    }
+                });
+
+                max_value_{{ actuator.name }}.addEventListener('change', function () {
+                    range_input_{{ actuator.name }}.max = this.value;
+                    min_value_{{ actuator.name }}.max = this.value;
+                    console.log("Fuck")
+                    const min_value = min_value_{{ actuator.name }}.value;
+                    if (parseInt(this.value) < parseInt(min_value)) {
+                        this.value = min_value;
+                    }
+                });
+
+            </script>
         </div>
     </div>
     {% endfor %}
 
 </div>
-<div>
-    <div id="joystick" class="w-40 h-40 bg-gray-700 rounded-full flex items-center justify-center relative">
-        <div id="knob" class="w-20 h-20 bg-gray-400 rounded-full cursor-pointer"></div>
-    </div>
-</div>
-
-<script>
-    const joystick = document.getElementById('joystick');
-    const knob = document.getElementById('knob');
-
-    let isDragging = false;
-
-    knob.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        isDragging = true;
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isDragging) {
-            isDragging = false;
-            knob.style.transition = 'transform 0.2s ease-out'; // Smooth return transition
-            knob.style.transform = 'translate(0px, 0px)'; // Reset position
-        }
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-            // Reset transition to none to make dragging look immediate
-            knob.style.transition = 'none';
-
-            const rect = joystick.getBoundingClientRect();
-            let x = e.clientX - rect.left - rect.width / 2;
-            let y = e.clientY - rect.top - rect.height / 2;
-            const distance = Math.sqrt(x * x + y * y);
-            if (distance < rect.width / 2) { // Keep the knob within the joystick
-                knob.style.transform = `translate(${x}px, ${y}px)`;
-            }
-        }
-    });
-</script>
-
 
 {% endblock %}

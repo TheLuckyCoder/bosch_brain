@@ -1,16 +1,17 @@
-use std::sync::Arc;
-use askama::Template;
-use askama_axum::IntoResponse;
-use axum::extract::State;
-use axum::Router;
-use axum::routing::get;
-use strum::IntoEnumIterator;
 use crate::http::frontend::sensors::{get_sensors, sensors_ws};
 use crate::http::GlobalState;
 use crate::sensors::SensorName;
+use askama::Template;
+use askama_axum::IntoResponse;
+use axum::extract::State;
+use axum::routing::get;
+use axum::Router;
+use std::sync::Arc;
+use strum::IntoEnumIterator;
 
-mod sensors;
 mod actuators;
+mod remote;
+mod sensors;
 
 pub fn router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
@@ -19,7 +20,8 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
         .route("/sensors", get(get_sensors))
         .route("/sensor_ws", get(sensors_ws))
         .with_state(global_state.clone())
-        .merge(actuators::actuators_router(global_state))
+        .merge(actuators::actuators_router(global_state.clone()))
+        .merge(remote::remote_router(global_state))
 }
 
 struct HomeSensor {

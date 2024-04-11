@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %} Remote Control {% endblock %}
+
+{% block content %}
+
+<div>
+    <div id="joystick" class="w-40 h-40 bg-gray-700 rounded-full flex items-center justify-center relative">
+        <div id="knob" class="w-10 h-10 bg-gray-400 rounded-full cursor-pointer"></div>
+    </div>
+</div>
+
+<script>
+    const joystick = document.getElementById('joystick');
+    const knob = document.getElementById('knob');
+    let isDragging = false;
+
+    // Function to move the knob
+    const moveKnob = (x, y) => {
+        const rect = joystick.getBoundingClientRect();
+        const dx = x - (rect.left + window.scrollX + rect.width / 2);
+        const dy = y - (rect.top + window.scrollY + rect.height / 2);
+        const distance = Math.hypot(dx, dy);
+        if (distance < rect.width / 2) {
+            knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        } else {
+            // Extend the knob to the edge of the joystick circle
+            const angle = Math.atan2(dy, dx);
+            const limitX = Math.cos(angle) * (rect.width / 2);
+            const limitY = Math.sin(angle) * (rect.height / 2);
+            knob.style.transform = `translate(${limitX}px, ${limitY}px)`;
+        }
+    };
+
+    knob.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        knob.style.transition = 'none'; // Remove transition to make movement immediate
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            knob.style.transition = 'transform 0.15s ease-out'; // Smooth return transition
+            knob.style.transform = 'translate(0px, 0px)'; // Reset position
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            moveKnob(e.clientX, e.clientY);
+        }
+    });
+</script>
+
+{% endblock %}
