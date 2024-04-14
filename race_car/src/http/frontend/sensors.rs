@@ -1,13 +1,17 @@
+use crate::http::states::CarStates;
 use crate::http::GlobalState;
+use crate::sensors::{SensorData, SensorName, TimedSensorData};
 use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
+use axum::extract::{ConnectInfo, Path, State, WebSocketUpgrade};
+use axum::routing::{get, post};
+use axum::Router;
 use axum_extra::{headers, TypedHeader};
 use futures_util::{SinkExt, StreamExt};
 use multiqueue2::BroadcastReceiver;
 use serde::de::IgnoredAny;
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::net::SocketAddr;
 use std::ops::ControlFlow;
@@ -16,7 +20,14 @@ use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 use tracing::{error, info};
-use crate::sensors::{SensorData, SensorName, TimedSensorData};
+
+pub fn sensors_router() -> Router<Arc<GlobalState>> {
+    Router::new()
+        .route("/", get(get_sensors))
+        .route("/configure/:sensor", get(configure_sensor))
+        .route("/configure_end/", post(end_sensor_configuration))
+        .route("/ws", get(sensors_ws))
+}
 
 #[derive(Template)]
 #[template(path = "pages/sensors.html")]
@@ -25,7 +36,7 @@ struct SensorTemplate {
     sensors: Vec<&'static str>,
 }
 
-pub async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
+async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let car_state = *state.car_state.lock().await;
     let sensor_manager = state.sensor_manager.lock().await;
 
@@ -40,7 +51,7 @@ pub async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResp
     }
 }
 
-pub async fn sensors_ws(
+async fn sensors_ws(
     State(state): State<Arc<GlobalState>>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
@@ -106,18 +117,18 @@ async fn handle_socket(socket: WebSocket, who: SocketAddr, global_state: Arc<Glo
     let mut recv_task = tokio::spawn(async move {
         loop {
             while let Some(message) = ws_receiver.next().await {
-                if let Ok(message) = message {
-                    match process_message(message, who) {
-                        ControlFlow::Continue(new_active_sensors) => {
-                            if let Some(new_active_sensors) = new_active_sensors {
-                                *active_sensors.lock().await = new_active_sensors;
-                            }
-                        }
-                        ControlFlow::Break(_) => return,
-                    }
-                } else {
+                let Ok(message) = message else {
                     println!("client {who} abruptly disconnected");
                     return;
+                };
+
+                match process_message(message, who) {
+                    ControlFlow::Continue(new_active_sensors) => {
+                        if let Some(new_active_sensors) = new_active_sensors {
+                            *active_sensors.lock().await = new_active_sensors;
+                        }
+                    }
+                    ControlFlow::Break(_) => return,
                 }
             }
         }
@@ -146,8 +157,6 @@ fn reader_mode(
 
 #[derive(Deserialize)]
 struct WsMessage {
-    #[serde(rename = "HEADERS")]
-    _headers: IgnoredAny,
     #[serde(flatten)]
     sensors: HashMap<String, String>,
 }
@@ -160,7 +169,7 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<Vec<
                 error!("Failed to parse message");
                 return ControlFlow::Continue(None);
             };
-            
+
             let active_sensors: Vec<_> = values
                 .sensors
                 .into_iter()
@@ -181,6 +190,20 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<Vec<
             }
             ControlFlow::Break(())
         }
-        _ => ControlFlow::Continue(None)
+        _ => ControlFlow::Continue(None),
     }
 }
+
+async fn configure_sensor(
+    State(state): State<Arc<GlobalState>>,
+    Path(sensor_name): Path<SensorName>,
+) {
+    *state.car_state.lock().await = CarStates::Config;
+    state
+        .sensor_manager
+        .lock()
+        .await
+        .stop_listening_to_sensors();
+}
+
+async fn end_sensor_configuration() {}

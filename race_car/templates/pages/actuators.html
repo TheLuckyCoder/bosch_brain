@@ -51,7 +51,6 @@
                 max_value_{{ actuator.name }}.addEventListener('change', function () {
                     range_input_{{ actuator.name }}.max = this.value;
                     min_value_{{ actuator.name }}.max = this.value;
-                    console.log("Fuck")
                     const min_value = min_value_{{ actuator.name }}.value;
                     if (parseInt(this.value) < parseInt(min_value)) {
                         this.value = min_value;

@@ -3,11 +3,11 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{Json, Router};
 use axum::extract::{ConnectInfo, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
+use axum::{Json, Router};
 use strum::IntoEnumIterator;
 use tracing::info;
 
@@ -26,9 +26,14 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
 async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let sensor_manager = state.sensor_manager.lock().await;
 
-    let sensors: Vec<(&'static str, bool)> = SensorName::iter().map(|sensor_name| {
-        (sensor_name.into(), sensor_manager.get_sensor(&sensor_name).is_some())
-    }).collect();
+    let sensors: Vec<(&'static str, bool)> = SensorName::iter()
+        .map(|sensor_name| {
+            (
+                sensor_name.into(),
+                sensor_manager.get_sensor(&sensor_name).is_some(),
+            )
+        })
+        .collect();
 
     Json(sensors)
 }

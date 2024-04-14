@@ -4,7 +4,7 @@
 
 {% block content %}
 
-<main id="main-content" class="p-4 flex flex-col gap-6" hx-ext="ws" ws-connect="/sensor_ws">
+<main id="main-content" class="p-4 flex flex-col gap-6" hx-ext="ws" ws-connect="/sensors/ws">
 
     <div class="flex flex-row flex-wrap gap-8">
         <form id="active-sensors"
@@ -24,7 +24,13 @@
 
         <div class="card bg-base-200 shadow-xl grow">
             <div id="status" class="card-body">
-                <div class="card-title">Please select sensors</div>
+                <div class="flex flex-row justify-between">
+                    <div class="card-title">Please select sensors</div>
+                    <button class="btn btn-square btn-outline"
+                            onclick="configure_modal.showModal()">
+                        <span class="material-symbols-outlined">settings</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -40,5 +46,27 @@
         </div>
     </div>
 </main>
+
+<dialog id="configure_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">Select a sensor to configure:</h3>
+        <p class="flex flex-col py-4">
+            {% for sensor in sensors %}
+            <a href="/sensors/configure/{{ sensor }}">
+                <button class="btn btn-primary btn-outline my-2">{{ sensor }}</button>
+            </a>
+            {% endfor %}
+        </p>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    document.addEventListener('htmx:wsConfigSend', function (event) {
+        event.detail.headers = undefined;
+    });
+</script>
 
 {% endblock %}

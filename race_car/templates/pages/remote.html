@@ -4,32 +4,80 @@
 
 {% block content %}
 
-<div>
-    <div id="joystick" class="w-40 h-40 bg-gray-700 rounded-full flex items-center justify-center relative">
-        <div id="knob" class="w-10 h-10 bg-gray-400 rounded-full cursor-pointer"></div>
+<main hx-ext="ws">
+    <div id="joystick" class="m-52 w-52 h-52 bg-gray-700 rounded-full flex items-center justify-center relative"
+         ws-connect="/remote/ws">
+        <div id="knob" class="w-12 h-12 bg-gray-400 rounded-full cursor-pointer shadow-2xl"
+             ws-send hx-trigger="knob"></div>
     </div>
-</div>
+
+    <div class="card bg-base-200 shadow-xl grow" ws-connect="/sensors/ws">
+        <div id="status" class="card-body">
+            <div class="flex flex-row justify-between">
+                <div class="card-title">Please select sensors</div>
+                <button class="btn btn-square btn-outline"
+                        onclick="configure_modal.showModal()">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
+            </div>
+        </div>
+
+        <dialog id="configure_modal" class="modal">
+            <div class="modal-box">
+                <h3 class="font-bold text-lg">Active Sensors</h3>
+                <form class="flex flex-col py-4">
+                    {% for sensor in sensors %}
+                    <label class="cursor-pointer label">
+                        <span class="label-text">{{ sensor }}</span>
+                        <input id="checkbox-{{ sensor }}" name="{{ sensor }}"
+                               type="checkbox" class="toggle toggle-secondary"
+                               ws-send/>
+                    </label>
+                    {% endfor %}
+                </form>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+        </dialog>
+    </div>
+
+</main>
 
 <script>
     const joystick = document.getElementById('joystick');
     const knob = document.getElementById('knob');
     let isDragging = false;
+    let x_percent = 0;
+    let y_percent = 0;
 
     // Function to move the knob
     const moveKnob = (x, y) => {
         const rect = joystick.getBoundingClientRect();
-        const dx = x - (rect.left + window.scrollX + rect.width / 2);
-        const dy = y - (rect.top + window.scrollY + rect.height / 2);
+        const half_width = rect.width / 2;
+        const half_height = rect.height / 2;
+
+        const dx = x - (rect.left + window.scrollX + half_width);
+        const dy = y - (rect.top + window.scrollY + half_height);
         const distance = Math.hypot(dx, dy);
-        if (distance < rect.width / 2) {
+
+        if (distance < half_width) {
             knob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+            x_percent = dx / half_width;
+            y_percent = dy / half_height;
         } else {
             // Extend the knob to the edge of the joystick circle
             const angle = Math.atan2(dy, dx);
-            const limitX = Math.cos(angle) * (rect.width / 2);
-            const limitY = Math.sin(angle) * (rect.height / 2);
+            const limitX = Math.cos(angle) * half_width;
+            const limitY = Math.sin(angle) * half_height;
             knob.style.transform = `translate(${limitX}px, ${limitY}px)`;
+
+            x_percent = limitX / half_width;
+            y_percent = limitY / half_height;
         }
+
+        htmx.trigger("#knob", "knob");
     };
 
     knob.addEventListener('mousedown', (e) => {
@@ -41,8 +89,12 @@
     document.addEventListener('mouseup', () => {
         if (isDragging) {
             isDragging = false;
+            x_percent = 0;
+            y_percent = 0;
             knob.style.transition = 'transform 0.15s ease-out'; // Smooth return transition
             knob.style.transform = 'translate(0px, 0px)'; // Reset position
+
+            htmx.trigger("#knob", "knob");
         }
     });
 
@@ -50,6 +102,16 @@
         if (isDragging) {
             moveKnob(e.clientX, e.clientY);
         }
+    });
+
+    document.addEventListener('htmx:wsConfigSend', function (event) {
+        if (event.detail.headers['HX-Trigger'] === 'knob') {
+            event.detail.parameters = {
+                x: x_percent,
+                y: y_percent
+            };
+        }
+        event.detail.headers = undefined;
     });
 </script>
 
