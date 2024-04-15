@@ -1,7 +1,10 @@
-use crate::sensors::{BasicSensor, ImuData, SensorData, SensorName, TimedSensorData};
-use multiqueue2::BroadcastReceiver;
-use shared::math::AlmostEquals;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use multiqueue2::BroadcastReceiver;
+
+use shared::math::AlmostEquals;
+
+use crate::sensors::{BasicSensor, SensorData, SensorName, TimedSensorData};
 
 pub struct VelocitySensor {
     receiver: BroadcastReceiver<TimedSensorData>,
@@ -18,8 +21,8 @@ impl VelocitySensor {
         }
     }
 
-    fn update_velocity(&mut self, data: ImuData, timestamp: SystemTime) {
-        let acceleration = data.acceleration.x as f64;
+    fn update_velocity(&mut self, acceleration: [f32; 3], timestamp: SystemTime) {
+        let acceleration = acceleration[0] as f64;
         let acceleration = if acceleration.almost_equals(0.0, 0.006) {
             0.0
         } else {
@@ -57,16 +60,16 @@ impl BasicSensor for VelocitySensor {
             .receiver
             .try_iter()
             .filter_map(|sensor_data: TimedSensorData| {
-                if let SensorData::Imu(imu_data) = sensor_data.data {
-                    Some((imu_data, sensor_data.timestamp))
+                if let SensorData::Imu { acceleration, .. } = sensor_data.data {
+                    Some((acceleration, sensor_data.timestamp))
                 } else {
                     None
                 }
             })
             .collect::<Vec<_>>();
 
-        for (data, timestamp) in imu_data {
-            self.update_velocity(data, timestamp);
+        for (acceleration, timestamp) in imu_data {
+            self.update_velocity(acceleration, timestamp);
         }
 
         SensorData::Velocity(self.last_velocity)

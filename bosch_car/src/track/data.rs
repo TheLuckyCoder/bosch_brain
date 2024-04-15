@@ -61,7 +61,7 @@ impl<'a> Ord for State<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
         // Notice that the we flip the ordering on costs.
         // In case of a tie we compare positions - this step is necessary
-        // to make implementations of `PartialEq` and `Ord` consistent.
+        // to make drivers of `PartialEq` and `Ord` consistent.
         other
             .cost
             .cmp(&self.cost)

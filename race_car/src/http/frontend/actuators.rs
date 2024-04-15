@@ -1,5 +1,7 @@
-use crate::actuator::{Actuator, ActuatorName};
-use crate::http::GlobalState;
+use std::net::SocketAddr;
+use std::ops::ControlFlow;
+use std::sync::Arc;
+
 use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::ws::{Message, WebSocket};
@@ -12,11 +14,11 @@ use serde::de::IgnoredAny;
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
-use std::net::SocketAddr;
-use std::ops::ControlFlow;
-use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
+
+use crate::actuator::{Actuator, ActuatorName};
+use crate::http::GlobalState;
 
 pub fn actuators_router(global_state: Arc<GlobalState>) -> Router {
     Router::new()

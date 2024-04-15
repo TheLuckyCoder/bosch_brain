@@ -24,7 +24,7 @@ pub struct PidManager {
     pub acceleration_thread: Mutex<Option<JoinHandle<()>>>,
 }
 
-impl PidManager {
+drivers PidManager {
     pub async fn reset(&self) {
         self.acceleration.lock().await.reset();
         self.steering.lock().await.reset();
@@ -32,7 +32,7 @@ impl PidManager {
     }
 }
 
-impl PidManager {
+drivers PidManager {
     pub fn new(acceleration: PidController, steering: PidController) -> Self {
         Self {
             acceleration: Mutex::new(acceleration),

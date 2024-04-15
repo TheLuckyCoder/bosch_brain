@@ -5,12 +5,15 @@
 {% block content %}
 <div class="flex flex-col h-screen justify-between">
     <header>
-        <div class="py-4 flex flex-row flex-auto justify-evenly">
-            <div>State: {{ state }}</div>
-            <div>Connection 🔴</div>
-        </div>
-
         <h1 class="w-screen flex justify-center text-4xl">VROOM VROOM</h1>
+        <div>
+            <label class="cursor-pointer label">
+                <span class="label-text">Mock Sensors</span>
+                <input type="checkbox" class="toggle toggle-secondary"
+                       hx-post="/config/mock_sensors"
+                       {% if server_config.mock_sensors %}checked{% endif %}>
+            </label>
+        </div>
     </header>
 
     <main id="main-content" class="p-6">

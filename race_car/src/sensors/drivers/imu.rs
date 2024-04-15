@@ -6,24 +6,12 @@ use bno055::{BNO055Calibration, BNO055OperationMode, Bno055, BNO055_CALIB_SIZE};
 use linux_embedded_hal::{Delay, I2cdev};
 use mint::{Quaternion, Vector3};
 use serde::Serialize;
-use shared::math::AlmostEquals;
 use tracing::{error, info, warn};
+
+use shared::math::AlmostEquals;
 
 use crate::sensors::{BasicSensor, SensorData, SensorName};
 use crate::utils::files::get_car_file;
-
-/// Data from the IMU sensor
-#[derive(Debug, Clone, Serialize)]
-pub struct ImuData {
-    pub quaternion: Quaternion<f32>,
-    pub acceleration: Vector3<f32>,
-}
-
-impl Display for ImuData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "quaternion: {:?}, acceleration: {:?}", self.quaternion.as_ref(), self.acceleration.as_ref())
-    }
-}
 
 /// Wrapper for the BNO055 sensor
 pub struct ImuSensor(Bno055<I2cdev>);
@@ -89,10 +77,10 @@ impl BasicSensor for ImuSensor {
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Imu(ImuData {
-            quaternion: self.get_quaternion(),
-            acceleration: self.get_acceleration(),
-        })
+        SensorData::Imu {
+            quaternion: self.get_quaternion().into(),
+            acceleration: self.get_acceleration().into(),
+        }
     }
 
     fn read_debug(&mut self) -> String {

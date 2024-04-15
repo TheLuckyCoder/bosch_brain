@@ -1,7 +1,14 @@
-use mint::{Quaternion, Vector3};
-use crate::sensors::{BasicSensor, GpsCoordinates, ImuData, SensorData, SensorName};
+use crate::sensors::manager::SensorManager;
+use crate::sensors::{BasicSensor, GpsCoordinates, SensorData, SensorName};
 
-pub struct MockImuSensor;
+pub fn add_all_sensors(sensor_manager: &mut SensorManager) {
+    sensor_manager.add_sensor(MockImuSensor);
+    sensor_manager.add_sensor(MockUltrasonicSensor);
+    sensor_manager.add_sensor(MockGps);
+    sensor_manager.add_sensor(MockVelocitySensor);
+}
+
+struct MockImuSensor;
 
 impl BasicSensor for MockImuSensor {
     fn name(&self) -> SensorName {
@@ -9,18 +16,18 @@ impl BasicSensor for MockImuSensor {
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Imu(ImuData {
-            quaternion: Quaternion::from(rand::random::<[f32; 4]>()),
-            acceleration: Vector3::from(rand::random::<[f32; 3]>()),
-        })
+        SensorData::Imu {
+            quaternion: rand::random::<[f32; 4]>(),
+            acceleration: rand::random::<[f32; 3]>(),
+        }
     }
 }
 
-pub struct MockGps;
+struct MockGps;
 
 impl BasicSensor for MockGps {
     fn name(&self) -> SensorName {
-       SensorName::Gps
+        SensorName::Gps
     }
 
     fn read_data(&mut self) -> SensorData {
@@ -33,7 +40,7 @@ impl BasicSensor for MockGps {
     }
 }
 
-pub struct MockUltrasonicSensor;
+struct MockUltrasonicSensor;
 
 impl BasicSensor for MockUltrasonicSensor {
     fn name(&self) -> SensorName {
@@ -45,7 +52,7 @@ impl BasicSensor for MockUltrasonicSensor {
     }
 }
 
-pub struct MockVelocitySensor;
+struct MockVelocitySensor;
 
 impl BasicSensor for MockVelocitySensor {
     fn name(&self) -> SensorName {

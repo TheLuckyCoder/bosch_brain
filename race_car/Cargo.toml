@@ -40,6 +40,7 @@ chrono = "0.4"
 time = { version = "0.3", features = ["formatting", "macros"] }
 strum = { version = "0.26.1", features = ["derive"] }
 rand = "0.9.0-alpha.1"
+toml = "0.8.12"
 
 ### Sensors
 linux-embedded-hal = { version = "0.4.0", default-features = false, features = ["gpio_cdev", "i2c"] }

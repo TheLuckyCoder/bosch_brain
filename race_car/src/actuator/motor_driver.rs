@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+
 use crate::actuator::{Actuator, ActuatorName, Pwm};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -19,14 +20,19 @@ pub struct MotorDriver<P: Pwm> {
 }
 
 impl<P: Pwm> MotorDriver<P> {
-    pub fn new(pwm: P, actuator_name: ActuatorName, params: MotorParams, inverse_direction: bool) -> Self {
+    pub fn new(
+        pwm: P,
+        actuator_name: ActuatorName,
+        params: MotorParams,
+        inverse_direction: bool,
+    ) -> Self {
         Self {
             pwm,
             actuator_name,
             params,
             last_value: f64::INFINITY,
             paused: false,
-            inverse_direction
+            inverse_direction,
         }
     }
 }

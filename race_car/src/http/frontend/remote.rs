@@ -1,6 +1,7 @@
-use crate::actuator::ActuatorName;
-use crate::http::GlobalState;
-use crate::sensors::SensorName;
+use std::net::SocketAddr;
+use std::ops::ControlFlow;
+use std::sync::Arc;
+
 use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
@@ -13,11 +14,12 @@ use serde::de::IgnoredAny;
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
-use std::net::SocketAddr;
-use std::ops::ControlFlow;
-use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
+
+use crate::actuator::ActuatorName;
+use crate::http::GlobalState;
+use crate::sensors::SensorName;
 
 pub fn remote_router(global_state: Arc<GlobalState>) -> Router {
     Router::new()

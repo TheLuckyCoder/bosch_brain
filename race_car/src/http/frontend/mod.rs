@@ -1,12 +1,16 @@
-use crate::http::GlobalState;
-use crate::sensors::SensorName;
+use std::sync::Arc;
+
 use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::State;
-use axum::routing::get;
+use axum::http::StatusCode;
+use axum::routing::{get, post};
 use axum::Router;
-use std::sync::Arc;
 use strum::IntoEnumIterator;
+
+use crate::http::config::ServerConfig;
+use crate::http::GlobalState;
+use crate::sensors::{drivers, mock, SensorName};
 
 mod actuators;
 mod remote;
@@ -17,6 +21,7 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
         .nest_service("/assets", tower_http::services::ServeDir::new("assets"))
         .route("/", get(get_home))
         .nest("/sensors", sensors::sensors_router())
+        .route("/config/mock_sensors", post(toggle_mock_sensors))
         .with_state(global_state.clone())
         .merge(actuators::actuators_router(global_state.clone()))
         .merge(remote::remote_router(global_state))
@@ -33,6 +38,7 @@ struct HomeSensor {
 struct HomeTemplate {
     state: &'static str,
     sensors: Vec<HomeSensor>,
+    server_config: ServerConfig,
 }
 
 async fn get_home(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
@@ -57,5 +63,23 @@ async fn get_home(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     HomeTemplate {
         state: car_state.into(),
         sensors,
+        server_config: state.server_config.lock().await.clone(),
     }
+}
+
+async fn toggle_mock_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
+    let mut server_config = state.server_config.lock().await;
+    let mut sensor_manager = state.sensor_manager.lock().await;
+
+    server_config.mock_sensors = !server_config.mock_sensors;
+    server_config.save_to_file().unwrap();
+
+    sensor_manager.remove_all_sensors();
+    if server_config.mock_sensors {
+        mock::add_all_sensors(&mut sensor_manager);
+    } else {
+        drivers::add_all_sensors(&mut sensor_manager);
+    }
+
+    (StatusCode::OK, [("HX-Refresh", "true")])
 }

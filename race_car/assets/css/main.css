@@ -2554,28 +2554,20 @@ details.collapse summary::-webkit-details-marker {
   display: grid;
 }
 
-.h-10 {
-  height: 2.5rem;
-}
-
-.h-40 {
-  height: 10rem;
-}
-
-.h-screen {
-  height: 100vh;
+.h-12 {
+  height: 3rem;
 }
 
 .h-52 {
   height: 13rem;
 }
 
-.h-12 {
-  height: 3rem;
+.h-screen {
+  height: 100vh;
 }
 
-.w-10 {
-  width: 2.5rem;
+.w-12 {
+  width: 3rem;
 }
 
 .w-32 {
@@ -2592,10 +2584,6 @@ details.collapse summary::-webkit-details-marker {
 
 .w-screen {
   width: 100vw;
-}
-
-.w-12 {
-  width: 3rem;
 }
 
 .min-w-52 {

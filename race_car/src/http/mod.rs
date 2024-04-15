@@ -9,18 +9,20 @@ use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tower_livereload::LiveReloadLayer;
 use tracing::Level;
-use crate::actuator::manager::ActuatorManager;
 
+use crate::actuator::manager::ActuatorManager;
+use crate::http::config::ServerConfig;
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
 use crate::sensors::manager::SensorManager;
 
+pub mod config;
 mod control;
+mod frontend;
 mod motor;
 mod sensor;
 mod states;
 mod udp_broadcast;
-mod frontend;
 
 /// Global state for the HTTP server
 /// This is used to share state between the different routes
@@ -31,10 +33,15 @@ pub struct GlobalState {
     pub actuator_manager: Arc<ActuatorManager>,
     // pub motor_driver: Arc<Mutex<MotorDriver>>,
     // pub pids: Arc<PidManager>,
+    pub server_config: Arc<Mutex<ServerConfig>>,
 }
 
 impl GlobalState {
-    pub fn new(sensor_manager: SensorManager, actuator_manager: ActuatorManager) -> Self {
+    pub fn new(
+        sensor_manager: SensorManager,
+        actuator_manager: ActuatorManager,
+        server_config: ServerConfig,
+    ) -> Self {
         let sensor_manager = Arc::new(Mutex::new(sensor_manager));
         Self {
             car_state: Mutex::default(),
@@ -42,6 +49,7 @@ impl GlobalState {
                 .expect("Failed to initialize UDP Manager"),
             sensor_manager,
             actuator_manager: Arc::new(actuator_manager),
+            server_config: Arc::new(Mutex::new(server_config)),
             // motor_driver: Arc::new(Mutex::new(motor_driver)),
             // pids: Arc::new(PidManager::new(
             //     PidController::new(1.0, 0.0, 0.0),

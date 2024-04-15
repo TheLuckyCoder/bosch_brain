@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use linux_embedded_hal::I2cdev;
+
 use crate::actuator::Pwm;
 
 pub struct Pca9685Pwm {
@@ -21,7 +22,10 @@ impl Pca9685Pwm {
         // It is necessary to enable the device.
         pwm.enable().map_err(|e| anyhow!("{e:?}"))?;
 
-        Ok(Self { driver: pwm, channel })
+        Ok(Self {
+            driver: pwm,
+            channel,
+        })
     }
 }
 

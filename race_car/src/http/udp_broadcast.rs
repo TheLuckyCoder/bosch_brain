@@ -8,29 +8,30 @@ use tokio::sync::Mutex;
 use tracing::{error, warn};
 
 use crate::sensors::manager::SensorManager;
-use crate::sensors::{AmbienceData, GpsCoordinates, ImuData, SensorData, SensorName};
+use crate::sensors::SensorName;
 
 /// The data that is sent over UDP
 #[derive(Default, serde::Serialize)]
 struct UdpData {
-    #[serde(flatten)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    imu: Option<ImuData>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ultrasonic: Option<f32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    gps: Option<GpsCoordinates>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ambience: Option<AmbienceData>,
+    // #[serde(flatten)]
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // imu: Option<ImuData>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // ultrasonic: Option<f32>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // gps: Option<GpsCoordinates>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // ambience: Option<AmbienceData>,
 }
 
 impl UdpData {
     /// Checks if the struct contains any data
     fn is_empty(&self) -> bool {
-        self.imu.is_none()
-            && self.ultrasonic.is_none()
-            && self.gps.is_none()
-            && self.ambience.is_none()
+        // self.imu.is_none()
+        //     && self.ultrasonic.is_none()
+        //     && self.gps.is_none()
+        //     && self.ambience.is_none()
+        false
     }
 }
 
@@ -86,7 +87,7 @@ impl UdpBroadcast {
 
         Ok(udp_broadcast_clone)
     }
-    
+
     pub fn get_active_sensors(&self) -> &Vec<SensorName> {
         &self.active_sensors
     }
@@ -123,10 +124,10 @@ impl UdpBroadcast {
             .try_iter()
             .fold(UdpData::default(), |mut udp, sensor_data| {
                 match sensor_data.data {
-                    SensorData::Imu(imu) => udp.imu = Some(imu),
-                    SensorData::Ultrasonic(distance) => udp.ultrasonic = Some(distance),
-                    SensorData::Gps(gps) => udp.gps = Some(gps),
-                    SensorData::Ambience(ambience) => udp.ambience = Some(ambience),
+                    // SensorData::Imu(imu) => udp.imu = Some(imu),
+                    // SensorData::Ultrasonic(distance) => udp.ultrasonic = Some(distance),
+                    // SensorData::Gps(gps) => udp.gps = Some(gps),
+                    // SensorData::Ambience(ambience) => udp.ambience = Some(ambience),
                     _ => {}
                 }
                 udp
@@ -135,19 +136,19 @@ impl UdpBroadcast {
         let active_sensors = &self.active_sensors;
 
         if !active_sensors.contains(&SensorName::Imu) {
-            udp_data.imu = None;
+            // udp_data.imu = None;
         }
 
         if !active_sensors.contains(&SensorName::Ultrasonic) {
-            udp_data.ultrasonic = None;
+            // udp_data.ultrasonic = None;
         }
 
         if !active_sensors.contains(&SensorName::Gps) {
-            udp_data.gps = None;
+            // udp_data.gps = None;
         }
 
         if !active_sensors.contains(&SensorName::Ambience) {
-            udp_data.ambience = None;
+            // udp_data.ambience = None;
         }
 
         if !udp_data.is_empty() {

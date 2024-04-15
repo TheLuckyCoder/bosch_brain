@@ -1,17 +1,15 @@
-use crate::actuator::manager::ActuatorManager;
-use crate::actuator::motor_driver::{MotorDriver, MotorParams};
-use crate::actuator::pca9685_pwm::Pca9685Pwm;
-use crate::actuator::{ActuatorName, MockPwm};
-use tracing::{error, warn};
+use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
+use crate::actuator::manager::ActuatorManager;
+use crate::actuator::motor_driver::{MotorDriver, MotorParams};
+use crate::actuator::{ActuatorName, MockPwm};
+use crate::http::config::ServerConfig;
 use crate::http::GlobalState;
 use crate::sensors::manager::SensorManager;
-use crate::sensors::{
-    set_board_led_status, MockGps, MockImuSensor, MockUltrasonicSensor, MockVelocitySensor,
-};
+use crate::sensors::{drivers, mock};
 
 mod actuator;
 mod http;
@@ -29,34 +27,23 @@ async fn main() -> Result<(), String> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    set_board_led_status(false)
+    drivers::set_board_led_status(false)
         .inspect_err(|e| error!("Failed to set board led: {e}"))
         .ok();
 
+    let server_config = ServerConfig::read_server_config().unwrap_or_else(|e| {
+        error!("Failed to load config.toml: {e}");
+        ServerConfig::default()
+    });
+
     let mut sensor_manager = SensorManager::new();
 
-    sensor_manager.add_sensor(MockImuSensor);
-    sensor_manager.add_sensor(MockUltrasonicSensor);
-    sensor_manager.add_sensor(MockGps);
-    sensor_manager.add_sensor(MockVelocitySensor);
-    // Initialize the actual sensors
-    // ImuSensor::new()
-    //     .map(|sensor| sensor_manager.add_sensor(sensor))
-    //     .map_err(|e| error!("IMU failed to initialize: {e:?}"))
-    //     .ok();
-    // sensor_manager.add_sensor(VelocitySensor::new(receiver.add_stream()));
-    // UltrasonicSensor::new(21f32)
-    //     .map(|sensor| sensor_manager.add_sensor(sensor))
-    //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
-    //     .ok();
-    // GpsSensor::new()
-    //     .map(|sensor| sensor_manager.add_sensor(sensor))
-    //     .map_err(|e| error!("GPS failed to initialize: {e}"))
-    //     .ok();
-    // AmbienceSensor::new()
-    //     .map(|sensor| sensor_manager.add_sensor(sensor))
-    //     .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
-    //     .ok();
+    if server_config.mock_sensors {
+        info!("Initializing with Mock Sensors");
+        mock::add_all_sensors(&mut sensor_manager);
+    } else {
+        drivers::add_all_sensors(&mut sensor_manager);
+    }
 
     let mut actuator_manager = ActuatorManager::new();
 
@@ -73,7 +60,7 @@ async fn main() -> Result<(), String> {
         false,
     ));
 
-    let global_state = GlobalState::new(sensor_manager, actuator_manager);
+    let global_state = GlobalState::new(sensor_manager, actuator_manager, server_config);
 
     http::http_server(global_state).await.unwrap();
 

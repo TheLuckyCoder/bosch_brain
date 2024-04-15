@@ -1,18 +1,9 @@
 use crate::sensors::{BasicSensor, SensorData, SensorName};
-use serde::Serialize;
-
-/// Data from the ambience sensor
-#[derive(Debug, Clone, Copy, Serialize)]
-pub struct AmbienceData {
-    pub temperature: f32,
-    pub humidity: f32,
-}
 
 /// Wrapper for the HTU21DF sensor
 pub struct AmbienceSensor(/*htu21df_sensor::Sensor<I2cdev>*/);
 
 impl AmbienceSensor {
-
     pub fn new() -> anyhow::Result<AmbienceSensor> {
         // let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device")?;
         // let mut delay = Delay {};
@@ -25,7 +16,7 @@ impl AmbienceSensor {
 
     pub fn read_temperature(&mut self) -> f32 {
         // let mut delay = Delay {};
-        
+
         // match self.0.measure_temperature(&mut delay) {
         //     Ok(temp) => temp.value(),
         //     Err(e) => {
@@ -56,9 +47,9 @@ impl BasicSensor for AmbienceSensor {
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Ambience(AmbienceData {
+        SensorData::Ambience {
             temperature: self.read_temperature(),
             humidity: self.read_humidity(),
-        })
+        }
     }
 }

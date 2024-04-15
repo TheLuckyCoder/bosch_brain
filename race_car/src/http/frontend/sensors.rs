@@ -1,6 +1,9 @@
-use crate::http::states::CarStates;
-use crate::http::GlobalState;
-use crate::sensors::{SensorData, SensorName, TimedSensorData};
+use std::collections::{BTreeMap, HashMap};
+use std::net::SocketAddr;
+use std::ops::ControlFlow;
+use std::str::FromStr;
+use std::sync::Arc;
+
 use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::ws::{Message, WebSocket};
@@ -12,14 +15,13 @@ use futures_util::{SinkExt, StreamExt};
 use multiqueue2::BroadcastReceiver;
 use serde::de::IgnoredAny;
 use serde::Deserialize;
-use std::collections::{BTreeMap, HashMap};
-use std::net::SocketAddr;
-use std::ops::ControlFlow;
-use std::str::FromStr;
-use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 use tracing::{error, info};
+
+use crate::http::states::CarStates;
+use crate::http::GlobalState;
+use crate::sensors::{SensorData, SensorName, TimedSensorData};
 
 pub fn sensors_router() -> Router<Arc<GlobalState>> {
     Router::new()

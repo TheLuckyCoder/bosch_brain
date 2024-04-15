@@ -72,7 +72,7 @@ pub async fn router(global_state: Arc<GlobalState>) -> Router {
 }
 
 /// Returns a list of all motors
-async fn get_motors() -> impl IntoResponse {
+async fn get_motors() -> drivers IntoResponse {
     Json(ALL_MOTORS)
 }
 
@@ -80,7 +80,7 @@ async fn get_motors() -> impl IntoResponse {
 async fn get_motor_parameters(
     State(state): State<Arc<GlobalState>>,
     Path(motor): Path<Motor>,
-) -> impl IntoResponse {
+) -> drivers IntoResponse {
     let motor_driver = state.motor_driver.lock().await;
 
     Json(motor_driver.get_params(motor))

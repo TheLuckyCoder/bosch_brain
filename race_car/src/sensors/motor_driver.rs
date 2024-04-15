@@ -1,9 +1,8 @@
 use anyhow::anyhow;
 use linux_embedded_hal::I2cdev;
+use pwm_pca9685::Channel;
 use pwm_pca9685::{Address, Pca9685};
 use serde::{Deserialize, Serialize};
-
-use pwm_pca9685::Channel;
 
 /// All the motors that can be controlled
 #[repr(usize)]
