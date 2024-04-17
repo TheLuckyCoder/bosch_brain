@@ -4,7 +4,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
 use crate::actuator::manager::ActuatorManager;
-use crate::actuator::motor_driver::{MotorDriver, MotorParams};
+use crate::actuator::pwm_motor_driver::{PwmMotorDriver, MotorParams};
 use crate::actuator::{ActuatorName, MockPwm};
 use crate::http::config::ServerConfig;
 use crate::http::GlobalState;
@@ -47,13 +47,13 @@ async fn main() -> Result<(), String> {
 
     let mut actuator_manager = ActuatorManager::new();
 
-    actuator_manager.add_actuator(MotorDriver::new(
+    actuator_manager.add_actuator(PwmMotorDriver::new(
         MockPwm,
         ActuatorName::SteeringMotor,
         MotorParams::default(),
         false,
     ));
-    actuator_manager.add_actuator(MotorDriver::new(
+    actuator_manager.add_actuator(PwmMotorDriver::new(
         MockPwm,
         ActuatorName::SpeedMotor,
         MotorParams::default(),

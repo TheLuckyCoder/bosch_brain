@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 use std::ops::ControlFlow;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use askama::Template;
 use askama_axum::IntoResponse;
@@ -15,7 +15,7 @@ use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
 
-use crate::actuator::{ActuatorName};
+use crate::actuator::{Actuator, ActuatorName};
 use crate::http::GlobalState;
 
 pub fn actuators_router(global_state: Arc<GlobalState>) -> Router {
@@ -32,6 +32,7 @@ struct ActuatorTemplateContent {
     name: &'static str,
     active: bool,
     paused: bool,
+    configuration: Option<String>,
 }
 
 #[derive(Template)]
@@ -43,12 +44,23 @@ struct ActuatorsTemplate {
 async fn get_actuators(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let actuators = ActuatorName::iter()
         .map(|actuator_name| {
-            let actuator = state.actuator_manager.get_actuator_ref(actuator_name);
+            match state.actuator_manager.get_actuator_ref(actuator_name) {
+                None => ActuatorTemplateContent {
+                    name: actuator_name.into(),
+                    active: false,
+                    paused: false,
+                    configuration: None,
+                },
+                Some(actuator) => {
+                    let guard = actuator.lock().unwrap();
 
-            ActuatorTemplateContent {
-                name: actuator_name.into(),
-                active: actuator.is_some(),
-                paused: actuator.map_or(false, |a| a.lock().unwrap().is_paused()),
+                    ActuatorTemplateContent {
+                        name: actuator_name.into(),
+                        active: true,
+                        paused: guard.is_paused(),
+                        configuration: guard.get_config_html(),
+                    }
+                }
             }
         })
         .collect();
@@ -76,6 +88,7 @@ async fn pause_actuator(
             name: actuator.name().into(),
             active: true,
             paused: actuator.is_paused(),
+            configuration: actuator.get_config_html(),
         },
     }
 }
@@ -94,6 +107,7 @@ async fn resume_actuator(
             name: actuator.name().into(),
             active: true,
             paused: actuator.is_paused(),
+            configuration: actuator.get_config_html(),
         },
     }
 }
@@ -112,6 +126,7 @@ async fn stop_actuator(
             name: actuator.name().into(),
             active: true,
             paused: actuator.is_paused(),
+            configuration: actuator.get_config_html(),
         },
     }
 }

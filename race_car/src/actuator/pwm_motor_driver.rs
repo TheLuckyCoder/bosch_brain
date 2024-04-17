@@ -10,7 +10,7 @@ pub struct MotorParams {
     pub max: f64,
 }
 
-pub struct MotorDriver<P: Pwm> {
+pub struct PwmMotorDriver<P: Pwm> {
     pwm: P,
     actuator_name: ActuatorName,
     params: MotorParams,
@@ -19,7 +19,7 @@ pub struct MotorDriver<P: Pwm> {
     inverse_direction: bool,
 }
 
-impl<P: Pwm> MotorDriver<P> {
+impl<P: Pwm> PwmMotorDriver<P> {
     pub fn new(
         pwm: P,
         actuator_name: ActuatorName,
@@ -37,7 +37,7 @@ impl<P: Pwm> MotorDriver<P> {
     }
 }
 
-impl<P: Pwm> Actuator for MotorDriver<P> {
+impl<P: Pwm> Actuator for PwmMotorDriver<P> {
     fn name(&self) -> ActuatorName {
         self.actuator_name
     }
@@ -85,9 +85,13 @@ impl<P: Pwm> Actuator for MotorDriver<P> {
     fn is_paused(&self) -> bool {
         self.paused
     }
+
+    fn get_config_html(&self) -> Option<String> {
+        Some(format!("Hello {}", self.actuator_name))
+    }
 }
 
-impl<P: Pwm> Drop for MotorDriver<P> {
+impl<P: Pwm> Drop for PwmMotorDriver<P> {
     fn drop(&mut self) {
         self.stop()
     }

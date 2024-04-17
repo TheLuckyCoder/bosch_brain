@@ -8,7 +8,7 @@ pub use mock_pwm::*;
 
 pub mod manager;
 mod mock_pwm;
-pub mod motor_driver;
+pub mod pwm_motor_driver;
 pub mod pca9685_pwm;
 
 pub trait Actuator: Send + 'static {
@@ -16,7 +16,9 @@ pub trait Actuator: Send + 'static {
 
     fn set_value(&mut self, value: f64);
 
-    fn stop(&mut self);
+    fn stop(&mut self) {
+        self.set_value(0.0);
+    }
 
     fn pause(&mut self) {}
 
@@ -25,6 +27,12 @@ pub trait Actuator: Send + 'static {
     fn is_paused(&self) -> bool {
         false
     }
+
+    fn get_config_html(&self) -> Option<String> {
+        None
+    }
+
+    fn save_config(&mut self, data: String) {}
 }
 
 #[derive(
