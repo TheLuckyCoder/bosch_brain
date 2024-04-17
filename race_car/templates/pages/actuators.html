@@ -4,23 +4,37 @@
 
 {% block content %}
 
-<div class="flex flex-row flex-wrap gap-6 max-w-full" hx-ext="ws" ws-connect="/actuators_ws">
+<div class="flex flex-row flex-wrap gap-6 max-w-full m-2" hx-ext="ws" ws-connect="/actuators_ws">
     {% for actuator in actuators %}
     <div class="card bg-base-200 min-w-52 w-96 max-w-full grow">
         <div class="card-body" hx-vals='{"name": "{{ actuator.name }}"}'>
             <h2 class="card-title">{{ actuator.name }}</h2>
 
+            <label>
+                <span class="label-text">Step:
+                    <span id="step-value-{{ actuator.name }}">0</span>
+                </span>
+                <input id="step-range-{{ actuator.name }}" name="value" type="range" min="0" max="5" value="3"
+                       class="range range-accent"
+                       {% if !actuator.active -%} disabled {% endif -%} />
+            </label>
+
             {% include "../components/actuator_motor_value_input.html" %}
 
-            <div class="flex flex-row gap-4">
-                <input type="number" id="min-value-{{ actuator.name }}"
-                       name="min" min="-1" max="1" value="-1"
-                       class="input input-bordered input-sm grow">
-                <input type="number" id="max-value-{{ actuator.name }}"
-                       name="max" min="-1" max="1" value="1"
-                       class="input input-bordered input-sm grow">
+            <div class="flex flex-row gap-4 my-4">
+                <label class="grow">
+                    <span>Min value</span>
+                    <input type="number" id="min-value-{{ actuator.name }}"
+                           name="min" min="-1" max="1" value="-1"
+                           class="input input-bordered input-sm w-full">
+                </label>
+                <label class="grow">
+                    <span>Max value</span>
+                    <input type="number" id="max-value-{{ actuator.name }}"
+                           name="max" min="-1" max="1" value="1"
+                           class="input input-bordered input-sm w-full">
+                </label>
             </div>
-
 
             <div class="card-actions">
                 {% include "../components/actuators_pause_resume_btn.html" %}
@@ -28,16 +42,20 @@
             </div>
 
             <script>
+                const step_value_{{ actuator.name }} = document.getElementById('step-value-{{ actuator.name }}');
+                const step_range_{{ actuator.name }} = document.getElementById('step-range-{{ actuator.name }}');
                 const value_input_{{ actuator.name }} = document.getElementById('value-{{ actuator.name }}');
                 const range_input_{{ actuator.name }} = document.getElementById('range-{{ actuator.name }}');
                 const min_value_{{ actuator.name }} = document.getElementById('min-value-{{ actuator.name }}');
                 const max_value_{{ actuator.name }} = document.getElementById('max-value-{{ actuator.name }}');
 
-                function {{ actuator.name }}ResetValue() {
-                    value_input_{{ actuator.name }}.innerHTML = "0";
-                    range_input_{{ actuator.name }}.value = 0;
-                    console.log("Value was reset {{ actuator.name }}")
-                }
+                step_range_{{ actuator.name }}.addEventListener('input', function () {
+                    const steps = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5];
+                    const step = steps[parseInt(this.value)];
+                    step_value_{{ actuator.name }}.innerHTML = step;
+
+                    range_input_{{ actuator.name }}.step = step;
+                });
 
                 min_value_{{ actuator.name }}.addEventListener('change', function () {
                     range_input_{{ actuator.name }}.min = this.value;
@@ -48,9 +66,26 @@
                     }
                 });
 
+                function {{ actuator.name }}ResetValue() {
+                    value_input_{{ actuator.name }}.innerHTML = "0";
+                    range_input_{{ actuator.name }}.value = 0;
+                    console.log("Value was reset {{ actuator.name }}")
+                }
+
+                min_value_{{ actuator.name }}.addEventListener('change', function () {
+                    range_input_{{ actuator.name }}.min = this.value;
+                    max_value_{{ actuator.name }}.min = this.value;
+                    
+                    const max_value = max_value_{{ actuator.name }}.value;
+                    if (parseInt(this.value) > parseInt(max_value)) {
+                        this.value = max_value;
+                    }
+                });
+
                 max_value_{{ actuator.name }}.addEventListener('change', function () {
                     range_input_{{ actuator.name }}.max = this.value;
                     min_value_{{ actuator.name }}.max = this.value;
+                    
                     const min_value = min_value_{{ actuator.name }}.value;
                     if (parseInt(this.value) < parseInt(min_value)) {
                         this.value = min_value;
@@ -63,5 +98,11 @@
     {% endfor %}
 
 </div>
+
+<script>
+    document.addEventListener('htmx:wsConfigSend', function (event) {
+        event.detail.headers = undefined;
+    });
+</script>
 
 {% endblock %}

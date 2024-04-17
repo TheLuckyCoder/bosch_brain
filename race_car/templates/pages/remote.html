@@ -11,27 +11,51 @@
              ws-send hx-trigger="knob"></div>
     </div>
 
+    <button class="btn btn-square btn-outline"
+            onclick="configure_modal.showModal()">
+        <span class="material-symbols-outlined">settings</span>
+    </button>
+
     <div class="card bg-base-200 shadow-xl grow" ws-connect="/sensors/ws">
         <div id="status" class="card-body">
             <div class="flex flex-row justify-between">
                 <div class="card-title">Please select sensors</div>
-                <button class="btn btn-square btn-outline"
-                        onclick="configure_modal.showModal()">
-                    <span class="material-symbols-outlined">settings</span>
-                </button>
             </div>
         </div>
 
         <dialog id="configure_modal" class="modal">
             <div class="modal-box">
-                <h3 class="font-bold text-lg">Active Sensors</h3>
+                <h2 class="font-bold text-xl">Settings</h2>
                 <form class="flex flex-col py-4">
+                    <h3 class="font-bold text-lg">Active Sensors</h3>
                     {% for sensor in sensors %}
                     <label class="cursor-pointer label">
                         <span class="label-text">{{ sensor }}</span>
                         <input id="checkbox-{{ sensor }}" name="{{ sensor }}"
                                type="checkbox" class="toggle toggle-secondary"
                                ws-send/>
+                    </label>
+                    {% endfor %}
+                </form>
+
+                <h3 class="font-bold text-lg">Joystick Axis</h3>
+                <form class="flex flex-col py-4">
+                    <span class="label-text font-bold">X Axis</span>
+                    {% for actuator in actuators %}
+                    <label class="cursor-pointer label">
+                        <span class="label-text">{{ actuator }}</span>
+                        <input id="x-radio-{{ actuator }}" name="x-axis" value="{{ actuator }}"
+                               type="radio" class="radio" {% if loop.index0 == 0 -%} checked {% endif -%} />
+                    </label>
+                    {% endfor %}
+                </form>
+                <form class="flex flex-col py-4">
+                    <span class="label-text font-bold">Y Axis</span>
+                    {% for actuator in actuators %}
+                    <label class="cursor-pointer label">
+                        <span class="label-text">{{ actuator }}</span>
+                        <input id="y-radio-{{ actuator }}" name="y-axis" value="{{ actuator }}"
+                               type="radio" class="radio" {% if loop.index0 == 1 -%} checked {% endif -%} />
                     </label>
                     {% endfor %}
                 </form>
@@ -45,6 +69,8 @@
 </main>
 
 <script>
+    const x_axis_radios = document.getElementsByName('x-axis');
+    const y_axis_radios = document.getElementsByName('y-axis');
     const joystick = document.getElementById('joystick');
     const knob = document.getElementById('knob');
     let isDragging = false;
@@ -106,9 +132,31 @@
 
     document.addEventListener('htmx:wsConfigSend', function (event) {
         if (event.detail.headers['HX-Trigger'] === 'knob') {
+
+            let x_axis_motor = undefined;
+            for (let i = 0, length = x_axis_radios.length; i < length; i++) {
+                if (x_axis_radios[i].checked) {
+                    x_axis_motor = x_axis_radios[i].value;
+                    break;
+                }
+            }
+            let y_axis_motor = undefined;
+            for (let i = 0, length = y_axis_radios.length; i < length; i++) {
+                if (y_axis_radios[i].checked) {
+                    y_axis_motor = y_axis_radios[i].value;
+                    break;
+                }
+            }
+
             event.detail.parameters = {
-                x: x_percent,
-                y: y_percent
+                motors: {
+                    x: x_axis_motor,
+                    y: y_axis_motor
+                },
+                joystick: {
+                    x: x_percent,
+                    y: y_percent
+                }
             };
         }
         event.detail.headers = undefined;

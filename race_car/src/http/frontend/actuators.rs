@@ -6,18 +6,16 @@ use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, Path, State, WebSocketUpgrade};
-use axum::http::Response;
 use axum::routing::{get, put};
 use axum::Router;
 use axum_extra::{headers, TypedHeader};
-use serde::de::IgnoredAny;
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
 
-use crate::actuator::{Actuator, ActuatorName};
+use crate::actuator::{ActuatorName};
 use crate::http::GlobalState;
 
 pub fn actuators_router(global_state: Arc<GlobalState>) -> Router {
@@ -166,10 +164,6 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc
 #[serde_as]
 #[derive(Deserialize)]
 struct WsMessage {
-    #[serde(rename = "HEADERS")]
-    _headers: IgnoredAny,
-    // #[serde(flatten)]
-    // sensors: HashMap<String, String>,
     name: ActuatorName,
     #[serde_as(as = "DisplayFromStr")]
     value: f64,

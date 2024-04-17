@@ -6,14 +6,10 @@ use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
-use axum::routing::{get, put};
 use axum::Router;
+use axum::routing::get;
 use axum_extra::{headers, TypedHeader};
-use futures_util::{SinkExt, StreamExt};
-use serde::de::IgnoredAny;
 use serde::Deserialize;
-use serde_with::serde_as;
-use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
 
@@ -32,6 +28,7 @@ pub fn remote_router(global_state: Arc<GlobalState>) -> Router {
 #[template(path = "pages/remote.html")]
 struct RemoteTemplate {
     sensors: Vec<&'static str>,
+    actuators: Vec<&'static str>,
 }
 
 async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
@@ -42,7 +39,12 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
         .map(|sensor_name| sensor_name.into())
         .collect();
 
-    RemoteTemplate { sensors }
+    let actuators = ActuatorName::iter()
+        .filter(|actuator_name| state.actuator_manager.get_actuator_ref(actuator_name.clone()).is_some())
+        .map(|actuator_name| actuator_name.into())
+        .collect();
+
+    RemoteTemplate { sensors, actuators }
 }
 
 pub async fn remote_ws(
@@ -72,30 +74,46 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc
                 return;
             };
 
-            match process_message(message, who) {
-                ControlFlow::Continue(new_active_sensors) => {
-                    if let Some(message) = new_active_sensors {
-                        if let Some(motor) = actuator_manager.get_actuator(ActuatorName::SpeedMotor)
-                        {
-                            motor.lock().unwrap().set_value(message.y)
-                        }
-                        if let Some(motor) =
-                            actuator_manager.get_actuator(ActuatorName::SteeringMotor)
-                        {
-                            motor.lock().unwrap().set_value(message.x)
-                        }
+            let message: WsMessage = match process_message(message, who) {
+                ControlFlow::Continue(message) => {
+                    if let Some(message) = message {
+                        message
+                    } else {
+                        continue
                     }
                 }
                 ControlFlow::Break(_) => return,
+            };
+
+
+            if let Some(motor) = actuator_manager.get_actuator(message.motors.x)
+            {
+                motor.lock().unwrap().set_value(message.joystick.y)
+            }
+            if let Some(motor) = actuator_manager.get_actuator(message.motors.y)
+            {
+                motor.lock().unwrap().set_value(message.joystick.x)
             }
         }
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct WsMessage {
+#[derive(Deserialize)]
+struct WsMotors {
+    x: ActuatorName,
+    y: ActuatorName,
+}
+
+#[derive(Deserialize)]
+struct WsJoystick {
     x: f64,
     y: f64,
+}
+
+#[derive(Deserialize)]
+struct WsMessage {
+    motors: WsMotors,
+    joystick: WsJoystick,
 }
 
 fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMessage>> {
