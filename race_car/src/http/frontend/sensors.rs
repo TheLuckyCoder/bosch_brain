@@ -13,7 +13,8 @@ use axum::Router;
 use axum_extra::{headers, TypedHeader};
 use futures_util::{SinkExt, StreamExt};
 use multiqueue2::BroadcastReceiver;
-use serde::de::IgnoredAny;
+use sensors::name::SensorName;
+use sensors::SensorData;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
@@ -21,7 +22,7 @@ use tracing::{error, info};
 
 use crate::http::states::CarStates;
 use crate::http::GlobalState;
-use crate::sensors::{SensorData, SensorName, TimedSensorData};
+use crate::sensors::TimedSensorData;
 
 pub fn sensors_router() -> Router<Arc<GlobalState>> {
     Router::new()

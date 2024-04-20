@@ -1,17 +1,19 @@
+use ::sensors::drivers::set_board_led_status;
 use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
-use crate::actuator::manager::ActuatorManager;
-use crate::actuator::pwm_motor_driver::{PwmMotorDriver, MotorParams};
-use crate::actuator::{ActuatorName, MockPwm};
+use crate::actuators::manager::ActuatorManager;
+use crate::actuators::pwm_motor_driver::{MotorParams, PwmMotorDriver};
+use crate::actuators::{ActuatorName, MockPwm};
 use crate::http::config::ServerConfig;
 use crate::http::GlobalState;
+use crate::sensors::add_all_sensors;
 use crate::sensors::manager::SensorManager;
-use crate::sensors::{drivers, mock};
+use crate::sensors::mock::add_all_mock_sensors;
 
-mod actuator;
+mod actuators;
 mod http;
 mod sensors;
 mod utils;
@@ -27,7 +29,7 @@ async fn main() -> Result<(), String> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    drivers::set_board_led_status(false)
+    set_board_led_status(false)
         .inspect_err(|e| error!("Failed to set board led: {e}"))
         .ok();
 
@@ -40,9 +42,9 @@ async fn main() -> Result<(), String> {
 
     if server_config.mock_sensors {
         info!("Initializing with Mock Sensors");
-        mock::add_all_sensors(&mut sensor_manager);
+        add_all_mock_sensors(&mut sensor_manager);
     } else {
-        drivers::add_all_sensors(&mut sensor_manager);
+        add_all_sensors(&mut sensor_manager);
     }
 
     let mut actuator_manager = ActuatorManager::new();

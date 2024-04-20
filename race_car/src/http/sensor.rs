@@ -8,11 +8,11 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use sensors::name::SensorName;
 use strum::IntoEnumIterator;
 use tracing::info;
 
 use crate::http::GlobalState;
-use crate::sensors::SensorName;
 
 /// Creates an object that manages all the sensor routes
 pub fn router(global_state: Arc<GlobalState>) -> Router {

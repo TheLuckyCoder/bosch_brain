@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::actuator::{Actuator, ActuatorName, Pwm};
+use crate::actuators::{Actuator, ActuatorName, Pwm};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct MotorParams {

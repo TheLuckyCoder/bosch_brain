@@ -1,7 +1,8 @@
 use crate::sensors::manager::SensorManager;
-use crate::sensors::{BasicSensor, GpsCoordinates, SensorData, SensorName};
+use sensors::name::SensorName;
+use sensors::{BasicSensor, GpsCoordinates, SensorData};
 
-pub fn add_all_sensors(sensor_manager: &mut SensorManager) {
+pub fn add_all_mock_sensors(sensor_manager: &mut SensorManager) {
     sensor_manager.add_sensor(MockImuSensor);
     sensor_manager.add_sensor(MockUltrasonicSensor);
     sensor_manager.add_sensor(MockGps);

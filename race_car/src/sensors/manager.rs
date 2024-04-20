@@ -6,10 +6,11 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 use std::{mem, thread};
 
+use crate::sensors::TimedSensorData;
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
+use sensors::name::SensorName;
+use sensors::BasicSensor;
 use tracing::{debug, error, info, warn};
-
-use crate::sensors::{BasicSensor, SensorName, TimedSensorData};
 
 #[derive(Default)]
 struct Shared {
@@ -121,7 +122,7 @@ impl SensorManager {
 
                 thread::sleep(Duration::from_millis(50));
 
-                let sensor_data = sensor.lock().unwrap().read_data_timed();
+                let sensor_data = TimedSensorData::from(sensor.lock().unwrap().read_data());
 
                 // println!("{:?}: {}", sensor_data.data, sensor_name);
 

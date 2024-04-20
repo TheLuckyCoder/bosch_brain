@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::anyhow;
 use linux_embedded_hal::I2cdev;
 
-use crate::actuator::Pwm;
+use crate::actuators::Pwm;
 
 pub struct Pca9685Pwm {
     driver: pwm_pca9685::Pca9685<I2cdev>,

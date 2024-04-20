@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use ::sensors::name::SensorName;
 use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::State;
@@ -10,7 +11,8 @@ use strum::IntoEnumIterator;
 
 use crate::http::config::ServerConfig;
 use crate::http::GlobalState;
-use crate::sensors::{drivers, mock, SensorName};
+use crate::sensors::add_all_sensors;
+use crate::sensors::mock::add_all_mock_sensors;
 
 mod actuators;
 mod remote;
@@ -76,9 +78,9 @@ async fn toggle_mock_sensors(State(state): State<Arc<GlobalState>>) -> impl Into
 
     sensor_manager.remove_all_sensors();
     if server_config.mock_sensors {
-        mock::add_all_sensors(&mut sensor_manager);
+        add_all_mock_sensors(&mut sensor_manager);
     } else {
-        drivers::add_all_sensors(&mut sensor_manager);
+        add_all_sensors(&mut sensor_manager);
     }
 
     (StatusCode::OK, [("HX-Refresh", "true")])

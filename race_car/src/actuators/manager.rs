@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::actuator::{Actuator, ActuatorName};
+use crate::actuators::{Actuator, ActuatorName};
 
 pub struct ActuatorManager {
     sensors: HashMap<ActuatorName, Arc<Mutex<dyn Actuator + Send>>>,

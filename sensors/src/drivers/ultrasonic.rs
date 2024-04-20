@@ -1,6 +1,6 @@
+use crate::name::SensorName;
+use crate::{BasicSensor, SensorData};
 use hc_sr04::{HcSr04, Unit};
-
-use crate::sensors::{BasicSensor, SensorData, SensorName};
 
 /// Wrapper for the HC-SR04 sensor
 pub struct UltrasonicSensor(HcSr04);

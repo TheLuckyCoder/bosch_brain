@@ -1,25 +1,29 @@
 use std::convert::TryInto;
-use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
 
 use anyhow::Context;
 use bno055::{BNO055Calibration, BNO055OperationMode, Bno055, BNO055_CALIB_SIZE};
 use linux_embedded_hal::{Delay, I2cdev};
 use mint::{Quaternion, Vector3};
-use serde::Serialize;
 use tracing::{error, info, warn};
 
 use shared::math::AlmostEquals;
 
-use crate::sensors::{BasicSensor, SensorData, SensorName};
-use crate::utils::files::get_car_file;
+use crate::name::SensorName;
+use crate::{BasicSensor, SensorData};
 
 /// Wrapper for the BNO055 sensor
-pub struct ImuSensor(Bno055<I2cdev>);
+pub struct ImuSensor {
+    imu: Bno055<I2cdev>,
+    calibration_file_path: PathBuf,
+}
 
 impl ImuSensor {
     const BNO_FILE: &'static str = "bno.bin";
 
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(mut calibration_folder: PathBuf) -> anyhow::Result<Self> {
+        calibration_folder.push(Self::BNO_FILE);
+
         let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device")?;
 
         let mut imu = Bno055::new(i2c).with_alternative_address();
@@ -27,7 +31,7 @@ impl ImuSensor {
 
         imu.init(&mut delay).context("Failed to init IMU")?;
 
-        if let Ok(file_buffer) = std::fs::read(get_car_file(Self::BNO_FILE)) {
+        if let Ok(file_buffer) = std::fs::read(calibration_folder.as_path()) {
             let buffer: [u8; BNO055_CALIB_SIZE] = vec_to_array(file_buffer);
 
             // Apply calibration profile
@@ -40,18 +44,21 @@ impl ImuSensor {
         imu.set_mode(BNO055OperationMode::NDOF, &mut delay)
             .context("Failed to set IMU mode")?;
 
-        Ok(Self(imu))
+        Ok(Self {
+            imu,
+            calibration_file_path: calibration_folder,
+        })
     }
 
     pub fn get_acceleration(&mut self) -> Vector3<f32> {
-        self.0.linear_acceleration().unwrap_or_else(|e| {
+        self.imu.linear_acceleration().unwrap_or_else(|e| {
             error!("IMU probably not in fusion mode: {e}");
             Vector3::from([f32::NAN; 3])
         })
     }
 
     pub fn get_quaternion(&mut self) -> Quaternion<f32> {
-        self.0
+        self.imu
             .quaternion()
             .map(|q| {
                 let vec = &q.v;
@@ -85,7 +92,7 @@ impl BasicSensor for ImuSensor {
 
     fn read_debug(&mut self) -> String {
         let status = self
-            .0
+            .imu
             .get_calibration_status()
             .expect("Failed to get calibration status");
 
@@ -99,12 +106,12 @@ impl BasicSensor for ImuSensor {
         let mut delay = Delay {};
 
         let calibration = self
-            .0
+            .imu
             .calibration_profile(&mut delay)
             .context("Failed to get calibration result")?;
 
-        let file_path = get_car_file(Self::BNO_FILE);
-        std::fs::write(file_path, calibration.as_bytes()).context("Failed to save calibration")?;
+        std::fs::write(self.calibration_file_path.as_path(), calibration.as_bytes())
+            .context("Failed to save calibration")?;
 
         info!("IMU calibration is saved");
         Ok(())

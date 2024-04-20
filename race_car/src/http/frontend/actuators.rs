@@ -1,7 +1,8 @@
 use std::net::SocketAddr;
 use std::ops::ControlFlow;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use crate::actuators::ActuatorName;
 use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::ws::{Message, WebSocket};
@@ -15,7 +16,6 @@ use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
 
-use crate::actuator::{Actuator, ActuatorName};
 use crate::http::GlobalState;
 
 pub fn actuators_router(global_state: Arc<GlobalState>) -> Router {
@@ -43,8 +43,8 @@ struct ActuatorsTemplate {
 
 async fn get_actuators(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
     let actuators = ActuatorName::iter()
-        .map(|actuator_name| {
-            match state.actuator_manager.get_actuator_ref(actuator_name) {
+        .map(
+            |actuator_name| match state.actuator_manager.get_actuator_ref(actuator_name) {
                 None => ActuatorTemplateContent {
                     name: actuator_name.into(),
                     active: false,
@@ -61,8 +61,8 @@ async fn get_actuators(State(state): State<Arc<GlobalState>>) -> impl IntoRespon
                         configuration: guard.get_config_html(),
                     }
                 }
-            }
-        })
+            },
+        )
         .collect();
 
     ActuatorsTemplate { actuators }

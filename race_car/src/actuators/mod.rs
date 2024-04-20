@@ -8,8 +8,8 @@ pub use mock_pwm::*;
 
 pub mod manager;
 mod mock_pwm;
-pub mod pwm_motor_driver;
 pub mod pca9685_pwm;
+pub mod pwm_motor_driver;
 
 pub trait Actuator: Send + 'static {
     fn name(&self) -> ActuatorName;
@@ -32,7 +32,7 @@ pub trait Actuator: Send + 'static {
         None
     }
 
-    fn save_config(&mut self, data: String) {}
+    fn save_config(&mut self, _data: String) {}
 }
 
 #[derive(

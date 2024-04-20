@@ -1,11 +1,11 @@
 use std::io::{Read, Write};
 use std::time::Duration;
 
-use serde::Serialize;
 use serialport::{DataBits, Parity, SerialPort, StopBits, TTYPort};
 use tracing::error;
 
-use crate::sensors::{BasicSensor, GpsCoordinates, SensorData, SensorName};
+use crate::name::SensorName;
+use crate::{BasicSensor, GpsCoordinates, SensorData};
 
 /// Data from the GPS sensor
 

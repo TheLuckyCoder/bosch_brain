@@ -7,12 +7,12 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use sensors::drivers::set_board_led_status;
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumIter, IntoStaticStr};
 use tracing::error;
 
 use crate::http::GlobalState;
-use crate::sensors::drivers::set_board_led_status;
 
 /// The different states the car can be in.
 /// - Standby: The default state of the car.

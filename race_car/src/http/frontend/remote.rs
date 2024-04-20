@@ -6,16 +6,16 @@ use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
-use axum::Router;
 use axum::routing::get;
+use axum::Router;
 use axum_extra::{headers, TypedHeader};
+use sensors::name::SensorName;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
 
-use crate::actuator::ActuatorName;
+use crate::actuators::ActuatorName;
 use crate::http::GlobalState;
-use crate::sensors::SensorName;
 
 pub fn remote_router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
@@ -40,7 +40,12 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
         .collect();
 
     let actuators = ActuatorName::iter()
-        .filter(|actuator_name| state.actuator_manager.get_actuator_ref(actuator_name.clone()).is_some())
+        .filter(|actuator_name| {
+            state
+                .actuator_manager
+                .get_actuator_ref(actuator_name.clone())
+                .is_some()
+        })
         .map(|actuator_name| actuator_name.into())
         .collect();
 
@@ -79,19 +84,16 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc
                     if let Some(message) = message {
                         message
                     } else {
-                        continue
+                        continue;
                     }
                 }
                 ControlFlow::Break(_) => return,
             };
 
-
-            if let Some(motor) = actuator_manager.get_actuator(message.motors.x)
-            {
+            if let Some(motor) = actuator_manager.get_actuator(message.motors.x) {
                 motor.lock().unwrap().set_value(message.joystick.y)
             }
-            if let Some(motor) = actuator_manager.get_actuator(message.motors.y)
-            {
+            if let Some(motor) = actuator_manager.get_actuator(message.motors.y) {
                 motor.lock().unwrap().set_value(message.joystick.x)
             }
         }

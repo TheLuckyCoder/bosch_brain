@@ -4,11 +4,11 @@ use std::net::UdpSocket;
 use std::sync::Arc;
 use std::time::Duration;
 
+use sensors::name::SensorName;
 use tokio::sync::Mutex;
 use tracing::{error, warn};
 
 use crate::sensors::manager::SensorManager;
-use crate::sensors::SensorName;
 
 /// The data that is sent over UDP
 #[derive(Default, serde::Serialize)]

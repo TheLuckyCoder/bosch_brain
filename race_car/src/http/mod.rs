@@ -10,7 +10,7 @@ use tower_http::trace::TraceLayer;
 use tower_livereload::LiveReloadLayer;
 use tracing::Level;
 
-use crate::actuator::manager::ActuatorManager;
+use crate::actuators::manager::ActuatorManager;
 use crate::http::config::ServerConfig;
 use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;

@@ -1,4 +1,5 @@
-use crate::sensors::{BasicSensor, SensorData, SensorName};
+use crate::name::SensorName;
+use crate::{BasicSensor, SensorData};
 
 /// Wrapper for the HTU21DF sensor
 pub struct AmbienceSensor(/*htu21df_sensor::Sensor<I2cdev>*/);

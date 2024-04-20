@@ -1,104 +1,21 @@
 //! Module containing all sensor abstraction classes
 
-use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
+use crate::sensors::manager::SensorManager;
+use crate::sensors::r#virtual::velocity::VelocitySensor;
+use crate::utils::files::get_car_dir;
+use sensors::drivers::{AmbienceSensor, GpsSensor, ImuSensor, UltrasonicSensor};
+use sensors::SensorData;
 use serde::Serialize;
 use serde_with::serde_as;
 use serde_with::TimestampMilliSeconds;
+use tracing::error;
 
-pub use name::*;
-
-pub mod drivers;
 pub mod manager;
 pub mod mock;
 mod motor_driver;
-mod name;
-
-/// Common set of functions each sensor class should implement
-pub trait BasicSensor: Send + 'static {
-    /// Unique name of the sensor
-    fn name(&self) -> SensorName;
-
-    /// Called right before a reading session begins
-    fn prepare_read(&mut self) {}
-
-    /// Reads data from the sensor, returning a generic [SensorData] enum
-    fn read_data(&mut self) -> SensorData;
-
-    /// Allows the sensor to read its debug data, needed for configuration, defaults to [Self::read_data]
-    fn read_debug(&mut self) -> String {
-        self.read_data().to_string()
-    }
-
-    /// Allows the sensor to save its current configuration, defaults to doing nothing
-    fn save_config(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    /// Reads data, and returns it with a timestamp
-    fn read_data_timed(&mut self) -> TimedSensorData {
-        TimedSensorData::from(self.read_data())
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize)]
-pub struct GpsCoordinates {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub confidence: u8,
-}
-
-/// Enum containing all possible sensor data
-#[derive(Debug, Clone, Serialize)]
-pub enum SensorData {
-    Imu {
-        quaternion: [f32; 4],
-        acceleration: [f32; 3],
-    },
-    Ultrasonic(f32),
-    Gps(GpsCoordinates),
-    Velocity(f64),
-    Ambience {
-        temperature: f32,
-        humidity: f32,
-    },
-}
-
-impl Display for SensorData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SensorData::Imu {
-                quaternion,
-                acceleration,
-            } => write!(
-                f,
-                "Quaternion: {:?}, Acceleration: {:?}",
-                quaternion, acceleration
-            ),
-            SensorData::Ultrasonic(distance) => write!(f, "Ultrasonic: {distance:.4}"),
-            SensorData::Gps(coordinates) => write!(f, "{coordinates:?}"),
-            SensorData::Velocity(velocity) => write!(f, "Velocity: {velocity:.4}"),
-            SensorData::Ambience {
-                temperature,
-                humidity,
-            } => write!(f, "Ambience: {temperature:.4}, {humidity:.4}"),
-        }
-    }
-}
-
-impl SensorData {
-    pub fn get_sensor_name(&self) -> SensorName {
-        match self {
-            SensorData::Imu { .. } => SensorName::Imu,
-            SensorData::Ultrasonic(_) => SensorName::Ultrasonic,
-            SensorData::Gps(_) => SensorName::Gps,
-            SensorData::Velocity(_) => SensorName::Velocity,
-            SensorData::Ambience { .. } => SensorName::Ambience,
-        }
-    }
-}
+mod r#virtual;
 
 /// Sensor data with a timestamp
 #[serde_as]
@@ -121,4 +38,27 @@ impl From<SensorData> for TimedSensorData {
     fn from(value: SensorData) -> Self {
         Self::new(value, SystemTime::now())
     }
+}
+
+pub fn add_all_sensors(sensor_manager: &mut SensorManager) {
+    let calibration_folder = get_car_dir();
+    ImuSensor::new(calibration_folder)
+        .map(|sensor| sensor_manager.add_sensor(sensor))
+        .map_err(|e| error!("IMU failed to initialize: {e:?}"))
+        .ok();
+    UltrasonicSensor::new(21f32)
+        .map(|sensor| sensor_manager.add_sensor(sensor))
+        .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))
+        .ok();
+    GpsSensor::new()
+        .map(|sensor| sensor_manager.add_sensor(sensor))
+        .map_err(|e| error!("GPS failed to initialize: {e}"))
+        .ok();
+    AmbienceSensor::new()
+        .map(|sensor| sensor_manager.add_sensor(sensor))
+        .map_err(|e| error!("AmbienceSensor failed to initialize: {e:?}"))
+        .ok();
+    sensor_manager.add_sensor(VelocitySensor::new(
+        sensor_manager.get_data_receiver().add_stream(),
+    ));
 }

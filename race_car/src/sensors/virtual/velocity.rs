@@ -4,7 +4,9 @@ use multiqueue2::BroadcastReceiver;
 
 use shared::math::AlmostEquals;
 
-use crate::sensors::{BasicSensor, SensorData, SensorName, TimedSensorData};
+use crate::sensors::TimedSensorData;
+use sensors::name::SensorName;
+use sensors::{BasicSensor, SensorData};
 
 pub struct VelocitySensor {
     receiver: BroadcastReceiver<TimedSensorData>,
