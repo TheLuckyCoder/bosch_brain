@@ -4,11 +4,11 @@ use std::str::FromStr;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use strum::{AsRefStr, EnumIter, IntoStaticStr};
 
-pub use mock_pwm::*;
+pub use pwm::mock::*;
 
 pub mod manager;
-mod mock_pwm;
-pub mod pca9685_pwm;
+pub mod motor_drivers;
+mod pwm;
 pub mod pwm_motor_driver;
 
 pub trait Actuator: Send + 'static {
@@ -71,10 +71,4 @@ impl Display for ActuatorName {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.into())
     }
-}
-
-pub trait Pwm: Send + 'static {
-    fn set_duty_cycle(&mut self, percentage: f64);
-
-    fn turn_off(&mut self);
 }

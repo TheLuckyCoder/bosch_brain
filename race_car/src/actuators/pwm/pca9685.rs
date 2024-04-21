@@ -1,9 +1,8 @@
 use std::path::Path;
 
+use crate::actuators::pwm::{Percentage, Pwm};
 use anyhow::anyhow;
 use linux_embedded_hal::I2cdev;
-
-use crate::actuators::Pwm;
 
 pub struct Pca9685Pwm {
     driver: pwm_pca9685::Pca9685<I2cdev>,
@@ -30,7 +29,7 @@ impl Pca9685Pwm {
 }
 
 impl Pwm for Pca9685Pwm {
-    fn set_duty_cycle(&mut self, percentage: f64) {
+    fn set_duty_cycle(&mut self, percentage: Percentage) {
         self.driver
             .set_channel_on_off(
                 self.channel,
@@ -48,10 +47,7 @@ impl Pwm for Pca9685Pwm {
 }
 
 #[inline]
-fn map_from_percentage_to_12_bit_int(input: f64) -> u16 {
-    // Ensure input is within the 0.0-100.0 range
-    let clamped_input = input.clamp(0.0, 100.0);
-
+fn map_from_percentage_to_12_bit_int(input: Percentage) -> u16 {
     // Map clamped_input to the 0-4096 range
-    (clamped_input * 40.96) as u16
+    (input.value * 40.96) as u16
 }

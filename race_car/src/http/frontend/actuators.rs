@@ -21,7 +21,7 @@ use crate::http::GlobalState;
 pub fn actuators_router(global_state: Arc<GlobalState>) -> Router {
     Router::new()
         .route("/actuators", get(get_actuators))
-        .route("/actuators_ws", get(actuators_ws))
+        .route("/actuators/ws", get(actuators_ws))
         .route("/pause_actuator/:name", put(pause_actuator))
         .route("/resume_actuator/:name", put(resume_actuator))
         .route("/stop_actuator/:name", put(stop_actuator))

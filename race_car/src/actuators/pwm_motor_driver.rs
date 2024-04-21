@@ -1,29 +1,26 @@
-use serde::{Deserialize, Serialize};
+use crate::actuators::pwm::{Percentage, Pwm};
+use crate::actuators::{Actuator, ActuatorName};
 
-use crate::actuators::{Actuator, ActuatorName, Pwm};
+pub trait PwmMotorDriverParams: Send + 'static {
+    fn value_to_percentage(&self, value: f64) -> Percentage;
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct MotorParams {
-    pub min: f64,
-    pub lower_middle: f64,
-    pub upper_middle: f64,
-    pub max: f64,
+    fn get_config_html(&self, name: ActuatorName) -> String;
 }
 
-pub struct PwmMotorDriver<P: Pwm> {
-    pwm: P,
-    actuator_name: ActuatorName,
-    params: MotorParams,
+pub struct PwmMotorDriver<PWM: Pwm, Params: PwmMotorDriverParams> {
+    pwm: PWM,
+    params: Params,
     last_value: f64,
+    actuator_name: ActuatorName,
     paused: bool,
     inverse_direction: bool,
 }
 
-impl<P: Pwm> PwmMotorDriver<P> {
+impl<PWM: Pwm, Params: PwmMotorDriverParams> PwmMotorDriver<PWM, Params> {
     pub fn new(
-        pwm: P,
         actuator_name: ActuatorName,
-        params: MotorParams,
+        pwm: PWM,
+        params: Params,
         inverse_direction: bool,
     ) -> Self {
         Self {
@@ -37,7 +34,7 @@ impl<P: Pwm> PwmMotorDriver<P> {
     }
 }
 
-impl<P: Pwm> Actuator for PwmMotorDriver<P> {
+impl<PWM: Pwm, Params: PwmMotorDriverParams> Actuator for PwmMotorDriver<PWM, Params> {
     fn name(&self) -> ActuatorName {
         self.actuator_name
     }
@@ -52,21 +49,9 @@ impl<P: Pwm> Actuator for PwmMotorDriver<P> {
 
         self.last_value = input;
 
-        let params = &self.params;
+        let duty_cycle = self.params.value_to_percentage(value);
 
-        // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
-        // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
-        let motor_input_percentage = if input != 0.0 {
-            if input > 0.0 {
-                params.upper_middle + input * (params.max - params.upper_middle)
-            } else {
-                params.lower_middle + -input * (params.min - params.lower_middle)
-            }
-        } else {
-            (params.lower_middle + params.upper_middle) / 2.0
-        };
-
-        self.pwm.set_duty_cycle(motor_input_percentage);
+        self.pwm.set_duty_cycle(duty_cycle);
     }
 
     fn stop(&mut self) {
@@ -87,11 +72,11 @@ impl<P: Pwm> Actuator for PwmMotorDriver<P> {
     }
 
     fn get_config_html(&self) -> Option<String> {
-        Some(format!("Hello {}", self.actuator_name))
+        Some(self.params.get_config_html(self.actuator_name))
     }
 }
 
-impl<P: Pwm> Drop for PwmMotorDriver<P> {
+impl<PWM: Pwm, Params: PwmMotorDriverParams> Drop for PwmMotorDriver<PWM, Params> {
     fn drop(&mut self) {
         self.stop()
     }

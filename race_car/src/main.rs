@@ -1,11 +1,13 @@
 use ::sensors::drivers::set_board_led_status;
+use anyhow::Context;
 use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
 use crate::actuators::manager::ActuatorManager;
-use crate::actuators::pwm_motor_driver::{MotorParams, PwmMotorDriver};
+use crate::actuators::motor_drivers::{SteeringMotorParams, VelocityMotorParams};
+use crate::actuators::pwm_motor_driver::PwmMotorDriver;
 use crate::actuators::{ActuatorName, MockPwm};
 use crate::http::config::ServerConfig;
 use crate::http::GlobalState;
@@ -22,7 +24,7 @@ mod utils;
 ///
 /// Initializes the logging system, creates the GlobalState object and starts the HTTP server
 #[tokio::main]
-async fn main() -> Result<(), String> {
+async fn main() -> anyhow::Result<()> {
     std::env::set_var("RUST_LOG", "info");
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().compact())
@@ -50,21 +52,30 @@ async fn main() -> Result<(), String> {
     let mut actuator_manager = ActuatorManager::new();
 
     actuator_manager.add_actuator(PwmMotorDriver::new(
-        MockPwm,
         ActuatorName::SteeringMotor,
-        MotorParams::default(),
+        MockPwm,
+        SteeringMotorParams {
+            min: 7.2,
+            middle: 9.07,
+            max: 10.95,
+        },
         false,
     ));
     actuator_manager.add_actuator(PwmMotorDriver::new(
-        MockPwm,
         ActuatorName::SpeedMotor,
-        MotorParams::default(),
-        false,
+        MockPwm,
+        VelocityMotorParams {
+            min: 8.2,
+            lower_middle: 8.6,
+            upper_middle: 9.05,
+            max: 9.08,
+        },
+        true,
     ));
 
     let global_state = GlobalState::new(sensor_manager, actuator_manager, server_config);
 
-    http::http_server(global_state).await.unwrap();
-
-    return Ok(());
+    http::http_server(global_state)
+        .await
+        .context("Failed to start HTTP Server")
 }
