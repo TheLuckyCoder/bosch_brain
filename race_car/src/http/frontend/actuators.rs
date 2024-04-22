@@ -165,9 +165,11 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc
                         continue;
                     };
 
-                    actuator.lock().unwrap().set_value(motor_values.value);
-
-                    println!("{:?}", motor_values.value)
+                    let mut guard = actuator.lock().unwrap();
+                    match motor_values.data {
+                        WsData::Value(value) => guard.set_value(value),
+                        WsData::Config(config) => guard.save_config(config),
+                    }
                 }
                 ControlFlow::Continue(None) => continue,
                 ControlFlow::Break(_) => return,
@@ -176,21 +178,34 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc
     }
 }
 
-#[serde_as]
 #[derive(Deserialize)]
 struct WsMessage {
     name: ActuatorName,
-    #[serde_as(as = "DisplayFromStr")]
-    value: f64,
+    #[serde(flatten)]
+    data: WsData,
+}
+
+#[serde_as]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum WsData {
+    Value(
+        #[serde_as(as = "DisplayFromStr")]
+        f64,
+    ),
+    Config(serde_json::Value),
 }
 
 fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMessage>> {
     match msg {
         Message::Text(text) => {
             info!(">>> {who} sent str: {text:?}");
-            let Ok(values) = serde_json::from_str::<WsMessage>(&text) else {
-                error!("Failed to parse message");
-                return ControlFlow::Continue(None);
+            let values = match serde_json::from_str::<WsMessage>(&text) {
+                Ok(values) => values,
+                Err(e) => {
+                    error!("Failed to parse message: {e}");
+                    return ControlFlow::Continue(None);
+                }
             };
 
             ControlFlow::Continue(Some(values))

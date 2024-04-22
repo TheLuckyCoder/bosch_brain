@@ -73,7 +73,7 @@
     const y_axis_radios = document.getElementsByName('y-axis');
     const joystick = document.getElementById('joystick');
     const knob = document.getElementById('knob');
-    let isDragging = false;
+    let is_dragging = false;
     let x_percent = 0;
     let y_percent = 0;
 
@@ -108,13 +108,13 @@
 
     knob.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        isDragging = true;
+        is_dragging = true;
         knob.style.transition = 'none'; // Remove transition to make movement immediate
     });
 
     document.addEventListener('mouseup', () => {
-        if (isDragging) {
-            isDragging = false;
+        if (is_dragging) {
+            is_dragging = false;
             x_percent = 0;
             y_percent = 0;
             knob.style.transition = 'transform 0.15s ease-out'; // Smooth return transition
@@ -125,7 +125,7 @@
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (isDragging) {
+        if (is_dragging) {
             moveKnob(e.clientX, e.clientY);
         }
     });

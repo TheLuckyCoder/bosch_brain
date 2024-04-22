@@ -2,11 +2,20 @@ use crate::actuators::pwm::Percentage;
 use crate::actuators::pwm_motor_driver::PwmMotorDriverParams;
 use crate::actuators::ActuatorName;
 use askama::Template;
+use serde::Deserialize;
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 
+#[serde_as]
+#[derive(Deserialize)]
 pub struct VelocityMotorParams {
+    #[serde_as(as = "DisplayFromStr")]
     pub min: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub lower_middle: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub upper_middle: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub max: f64,
 }
 
@@ -29,7 +38,7 @@ impl PwmMotorDriverParams for VelocityMotorParams {
 
     fn get_config_html(&self, name: ActuatorName) -> String {
         #[derive(Template)]
-        #[template(path = "components/motor_config.html")]
+        #[template(path = "components/velocity_motor_config.html")]
         struct ConfigTemplate {
             name: ActuatorName,
             min: f64,
@@ -50,11 +59,20 @@ impl PwmMotorDriverParams for VelocityMotorParams {
             .render()
             .unwrap_or_else(|e| format!("Failed to render config: {e}"))
     }
+
+    fn parse(value: serde_json::Value) -> Result<Self, serde_json::Error> {
+        serde_json::from_value(value)
+    }
 }
 
+#[serde_as]
+#[derive(Deserialize)]
 pub struct SteeringMotorParams {
+    #[serde_as(as = "DisplayFromStr")]
     pub min: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub middle: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub max: f64,
 }
 
@@ -76,6 +94,28 @@ impl PwmMotorDriverParams for SteeringMotorParams {
     }
 
     fn get_config_html(&self, name: ActuatorName) -> String {
-        String::from("Hello")
+        #[derive(Template)]
+        #[template(path = "components/steering_motor_config.html")]
+        struct ConfigTemplate {
+            name: ActuatorName,
+            min: f64,
+            middle: f64,
+            max: f64,
+        }
+
+        let template = ConfigTemplate {
+            name,
+            min: self.min,
+            middle: self.middle,
+            max: self.max,
+        };
+
+        template
+            .render()
+            .unwrap_or_else(|e| format!("Failed to render config: {e}"))
+    }
+
+    fn parse(value: serde_json::Value) -> Result<Self, serde_json::Error> {
+        serde_json::from_value(value)
     }
 }

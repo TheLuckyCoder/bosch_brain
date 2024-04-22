@@ -1,0 +1,63 @@
+<form ws-send>
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Min:</span>
+            <input id="config-{{ name }}-min" type="number" value="{{ min }}" step="0.001" name="min"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-min")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-min")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Middle:</span>
+            <input id="config-{{ name }}-middle" type="number" value="{{ middle }}" step="0.001" name="middle"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-middle")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-middle")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Max:</span>
+            <input id="config-{{ name }}-max" type="number" value="{{ max }}" step="0.001" name="max"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-max")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-max")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+</form>
+
+<script>
+    function config_{{ name }}_decrement(field_id) {
+        const field_element = document.getElementById(field_id);
+        const value = parseFloat(step_value_{{ name }}.innerHTML);
+        field_element.value = (parseFloat(field_element.value) - value).toFixed(3);
+    }
+
+    function config_{{ name }}_increment(field_id) {
+        const field_element = document.getElementById(field_id);
+        const value = parseFloat(step_value_{{ name }}.innerHTML);
+        field_element.value = (parseFloat(field_element.value) + value).toFixed(3);
+    }
+</script>

@@ -6,5 +6,5 @@
            class="range range-primary"
            {% if !actuator.active -%} disabled{% endif -%}
            oninput="document.getElementById('value-{{ actuator.name }}').innerHTML = this.value"
-           hx-trigger="input" ws-send hx-swap-oob="true"/>
+           hx-trigger="input" ws-send hx-swap-oob="true" hx-headers='{"data_type": "value"}'/>
 </label>

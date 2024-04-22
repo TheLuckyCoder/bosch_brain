@@ -1,10 +1,15 @@
 use crate::actuators::pwm::{Percentage, Pwm};
 use crate::actuators::{Actuator, ActuatorName};
+use serde::Deserialize;
+use serde_json::Value;
+use tracing::error;
 
-pub trait PwmMotorDriverParams: Send + 'static {
+pub trait PwmMotorDriverParams: Sized + Send + 'static {
     fn value_to_percentage(&self, value: f64) -> Percentage;
 
     fn get_config_html(&self, name: ActuatorName) -> String;
+    
+    fn parse(value: Value) -> Result<Self, serde_json::Error>;
 }
 
 pub struct PwmMotorDriver<PWM: Pwm, Params: PwmMotorDriverParams> {
@@ -73,6 +78,19 @@ impl<PWM: Pwm, Params: PwmMotorDriverParams> Actuator for PwmMotorDriver<PWM, Pa
 
     fn get_config_html(&self) -> Option<String> {
         Some(self.params.get_config_html(self.actuator_name))
+    }
+
+    fn save_config(&mut self, data: Value) {
+        let content = data.to_string();
+        let new_params = match Params::parse(data) {
+            Ok(params) => params,
+            Err(e) => {
+                error!("Failed to parse params: {e}");
+                return;
+            }
+        };
+        
+        self.params = new_params;
     }
 }
 

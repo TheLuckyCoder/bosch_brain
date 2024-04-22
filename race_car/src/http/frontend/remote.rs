@@ -91,10 +91,10 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc
             };
 
             if let Some(motor) = actuator_manager.get_actuator(message.motors.x) {
-                motor.lock().unwrap().set_value(message.joystick.y)
+                motor.lock().unwrap().set_value(message.joystick.x)
             }
             if let Some(motor) = actuator_manager.get_actuator(message.motors.y) {
-                motor.lock().unwrap().set_value(message.joystick.x)
+                motor.lock().unwrap().set_value(message.joystick.y)
             }
         }
     }

@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use serde_json::Value;
 
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use strum::{AsRefStr, EnumIter, IntoStaticStr};
@@ -32,7 +33,7 @@ pub trait Actuator: Send + 'static {
         None
     }
 
-    fn save_config(&mut self, _data: String) {}
+    fn save_config(&mut self, data: Value) {}
 }
 
 #[derive(

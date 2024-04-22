@@ -41,17 +41,20 @@
                 {% include "../components/actuators_stop_btn.html" %}
             </div>
 
+            {% if actuator.active -%}
             {% match actuator.configuration %}
                 {% when Some with (config_str) %}
                 <div class="collapse collapse-arrow">
                     <input type="checkbox"/>
                     <span class="collapse-title text-xl font-medium">Configuration</span>
-                    <div class="collapse-content" id="config-{{ actuator.name }}">
+                    <div class="collapse-content" id="config-{{ actuator.name }}"
+                         hx-headers='{"data_type": "motor_config"}'>
                         {{ config_str|safe }}
                     </div>
                 </div>
                 {% when None %}
             {% endmatch %}
+            {% endif -%}
 
             <script>
                 const step_value_{{ actuator.name }} = document.getElementById('step-value-{{ actuator.name }}');
@@ -67,11 +70,8 @@
                     console.log("Value was reset {{ actuator.name }}")
                 }
 
-
-                function {{ actuator.name }}SaveConfig() {
-                    value_input_{{ actuator.name }}.innerHTML = "0";
-                    range_input_{{ actuator.name }}.value = 0;
-                    console.log("Value was reset {{ actuator.name }}")
+                function {{ actuator.name }}SaveConfig(data) {
+                    console.log("Value was saved:" + data)
                 }
 
                 step_range_{{ actuator.name }}.addEventListener('input', function () {
@@ -85,16 +85,6 @@
                 min_value_{{ actuator.name }}.addEventListener('change', function () {
                     range_input_{{ actuator.name }}.min = this.value;
                     max_value_{{ actuator.name }}.min = this.value;
-                    const max_value = max_value_{{ actuator.name }}.value;
-                    if (parseInt(this.value) > parseInt(max_value)) {
-                        this.value = max_value;
-                    }
-                });
-
-                min_value_{{ actuator.name }}.addEventListener('change', function () {
-                    range_input_{{ actuator.name }}.min = this.value;
-                    max_value_{{ actuator.name }}.min = this.value;
-                    
                     const max_value = max_value_{{ actuator.name }}.value;
                     if (parseInt(this.value) > parseInt(max_value)) {
                         this.value = max_value;
@@ -120,6 +110,15 @@
 
 <script>
     document.addEventListener('htmx:wsConfigSend', function (event) {
+        if (event.detail.headers["data_type"] === "motor_config") {
+            const new_parameters = {
+                name: event.detail.parameters.name,
+                config: event.detail.parameters,
+            };
+            event.detail.parameters.name = undefined;
+            event.detail.parameters = new_parameters;
+        }
+        // console.log(event.detail)
         event.detail.headers = undefined;
     });
 </script>
