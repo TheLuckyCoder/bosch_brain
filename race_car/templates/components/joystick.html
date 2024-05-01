@@ -1,0 +1,11 @@
+<div id="joystick" class="m-52 bg-gray-700 rounded-full flex items-center justify-center relative"
+style="{% if let Some(size) = joystick.size %}
+  width: {{- size -}}rem;
+  height: {{- size -}}rem;
+{% else %}
+  width: 13rem;
+  height: 13rem;
+{% endif %}">
+    <div id="knob" class="size-12 bg-gray-400 rounded-full cursor-pointer"
+         ws-send hx-trigger="knob"></div>
+</div>

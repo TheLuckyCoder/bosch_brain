@@ -23,10 +23,10 @@ pub fn router(global_state: Arc<GlobalState>) -> Router {
         .nest_service("/assets", tower_http::services::ServeDir::new("assets"))
         .route("/", get(get_home))
         .nest("/sensors", sensors::sensors_router())
+        .nest("/remote", remote::remote_router())
         .route("/config/mock_sensors", post(toggle_mock_sensors))
         .with_state(global_state.clone())
         .merge(actuators::actuators_router(global_state.clone()))
-        .merge(remote::remote_router(global_state))
 }
 
 struct HomeSensor {

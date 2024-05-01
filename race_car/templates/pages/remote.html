@@ -5,10 +5,8 @@
 {% block content %}
 
 <main hx-ext="ws">
-    <div id="joystick" class="m-52 w-52 h-52 bg-gray-700 rounded-full flex items-center justify-center relative"
-         ws-connect="/remote/ws">
-        <div id="knob" class="w-12 h-12 bg-gray-400 rounded-full cursor-pointer shadow-2xl"
-             ws-send hx-trigger="knob"></div>
+    <div ws-connect="/remote/ws">
+        {% include "../components/joystick.html" %}
     </div>
 
     <button class="btn btn-square btn-outline"
@@ -38,14 +36,20 @@
                     {% endfor %}
                 </form>
 
-                <h3 class="font-bold text-lg">Joystick Axis</h3>
+                <h3 class="font-bold text-lg">Joystick</h3>
+                <label>
+                    <span class="label-text">Size</span>
+                    <input value="13" min="8" max="23"
+                           type="range" class="range" name="size"
+                           hx-put="/remote/joystick" hx-target="#joystick" hx-swap="outerHTML"/>
+                </label>
                 <form class="flex flex-col py-4">
                     <span class="label-text font-bold">X Axis</span>
                     {% for actuator in actuators %}
                     <label class="cursor-pointer label">
                         <span class="label-text">{{ actuator }}</span>
                         <input id="x-radio-{{ actuator }}" name="x-axis" value="{{ actuator }}"
-                               type="radio" class="radio" {% if loop.index0 == 0 -%} checked {% endif -%} />
+                               type="radio" class="radio" {% if loop.index0== 0 -%} checked {% endif -%}/>
                     </label>
                     {% endfor %}
                 </form>
@@ -55,7 +59,7 @@
                     <label class="cursor-pointer label">
                         <span class="label-text">{{ actuator }}</span>
                         <input id="y-radio-{{ actuator }}" name="y-axis" value="{{ actuator }}"
-                               type="radio" class="radio" {% if loop.index0 == 1 -%} checked {% endif -%} />
+                               type="radio" class="radio" {% if loop.index0== 1 -%} checked {% endif -%}/>
                     </label>
                     {% endfor %}
                 </form>
@@ -73,6 +77,7 @@
     const y_axis_radios = document.getElementsByName('y-axis');
     const joystick = document.getElementById('joystick');
     const knob = document.getElementById('knob');
+
     let is_dragging = false;
     let x_percent = 0;
     let y_percent = 0;

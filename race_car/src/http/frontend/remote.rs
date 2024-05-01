@@ -4,24 +4,33 @@ use std::sync::Arc;
 
 use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
+use axum::extract::{ConnectInfo, Query, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
-use axum::routing::get;
-use axum::Router;
+use axum::routing::{get, put};
+use axum::{Form, Router};
 use axum_extra::{headers, TypedHeader};
 use sensors::name::SensorName;
 use serde::Deserialize;
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
 
 use crate::actuators::ActuatorName;
 use crate::http::GlobalState;
 
-pub fn remote_router(global_state: Arc<GlobalState>) -> Router {
+pub fn remote_router() -> Router<Arc<GlobalState>> {
     Router::new()
-        .route("/remote", get(get_remote))
-        .route("/remote/ws", get(remote_ws))
-        .with_state(global_state)
+        .route("/", get(get_remote))
+        .route("/joystick", put(update_joystick))
+        .route("/ws", get(remote_ws))
+}
+
+#[serde_as]
+#[derive(Default, Deserialize)]
+struct JoystickQuery {
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    size: Option<f32>,
 }
 
 #[derive(Template)]
@@ -29,6 +38,7 @@ pub fn remote_router(global_state: Arc<GlobalState>) -> Router {
 struct RemoteTemplate {
     sensors: Vec<&'static str>,
     actuators: Vec<&'static str>,
+    joystick: JoystickQuery,
 }
 
 async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
@@ -43,16 +53,30 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
         .filter(|actuator_name| {
             state
                 .actuator_manager
-                .get_actuator_ref(actuator_name.clone())
+                .get_actuator_ref(*actuator_name)
                 .is_some()
         })
         .map(|actuator_name| actuator_name.into())
         .collect();
 
-    RemoteTemplate { sensors, actuators }
+    RemoteTemplate {
+        sensors,
+        actuators,
+        joystick: JoystickQuery::default(),
+    }
 }
 
-pub async fn remote_ws(
+#[derive(Template)]
+#[template(path = "components/joystick.html")]
+struct JoystickTemplate {
+    joystick: JoystickQuery,
+}
+
+async fn update_joystick(Form(joystick): Form<JoystickQuery>) -> impl IntoResponse {
+    JoystickTemplate { joystick }
+}
+
+async fn remote_ws(
     State(state): State<Arc<GlobalState>>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
