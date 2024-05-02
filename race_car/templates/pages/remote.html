@@ -88,6 +88,7 @@
 
     // Function to move the knob
     const moveKnob = (x, y) => {
+        if (!is_dragging) return;
         const rect = joystick.getBoundingClientRect();
         const half_width = rect.width / 2;
         const half_height = rect.height / 2;
@@ -115,13 +116,13 @@
         htmx.trigger("#knob", "knob");
     };
 
-    knob.addEventListener('mousedown', (e) => {
+    function startDrag(e) {
         e.preventDefault();
         is_dragging = true;
-        knob.style.transition = 'none'; // Remove transition to make movement immediate
-    });
+        knob.style.transition = 'none'; // Remove transition for immediate movement
+    }
 
-    document.addEventListener('mouseup', () => {
+    function stopDrag() {
         if (is_dragging) {
             is_dragging = false;
             x_percent = 0;
@@ -131,13 +132,21 @@
 
             htmx.trigger("#knob", "knob");
         }
+    }
+
+    knob.addEventListener('mousedown', startDrag);
+    document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('mousemove', (e) => {
+        moveKnob(e.clientX, e.clientY);
     });
 
-    document.addEventListener('mousemove', (e) => {
-        if (is_dragging) {
-            moveKnob(e.clientX, e.clientY);
+    knob.addEventListener('touchstart', startDrag);
+    document.addEventListener('touchend', stopDrag);
+    document.addEventListener('touchmove', (e) => {
+        if (e.touches.length) {
+            moveKnob(e.touches[0].clientX, e.touches[0].clientY);
         }
-    });
+    }, {passive: false});
 
     document.addEventListener('htmx:wsConfigSend', function (event) {
         if (event.detail.headers['HX-Trigger'] === 'knob') {
