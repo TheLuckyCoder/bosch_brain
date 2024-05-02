@@ -3,6 +3,7 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use askama::filters;
 use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
@@ -44,7 +45,7 @@ pub fn remote_router() -> Router<Arc<GlobalState>> {
 #[template(path = "pages/remote.html")]
 struct RemoteTemplate {
     sensors: Vec<&'static str>,
-    actuators: Vec<&'static str>,
+    actuators: Vec<ActuatorName>,
     joystick: JoystickConfig,
     video_size: (usize, usize),
 }
@@ -64,13 +65,12 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
                 .get_actuator_ref(*actuator_name)
                 .is_some()
         })
-        .map(|actuator_name| actuator_name.into())
         .collect();
 
     RemoteTemplate {
         sensors,
         actuators,
-        joystick: state.server_config.lock().await.joystick.clone(),
+        joystick: state.server_config.lock().await.joystick,
         video_size: (VIDEO_WIDTH, VIDEO_HEIGHT),
     }
 }
@@ -82,25 +82,28 @@ struct JoystickTemplate {
 }
 
 #[serde_as]
-#[derive(Default, Deserialize)]
+#[derive(Deserialize)]
 struct JoystickQuery {
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    size: Option<u8>,
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    opacity: Option<u8>,
+    #[serde_as(as = "DisplayFromStr")]
+    size: u8,
+    #[serde_as(as = "DisplayFromStr")]
+    opacity: u8,
+    x_axis: ActuatorName,
+    y_axis: ActuatorName,
 }
 
 async fn update_joystick(
     State(state): State<Arc<GlobalState>>,
     Form(query): Form<JoystickQuery>,
 ) -> impl IntoResponse {
-    let mut server_config = state.server_config.lock().await;
-    let default = JoystickConfig::default();
-
     let new_config = JoystickConfig {
-        size: query.size.unwrap_or(default.size),
-        opacity: query.opacity.unwrap_or(default.opacity),
+        size: query.size,
+        opacity: query.opacity,
+        x_axis: query.x_axis,
+        y_axis: query.y_axis,
     };
+
+    let mut server_config = state.server_config.lock().await;
     server_config.joystick = new_config;
     server_config.save_to_file().unwrap();
 
@@ -132,7 +135,7 @@ async fn handle_joystick_socket(
                 return;
             };
 
-            let message: WsMessage = match process_joystick_message(message, who) {
+            let message: WsJoystick = match process_joystick_message(message, who) {
                 ControlFlow::Continue(message) => {
                     if let Some(message) = message {
                         message
@@ -142,21 +145,16 @@ async fn handle_joystick_socket(
                 }
                 ControlFlow::Break(_) => return,
             };
+            let joystick_config = global_state.server_config.lock().await.joystick;
 
-            if let Some(motor) = actuator_manager.get_actuator(message.motors.x) {
-                motor.lock().unwrap().set_value(message.joystick.x)
+            if let Some(motor) = actuator_manager.get_actuator(joystick_config.x_axis) {
+                motor.lock().unwrap().set_value(message.x)
             }
-            if let Some(motor) = actuator_manager.get_actuator(message.motors.y) {
-                motor.lock().unwrap().set_value(message.joystick.y)
+            if let Some(motor) = actuator_manager.get_actuator(joystick_config.y_axis) {
+                motor.lock().unwrap().set_value(message.y)
             }
         }
     }
-}
-
-#[derive(Deserialize)]
-struct WsMotors {
-    x: ActuatorName,
-    y: ActuatorName,
 }
 
 #[derive(Deserialize)]
@@ -165,17 +163,11 @@ struct WsJoystick {
     y: f64,
 }
 
-#[derive(Deserialize)]
-struct WsMessage {
-    motors: WsMotors,
-    joystick: WsJoystick,
-}
-
-fn process_joystick_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMessage>> {
+fn process_joystick_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsJoystick>> {
     match msg {
         Message::Text(text) => {
             info!(">>> {who} sent str: {text:?}");
-            let Ok(values) = serde_json::from_str::<WsMessage>(&text) else {
+            let Ok(values) = serde_json::from_str::<WsJoystick>(&text) else {
                 error!("Failed to parse message");
                 return ControlFlow::Continue(None);
             };

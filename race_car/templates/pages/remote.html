@@ -4,11 +4,6 @@
 
 {% block content %}
 
-<script>
-    const x_axis_radios = document.getElementsByName('x-axis');
-    const y_axis_radios = document.getElementsByName('y-axis');
-</script>
-
 <main hx-ext="ws" class="relative">
     <canvas id="streamdata" width="{{ video_size.0 }}" height="{{ video_size.1 }}" class="absolute w-screen h-screen">
         Your browser does not support the HTML5 canvas tag.
@@ -46,7 +41,8 @@
                 </form>
 
                 <h3 class="font-bold text-lg">Joystick</h3>
-                <form hx-put="/remote/joystick" hx-target="#joystick" hx-swap="outerHTML" hx-trigger="change">
+                <form hx-put="/remote/joystick" hx-target="#joystick" hx-swap="outerHTML" hx-trigger="change"
+                      class="flex flex-col py-4">
                     <label>
                         <span class="label-text">Size</span>
                         <input value="{{ joystick.size }}" min="8" max="23"
@@ -57,24 +53,24 @@
                         <input value="{{ joystick.opacity }}" min="0" max="100"
                                type="range" class="range" name="opacity"/>
                     </label>
-                </form>
-                <form class="flex flex-col py-4">
+
                     <span class="label-text font-bold">X Axis</span>
                     {% for actuator in actuators %}
                     <label class="cursor-pointer label">
-                        <span class="label-text">{{ actuator }}</span>
-                        <input id="x-radio-{{ actuator }}" name="x-axis" value="{{ actuator }}"
-                               type="radio" class="radio" {% if loop.index0== 0 -%} checked {% endif -%}/>
+                        <span class="label-text">{{ actuator.as_ref() }}</span>
+                        <input name="x_axis" value="{{ actuator.as_ref() }}"
+                               type="radio" class="radio"
+                               {% if actuator.clone()== joystick.x_axis -%} checked {% endif -%}/>
                     </label>
                     {% endfor %}
-                </form>
-                <form class="flex flex-col py-4">
+
                     <span class="label-text font-bold">Y Axis</span>
                     {% for actuator in actuators %}
                     <label class="cursor-pointer label">
-                        <span class="label-text">{{ actuator }}</span>
-                        <input id="y-radio-{{ actuator }}" name="y-axis" value="{{ actuator }}"
-                               type="radio" class="radio" {% if loop.index0== 1 -%} checked {% endif -%}/>
+                        <span class="label-text">{{ actuator.as_ref() }}</span>
+                        <input name="y_axis" value="{{ actuator.as_ref() }}"
+                               type="radio" class="radio"
+                               {% if actuator.clone()== joystick.y_axis -%} checked {% endif -%}/>
                     </label>
                     {% endfor %}
                 </form>
@@ -89,30 +85,9 @@
 <script>
     document.addEventListener('htmx:wsConfigSend', function (event) {
         if (event.detail.headers['HX-Trigger'] === 'knob') {
-            let x_axis_motor = undefined;
-            for (let i = 0, length = x_axis_radios.length; i < length; i++) {
-                if (x_axis_radios[i].checked) {
-                    x_axis_motor = x_axis_radios[i].value;
-                    break;
-                }
-            }
-            let y_axis_motor = undefined;
-            for (let i = 0, length = y_axis_radios.length; i < length; i++) {
-                if (y_axis_radios[i].checked) {
-                    y_axis_motor = y_axis_radios[i].value;
-                    break;
-                }
-            }
-
             event.detail.parameters = {
-                motors: {
-                    x: x_axis_motor,
-                    y: y_axis_motor
-                },
-                joystick: {
-                    x: x_percent,
-                    y: y_percent
-                }
+                x: x_percent,
+                y: y_percent
             };
         }
         event.detail.headers = undefined;

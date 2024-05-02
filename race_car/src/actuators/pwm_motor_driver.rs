@@ -1,6 +1,5 @@
 use crate::actuators::pwm::{Percentage, Pwm};
 use crate::actuators::{Actuator, ActuatorName};
-use serde::Deserialize;
 use serde_json::Value;
 use tracing::error;
 

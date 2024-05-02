@@ -1,5 +1,6 @@
 use std::{fs, io};
 
+use crate::actuators::ActuatorName;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -12,6 +13,8 @@ pub struct ServerConfig {
 pub struct JoystickConfig {
     pub size: u8,
     pub opacity: u8,
+    pub x_axis: ActuatorName,
+    pub y_axis: ActuatorName,
 }
 
 impl Default for JoystickConfig {
@@ -19,6 +22,8 @@ impl Default for JoystickConfig {
         Self {
             size: 13,
             opacity: 75,
+            x_axis: ActuatorName::SpeedMotor,
+            y_axis: ActuatorName::SteeringMotor,
         }
     }
 }

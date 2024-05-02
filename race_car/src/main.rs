@@ -37,7 +37,9 @@ async fn main() -> anyhow::Result<()> {
 
     let server_config = ServerConfig::read_server_config().unwrap_or_else(|e| {
         error!("Failed to load config.toml: {e}");
-        ServerConfig::default()
+        let default = ServerConfig::default();
+        let _ = default.save_to_file();
+        default
     });
 
     let mut sensor_manager = SensorManager::new();
