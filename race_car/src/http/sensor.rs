@@ -15,11 +15,10 @@ use tracing::info;
 use crate::http::GlobalState;
 
 /// Creates an object that manages all the sensor routes
-pub fn router(global_state: Arc<GlobalState>) -> Router {
+pub fn router() -> Router<Arc<GlobalState>> {
     Router::new()
         .route("/", get(get_sensors))
         .route("/active_udp", post(set_udp_sensors))
-        .with_state(global_state)
 }
 
 /// Returns a list of all available and initialized sensors

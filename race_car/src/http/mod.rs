@@ -19,7 +19,7 @@ use crate::sensors::manager::SensorManager;
 pub mod config;
 mod control;
 mod frontend;
-mod motor;
+mod actuator;
 mod sensor;
 mod states;
 mod udp_broadcast;
@@ -31,7 +31,6 @@ pub struct GlobalState {
     pub udp_manager: Arc<Mutex<UdpBroadcast>>,
     pub sensor_manager: Arc<Mutex<SensorManager>>,
     pub actuator_manager: Arc<ActuatorManager>,
-    // pub motor_driver: Arc<Mutex<MotorDriver>>,
     // pub pids: Arc<PidManager>,
     pub server_config: Arc<Mutex<ServerConfig>>,
 }
@@ -66,11 +65,12 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
     let global_state = Arc::new(global_state);
 
     let app = Router::new()
-        .merge(frontend::router(global_state.clone()))
-        // .nest("/api/motors", motor::router(global_state.clone()).await)
-        .nest("/api/state", states::router(global_state.clone()))
-        .nest("/api/sensors", sensor::router(global_state.clone()))
+        .merge(frontend::router())
+        .nest("/api/actuators", actuator::router())
+        .nest("/api/state", states::router())
+        .nest("/api/sensors", sensor::router())
         // .nest("/api/control", control::router(global_state))
+        .with_state(global_state)
         .layer(LiveReloadLayer::new())
         .layer(
             TraceLayer::new_for_http()

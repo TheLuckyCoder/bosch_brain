@@ -14,7 +14,6 @@ use tracing::error;
 
 pub mod manager;
 pub mod mock;
-mod motor_driver;
 mod r#virtual;
 
 /// Sensor data with a timestamp

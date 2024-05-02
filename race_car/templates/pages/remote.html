@@ -13,15 +13,17 @@
         {% include "../components/joystick.html" %}
     </div>
 
-    <div class="card bg-base-200 shadow-xl grow absolute top-0 right-0 m-2" ws-connect="/sensors/ws">
-        <button class="btn btn-square btn-outline m-2"
-                onclick="configure_modal.showModal()">
-            <span class="material-symbols-outlined">settings</span>
-        </button>
+    <div class="absolute top-0 right-0 m-2" ws-connect="/sensors/ws">
+        <div class="bg-base-200 opacity-90 rounded-xl">
+            <button class="btn btn-square btn-outline m-2"
+                    onclick="configure_modal.showModal()">
+                <span class="material-symbols-outlined">settings</span>
+            </button>
 
-        <div id="status" class="card-body">
-            <div class="flex flex-row justify-between">
-                <div class="card-title">Please select sensors</div>
+            <div id="status" class="card-body">
+                <div class="flex flex-row justify-between">
+                    Select sensors
+                </div>
             </div>
         </div>
 
@@ -104,7 +106,7 @@
             const imageBitmap = await createImageBitmap(new Blob([evt.data], {type: 'image/jpeg'}));
 
             // Draw the ImageBitmap directly onto the canvas
-            context.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
+            context.drawImage(imageBitmap, 0, 0);
 
             const end_time = new Date() - start_time;
             // console.log(end_time);

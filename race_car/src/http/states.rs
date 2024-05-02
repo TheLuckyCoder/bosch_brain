@@ -39,12 +39,11 @@ pub enum CarStates {
 }
 
 /// Creates an object that manages all state related routes
-pub fn router(global_state: Arc<GlobalState>) -> Router {
+pub fn router() -> Router<Arc<GlobalState>> {
     Router::new()
         .route("/all", get(get_all_states))
         .route("/", get(get_current_state))
         .route("/:new_state", post(set_current_state))
-        .with_state(global_state)
 }
 
 /// Returns a list of all available states
