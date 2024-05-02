@@ -5,27 +5,29 @@ use std::time::Instant;
 
 use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::{ConnectInfo, Query, State, WebSocketUpgrade};
+use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use axum::routing::{get, put};
 use axum::{Form, Router};
 use axum_extra::{headers, TypedHeader};
-use sensors::name::SensorName;
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
 use v4l::buffer::Type;
-use v4l::format::FieldOrder;
-use v4l::io::mmap::Stream;
-use v4l::io::traits::CaptureStream;
-use v4l::prelude::MmapStream;
+use v4l::io::traits::{CaptureStream, Stream};
+use v4l::prelude::UserptrStream;
 use v4l::video::Capture;
 use v4l::{Device, FourCC};
 
+use sensors::name::SensorName;
+
 use crate::actuators::ActuatorName;
 use crate::http::GlobalState;
+
+const VIDEO_WIDTH: usize = 640;
+const VIDEO_HEIGHT: usize = 480;
 
 pub fn remote_router() -> Router<Arc<GlobalState>> {
     Router::new()
@@ -48,6 +50,7 @@ struct RemoteTemplate {
     sensors: Vec<&'static str>,
     actuators: Vec<&'static str>,
     joystick: JoystickQuery,
+    video_size: (usize, usize),
 }
 
 async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
@@ -72,6 +75,7 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
         sensors,
         actuators,
         joystick: JoystickQuery::default(),
+        video_size: (VIDEO_WIDTH, VIDEO_HEIGHT),
     }
 }
 
@@ -182,7 +186,6 @@ fn process_joystick_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Op
 }
 
 async fn remote_video(
-    State(state): State<Arc<GlobalState>>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -195,32 +198,29 @@ async fn remote_video(
     info!("`{user_agent}` at {addr} connected.");
     // finalize the upgrade process by returning upgrade callback.
     // we can customize the callback by sending additional info such as address.
-    ws.on_upgrade(move |socket| handle_video_socket(socket, addr, state))
+    ws.on_upgrade(move |socket| handle_video_socket(socket, addr))
 }
 
-async fn handle_video_socket(
-    mut socket: WebSocket,
-    who: SocketAddr,
-    global_state: Arc<GlobalState>,
-) {
+async fn handle_video_socket(mut socket: WebSocket, who: SocketAddr) {
     // Create a new capture device with a few extra parameters
-    let mut dev = Device::new(0).expect("Failed to open device");
+    let dev = Device::new(0).expect("Failed to open device");
 
     // Let's say we want to explicitly request another format
     let mut fmt = dev.format().expect("Failed to read format");
-    fmt.width = 640;
-    fmt.height = 480;
-    fmt.fourcc = FourCC::new(b"YUYV");
-    fmt.field_order = FieldOrder::Interlaced;
+    fmt.width = VIDEO_WIDTH as u32;
+    fmt.height = VIDEO_HEIGHT as u32;
+    fmt.fourcc = FourCC::new(b"MJPG");
+    // fmt.field_order = FieldOrder::Interlaced;
 
     let fmt = dev.set_format(&fmt).expect("Failed to write format");
-    let mut stream =
-        MmapStream::new(&mut dev, Type::VideoCapture).expect("Failed to create buffer stream");
+    let mut stream = UserptrStream::with_buffers(&dev, Type::VideoCapture, 2)
+        .expect("Failed to create buffer stream");
+    stream.start().unwrap();
     println!("Format in use:\n{}", fmt);
 
     loop {
         let capture_instant = Instant::now();
-        let (buf, _meta) = stream.next().unwrap();
+        let (buf, meta) = stream.next().unwrap();
         let capture_ms = capture_instant.elapsed().as_millis();
 
         let transmission_instant = Instant::now();
@@ -229,10 +229,12 @@ async fn handle_video_socket(
             .await
             .expect("TODO: panic message");
 
-        let transmission_micros = transmission_instant.elapsed().as_micros();
+        let transmission_ms = transmission_instant.elapsed().as_millis();
         println!(
-            "capture: {}ms, transmission: {}micros",
-            capture_ms, transmission_micros
+            "size: {}KB capture: {}ms, transmission: {}ms",
+            meta.bytesused / 1024,
+            capture_ms,
+            transmission_ms
         );
     }
 }

@@ -59,7 +59,7 @@ impl UdpBroadcast {
         std::thread::Builder::new()
             .name(String::from("UDP Broadcaster"))
             .spawn(move || loop {
-                std::thread::sleep(Duration::from_millis(50));
+                std::thread::sleep(Duration::from_millis(10));
 
                 let mut sensor_guard = sensor_manager.blocking_lock();
                 let udp_guard = udp_broadcast.blocking_lock();
