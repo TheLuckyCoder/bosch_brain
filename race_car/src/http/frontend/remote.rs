@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 use std::ops::ControlFlow;
 use std::sync::Arc;
+use std::time::Instant;
 
 use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
@@ -15,6 +16,13 @@ use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
 use tracing::{error, info};
+use v4l::buffer::Type;
+use v4l::format::FieldOrder;
+use v4l::io::mmap::Stream;
+use v4l::io::traits::CaptureStream;
+use v4l::prelude::MmapStream;
+use v4l::video::Capture;
+use v4l::{Device, FourCC};
 
 use crate::actuators::ActuatorName;
 use crate::http::GlobalState;
@@ -24,6 +32,7 @@ pub fn remote_router() -> Router<Arc<GlobalState>> {
         .route("/", get(get_remote))
         .route("/joystick", put(update_joystick))
         .route("/ws", get(remote_ws))
+        .route("/video", get(remote_video))
 }
 
 #[serde_as]
@@ -90,10 +99,14 @@ async fn remote_ws(
     info!("`{user_agent}` at {addr} connected.");
     // finalize the upgrade process by returning upgrade callback.
     // we can customize the callback by sending additional info such as address.
-    ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
+    ws.on_upgrade(move |socket| handle_joystick_socket(socket, addr, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc<GlobalState>) {
+async fn handle_joystick_socket(
+    mut socket: WebSocket,
+    who: SocketAddr,
+    global_state: Arc<GlobalState>,
+) {
     let actuator_manager = global_state.actuator_manager.clone();
 
     loop {
@@ -103,7 +116,7 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc
                 return;
             };
 
-            let message: WsMessage = match process_message(message, who) {
+            let message: WsMessage = match process_joystick_message(message, who) {
                 ControlFlow::Continue(message) => {
                     if let Some(message) = message {
                         message
@@ -142,7 +155,7 @@ struct WsMessage {
     joystick: WsJoystick,
 }
 
-fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMessage>> {
+fn process_joystick_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMessage>> {
     match msg {
         Message::Text(text) => {
             info!(">>> {who} sent str: {text:?}");
@@ -165,5 +178,61 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMe
             ControlFlow::Break(())
         }
         _ => ControlFlow::Continue(None),
+    }
+}
+
+async fn remote_video(
+    State(state): State<Arc<GlobalState>>,
+    ws: WebSocketUpgrade,
+    user_agent: Option<TypedHeader<headers::UserAgent>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> impl IntoResponse {
+    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
+        user_agent.to_string()
+    } else {
+        String::from("Unknown browser")
+    };
+    info!("`{user_agent}` at {addr} connected.");
+    // finalize the upgrade process by returning upgrade callback.
+    // we can customize the callback by sending additional info such as address.
+    ws.on_upgrade(move |socket| handle_video_socket(socket, addr, state))
+}
+
+async fn handle_video_socket(
+    mut socket: WebSocket,
+    who: SocketAddr,
+    global_state: Arc<GlobalState>,
+) {
+    // Create a new capture device with a few extra parameters
+    let mut dev = Device::new(0).expect("Failed to open device");
+
+    // Let's say we want to explicitly request another format
+    let mut fmt = dev.format().expect("Failed to read format");
+    fmt.width = 640;
+    fmt.height = 480;
+    fmt.fourcc = FourCC::new(b"YUYV");
+    fmt.field_order = FieldOrder::Interlaced;
+
+    let fmt = dev.set_format(&fmt).expect("Failed to write format");
+    let mut stream =
+        MmapStream::new(&mut dev, Type::VideoCapture).expect("Failed to create buffer stream");
+    println!("Format in use:\n{}", fmt);
+
+    loop {
+        let capture_instant = Instant::now();
+        let (buf, _meta) = stream.next().unwrap();
+        let capture_ms = capture_instant.elapsed().as_millis();
+
+        let transmission_instant = Instant::now();
+        socket
+            .send(Message::Binary(buf.to_vec()))
+            .await
+            .expect("TODO: panic message");
+
+        let transmission_micros = transmission_instant.elapsed().as_micros();
+        println!(
+            "capture: {}ms, transmission: {}micros",
+            capture_ms, transmission_micros
+        );
     }
 }
