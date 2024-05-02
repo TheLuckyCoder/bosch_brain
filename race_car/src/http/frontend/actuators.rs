@@ -9,7 +9,6 @@ use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, Path, State, WebSocketUpgrade};
 use axum::routing::{get, put};
 use axum::Router;
-use axum_extra::{headers, TypedHeader};
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
@@ -134,17 +133,9 @@ async fn stop_actuator(
 async fn actuators_ws(
     State(state): State<Arc<GlobalState>>,
     ws: WebSocketUpgrade,
-    user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
-        user_agent.to_string()
-    } else {
-        String::from("Unknown browser")
-    };
-    info!("`{user_agent}` at {addr} connected.");
-    // finalize the upgrade process by returning upgrade callback.
-    // we can customize the callback by sending additional info such as address.
+    info!("{addr} connected.");
     ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
@@ -189,10 +180,7 @@ struct WsMessage {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 enum WsData {
-    Value(
-        #[serde_as(as = "DisplayFromStr")]
-        f64,
-    ),
+    Value(#[serde_as(as = "DisplayFromStr")] f64),
     Config(serde_json::Value),
 }
 

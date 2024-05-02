@@ -5,6 +5,22 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct ServerConfig {
     pub mock_sensors: bool,
+    pub joystick: JoystickConfig,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct JoystickConfig {
+    pub size: u8,
+    pub opacity: u8,
+}
+
+impl Default for JoystickConfig {
+    fn default() -> Self {
+        Self {
+            size: 13,
+            opacity: 75,
+        }
+    }
 }
 
 impl ServerConfig {

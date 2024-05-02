@@ -14,7 +14,6 @@ futures-util = { version = "0.3", default-features = false, features = ["sink", 
 
 # HTTP
 axum = { version = "0.7", features = ["http2", "ws"] }
-axum-extra = { version = "0.9", features = ["typed-header"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["trace", "fs"] }
 askama = { version = "0.12.1", features = ["with-axum"] }

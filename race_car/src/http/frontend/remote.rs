@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 use std::ops::ControlFlow;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use askama::Template;
 use axum::extract::ws::{Message, WebSocket};
@@ -9,11 +9,13 @@ use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use axum::routing::{get, put};
 use axum::{Form, Router};
-use axum_extra::{headers, TypedHeader};
+use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use strum::IntoEnumIterator;
+use tokio::task::yield_now;
+use tokio::time::sleep;
 use tracing::{error, info};
 use v4l::buffer::Type;
 use v4l::io::traits::{CaptureStream, Stream};
@@ -24,6 +26,7 @@ use v4l::{Device, FourCC};
 use sensors::name::SensorName;
 
 use crate::actuators::ActuatorName;
+use crate::http::config::JoystickConfig;
 use crate::http::GlobalState;
 
 const VIDEO_WIDTH: usize = 640;
@@ -37,19 +40,12 @@ pub fn remote_router() -> Router<Arc<GlobalState>> {
         .route("/video", get(remote_video))
 }
 
-#[serde_as]
-#[derive(Default, Deserialize)]
-struct JoystickQuery {
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    size: Option<f32>,
-}
-
 #[derive(Template)]
 #[template(path = "pages/remote.html")]
 struct RemoteTemplate {
     sensors: Vec<&'static str>,
     actuators: Vec<&'static str>,
-    joystick: JoystickQuery,
+    joystick: JoystickConfig,
     video_size: (usize, usize),
 }
 
@@ -74,7 +70,7 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
     RemoteTemplate {
         sensors,
         actuators,
-        joystick: JoystickQuery::default(),
+        joystick: state.server_config.lock().await.joystick.clone(),
         video_size: (VIDEO_WIDTH, VIDEO_HEIGHT),
     }
 }
@@ -82,27 +78,43 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
 #[derive(Template)]
 #[template(path = "components/joystick.html")]
 struct JoystickTemplate {
-    joystick: JoystickQuery,
+    joystick: JoystickConfig,
 }
 
-async fn update_joystick(Form(joystick): Form<JoystickQuery>) -> impl IntoResponse {
-    JoystickTemplate { joystick }
+#[serde_as]
+#[derive(Default, Deserialize)]
+struct JoystickQuery {
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    size: Option<u8>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    opacity: Option<u8>,
+}
+
+async fn update_joystick(
+    State(state): State<Arc<GlobalState>>,
+    Form(query): Form<JoystickQuery>,
+) -> impl IntoResponse {
+    let mut server_config = state.server_config.lock().await;
+    let default = JoystickConfig::default();
+
+    let new_config = JoystickConfig {
+        size: query.size.unwrap_or(default.size),
+        opacity: query.opacity.unwrap_or(default.opacity),
+    };
+    server_config.joystick = new_config;
+    server_config.save_to_file().unwrap();
+
+    JoystickTemplate {
+        joystick: new_config,
+    }
 }
 
 async fn remote_ws(
     State(state): State<Arc<GlobalState>>,
     ws: WebSocketUpgrade,
-    user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
-        user_agent.to_string()
-    } else {
-        String::from("Unknown browser")
-    };
-    info!("`{user_agent}` at {addr} connected.");
-    // finalize the upgrade process by returning upgrade callback.
-    // we can customize the callback by sending additional info such as address.
+    info!("{addr} connected.");
     ws.on_upgrade(move |socket| handle_joystick_socket(socket, addr, state))
 }
 
@@ -187,21 +199,17 @@ fn process_joystick_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Op
 
 async fn remote_video(
     ws: WebSocketUpgrade,
-    user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
-        user_agent.to_string()
-    } else {
-        String::from("Unknown browser")
-    };
-    info!("`{user_agent}` at {addr} connected.");
+    info!("`{addr} connected.");
     // finalize the upgrade process by returning upgrade callback.
     // we can customize the callback by sending additional info such as address.
     ws.on_upgrade(move |socket| handle_video_socket(socket, addr))
 }
 
 async fn handle_video_socket(mut socket: WebSocket, who: SocketAddr) {
+    let (mut ws_sender, mut ws_receiver) = socket.split();
+
     // Create a new capture device with a few extra parameters
     let dev = Device::new(0).expect("Failed to open device");
 
@@ -218,23 +226,49 @@ async fn handle_video_socket(mut socket: WebSocket, who: SocketAddr) {
     stream.start().unwrap();
     println!("Format in use:\n{}", fmt);
 
-    loop {
-        let capture_instant = Instant::now();
-        let (buf, meta) = stream.next().unwrap();
-        let capture_ms = capture_instant.elapsed().as_millis();
+    let mut send_task = tokio::spawn(async move {
+        loop {
+            let capture_instant = Instant::now();
+            let (buf, meta) = stream.next().unwrap();
+            let capture_ms = capture_instant.elapsed().as_millis();
 
-        let transmission_instant = Instant::now();
-        socket
-            .send(Message::Binary(buf.to_vec()))
-            .await
-            .expect("TODO: panic message");
+            let transmission_instant = Instant::now();
+            if ws_sender.send(Message::Binary(buf.to_vec())).await.is_err() {
+                println!("client {who} abruptly disconnected");
+                return;
+            }
 
-        let transmission_ms = transmission_instant.elapsed().as_millis();
-        println!(
-            "size: {}KB capture: {}ms, transmission: {}ms",
-            meta.bytesused / 1024,
-            capture_ms,
-            transmission_ms
-        );
+            // let transmission_ms = transmission_instant.elapsed().as_millis();
+            // println!(
+            //     "size: {}KB capture: {}ms, transmission: {}ms",
+            //     meta.bytesused / 1024,
+            //     capture_ms,
+            //     transmission_ms
+            // );
+            yield_now().await;
+        }
+    });
+
+    let mut recv_task = tokio::spawn(async move {
+        loop {
+            while let Some(message) = ws_receiver.next().await {
+                let Ok(message) = message else {
+                    println!("client {who} disconnected");
+                    return;
+                };
+
+                if let Message::Close(_) = message {
+                    break;
+                }
+            }
+
+            sleep(Duration::from_millis(20)).await;
+        }
+    });
+
+    // If any one of the tasks exit, abort the other.
+    tokio::select! {
+        _rv_a = &mut send_task => recv_task.abort(),
+        _rv_b = &mut recv_task => send_task.abort(),
     }
 }

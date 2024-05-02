@@ -8,7 +8,7 @@ pub trait PwmMotorDriverParams: Sized + Send + 'static {
     fn value_to_percentage(&self, value: f64) -> Percentage;
 
     fn get_config_html(&self, name: ActuatorName) -> String;
-    
+
     fn parse(value: Value) -> Result<Self, serde_json::Error>;
 }
 
@@ -81,7 +81,7 @@ impl<PWM: Pwm, Params: PwmMotorDriverParams> Actuator for PwmMotorDriver<PWM, Pa
     }
 
     fn save_config(&mut self, data: Value) {
-        let content = data.to_string();
+        // let content = data.to_string();
         let new_params = match Params::parse(data) {
             Ok(params) => params,
             Err(e) => {
@@ -89,7 +89,7 @@ impl<PWM: Pwm, Params: PwmMotorDriverParams> Actuator for PwmMotorDriver<PWM, Pa
                 return;
             }
         };
-        
+
         self.params = new_params;
     }
 }
