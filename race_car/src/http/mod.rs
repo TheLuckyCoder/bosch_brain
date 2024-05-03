@@ -7,7 +7,6 @@ use axum::Router;
 use tokio::sync::Mutex;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
-use tower_livereload::LiveReloadLayer;
 use tracing::Level;
 
 use crate::actuators::manager::ActuatorManager;
@@ -16,10 +15,10 @@ use crate::http::states::CarStates;
 use crate::http::udp_broadcast::UdpBroadcast;
 use crate::sensors::manager::SensorManager;
 
+mod actuator;
 pub mod config;
 mod control;
 mod frontend;
-mod actuator;
 mod sensor;
 mod states;
 mod udp_broadcast;
@@ -64,14 +63,16 @@ impl GlobalState {
 pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
     let global_state = Arc::new(global_state);
 
+    let api_router = Router::new()
+        .nest("/actuators", actuator::router())
+        .nest("/state", states::router())
+        // .nest("/api/control", control::router(global_state))
+        .nest("/sensors", sensor::router());
+
     let app = Router::new()
         .merge(frontend::router())
-        .nest("/api/actuators", actuator::router())
-        .nest("/api/state", states::router())
-        .nest("/api/sensors", sensor::router())
-        // .nest("/api/control", control::router(global_state))
+        .nest("/api", api_router)
         .with_state(global_state)
-        .layer(LiveReloadLayer::new())
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))

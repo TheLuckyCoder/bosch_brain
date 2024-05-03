@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
     let server_config = ServerConfig::read_server_config().unwrap_or_else(|e| {
         error!("Failed to load config.toml: {e}");
         let default = ServerConfig::default();
-        let _ = default.save_to_file();
+        // let _ = default.save_to_file();
         default
     });
 

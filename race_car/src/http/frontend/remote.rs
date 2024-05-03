@@ -26,11 +26,8 @@ use v4l::{Device, FourCC};
 use sensors::name::SensorName;
 
 use crate::actuators::ActuatorName;
-use crate::http::config::JoystickConfig;
+use crate::http::config::{JoystickConfig, ServerConfig, VideoConfig};
 use crate::http::GlobalState;
-
-const VIDEO_WIDTH: usize = 640;
-const VIDEO_HEIGHT: usize = 480;
 
 pub fn remote_router() -> Router<Arc<GlobalState>> {
     Router::new()
@@ -45,8 +42,7 @@ pub fn remote_router() -> Router<Arc<GlobalState>> {
 struct RemoteTemplate {
     sensors: Vec<&'static str>,
     actuators: Vec<ActuatorName>,
-    joystick: JoystickConfig,
-    video_size: (usize, usize),
+    config: ServerConfig,
 }
 
 async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
@@ -69,15 +65,14 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
     RemoteTemplate {
         sensors,
         actuators,
-        joystick: state.server_config.lock().await.joystick,
-        video_size: (VIDEO_WIDTH, VIDEO_HEIGHT),
+        config: state.server_config.lock().await.clone(),
     }
 }
 
 #[derive(Template)]
 #[template(path = "components/joystick.html")]
 struct JoystickTemplate {
-    joystick: JoystickConfig,
+    config: ServerConfig,
 }
 
 #[serde_as]
@@ -107,7 +102,7 @@ async fn update_joystick(
     server_config.save_to_file().unwrap();
 
     JoystickTemplate {
-        joystick: new_config,
+        config: server_config.clone(),
     }
 }
 
@@ -189,16 +184,16 @@ fn process_joystick_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Op
 }
 
 async fn remote_video(
+    State(state): State<Arc<GlobalState>>,
     ws: WebSocketUpgrade,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
     info!("`{addr} connected.");
-    // finalize the upgrade process by returning upgrade callback.
-    // we can customize the callback by sending additional info such as address.
-    ws.on_upgrade(move |socket| handle_video_socket(socket, addr))
+    let video_config = state.server_config.lock().await.video;
+    ws.on_upgrade(move |socket| handle_video_socket(socket, addr, video_config))
 }
 
-async fn handle_video_socket(mut socket: WebSocket, who: SocketAddr) {
+async fn handle_video_socket(socket: WebSocket, who: SocketAddr, video_config: VideoConfig) {
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
     // Create a new capture device with a few extra parameters
@@ -206,10 +201,13 @@ async fn handle_video_socket(mut socket: WebSocket, who: SocketAddr) {
 
     // Let's say we want to explicitly request another format
     let mut fmt = dev.format().expect("Failed to read format");
-    fmt.width = VIDEO_WIDTH as u32;
-    fmt.height = VIDEO_HEIGHT as u32;
+    fmt.width = video_config.width as u32;
+    fmt.height = video_config.height as u32;
     fmt.fourcc = FourCC::new(b"MJPG");
-    // fmt.field_order = FieldOrder::Interlaced;
+
+    if fmt.width == 0 || fmt.height == 0 {
+        return;
+    }
 
     let fmt = dev.set_format(&fmt).expect("Failed to write format");
     let mut stream = UserptrStream::with_buffers(&dev, Type::VideoCapture, 2)

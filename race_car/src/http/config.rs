@@ -3,12 +3,6 @@ use std::{fs, io};
 use crate::actuators::ActuatorName;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
-pub struct ServerConfig {
-    pub mock_sensors: bool,
-    pub joystick: JoystickConfig,
-}
-
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct JoystickConfig {
     pub size: u8,
@@ -26,6 +20,28 @@ impl Default for JoystickConfig {
             y_axis: ActuatorName::SteeringMotor,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct VideoConfig {
+    pub width: u16,
+    pub height: u16,
+}
+
+impl Default for VideoConfig {
+    fn default() -> Self {
+        Self {
+            width: 640,
+            height: 480,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct ServerConfig {
+    pub mock_sensors: bool,
+    pub joystick: JoystickConfig,
+    pub video: VideoConfig,
 }
 
 impl ServerConfig {

@@ -4,21 +4,26 @@
 
 {% block content %}
 
-<main hx-ext="ws" class="relative">
-    <canvas id="streamdata" width="{{ video_size.0 }}" height="{{ video_size.1 }}" class="absolute w-screen h-screen">
-        Your browser does not support the HTML5 canvas tag.
-    </canvas>
+<div hx-ext="ws" class="relative min-h-screen min-w-screen">
+    <canvas id="streamdata" width="{{ config.video.width }}" height="{{ config.video.height }}"
+            class="absolute w-screen h-screen"></canvas>
 
-    <div ws-connect="/remote/ws" class="absolute inset-y-0 left-0">
+    <div ws-connect="/remote/ws" class="absolute bottom-0 left-0 p-6">
         {% include "../components/joystick.html" %}
     </div>
 
     <div class="absolute top-0 right-0 m-2" ws-connect="/sensors/ws">
-        <div class="bg-base-200 opacity-90 rounded-xl">
-            <button class="btn btn-square btn-outline m-2"
-                    onclick="configure_modal.showModal()">
-                <span class="material-symbols-outlined">settings</span>
-            </button>
+        <div class="bg-base-200 opacity-90 rounded-xl flex flex-col items-end">
+            <div class="mt-2 me-1">
+                <button class="btn btn-square btn-outline mx-1"
+                        onclick="document.getElementById('content').requestFullscreen()">
+                    <span class="material-symbols-outlined">fullscreen</span>
+                </button>
+                <button class="btn btn-square btn-outline mx-1"
+                        onclick="configure_modal.showModal()">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
+            </div>
 
             <div id="status" class="card-body">
                 <div class="flex flex-row justify-between">
@@ -47,12 +52,12 @@
                       class="flex flex-col py-4">
                     <label>
                         <span class="label-text">Size</span>
-                        <input value="{{ joystick.size }}" min="8" max="23"
+                        <input value="{{ config.joystick.size }}" min="8" max="23"
                                type="range" class="range" name="size"/>
                     </label>
                     <label>
                         <span class="label-text">Opacity</span>
-                        <input value="{{ joystick.opacity }}" min="0" max="100"
+                        <input value="{{ config.joystick.opacity }}" min="0" max="100"
                                type="range" class="range" name="opacity"/>
                     </label>
 
@@ -62,7 +67,7 @@
                         <span class="label-text">{{ actuator.as_ref() }}</span>
                         <input name="x_axis" value="{{ actuator.as_ref() }}"
                                type="radio" class="radio"
-                               {% if actuator.clone()== joystick.x_axis -%} checked {% endif -%}/>
+                               {% if actuator.clone()== config.joystick.x_axis -%} checked {% endif -%}/>
                     </label>
                     {% endfor %}
 
@@ -72,7 +77,7 @@
                         <span class="label-text">{{ actuator.as_ref() }}</span>
                         <input name="y_axis" value="{{ actuator.as_ref() }}"
                                type="radio" class="radio"
-                               {% if actuator.clone()== joystick.y_axis -%} checked {% endif -%}/>
+                               {% if actuator.clone()== config.joystick.y_axis -%} checked {% endif -%}/>
                     </label>
                     {% endfor %}
                 </form>
@@ -82,7 +87,7 @@
             </form>
         </dialog>
     </div>
-</main>
+</div>
 
 <script>
     document.addEventListener('htmx:wsConfigSend', function (event) {
@@ -98,22 +103,18 @@
     const canvas = document.getElementById("streamdata");
     const context = canvas.getContext("2d", {alpha: false});
 
-    if ("WebSocket" in window) {
-        const ws = new WebSocket(window.location.href + "/video");
-        ws.binaryType = "arraybuffer";
-        ws.onmessage = async function (evt) {
-            const start_time = new Date();
-            const imageBitmap = await createImageBitmap(new Blob([evt.data], {type: 'image/jpeg'}));
+    const ws = new WebSocket(window.location.href + "/video");
+    ws.binaryType = "arraybuffer";
+    ws.onmessage = async function (evt) {
+        const start_time = new Date();
+        const imageBitmap = await createImageBitmap(new Blob([evt.data], {type: 'image/jpeg'}));
 
-            // Draw the ImageBitmap directly onto the canvas
-            context.drawImage(imageBitmap, 0, 0);
+        // Draw the ImageBitmap directly onto the canvas
+        context.drawImage(imageBitmap, 0, 0);
 
-            const end_time = new Date() - start_time;
-            // console.log(end_time);
-        };
-    } else {
-        console.log("Unable to access video stream (please make sure your browser supports canvas and websockets)");
-    }
+        const end_time = new Date() - start_time;
+        // console.log(end_time);
+    };
 </script>
 
 {% endblock %}
