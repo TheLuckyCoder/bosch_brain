@@ -1,6 +1,6 @@
+use serde_json::Value;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use serde_json::Value;
 
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use strum::{AsRefStr, EnumIter, IntoStaticStr};
@@ -45,6 +45,8 @@ pub trait Actuator: Send + 'static {
     PartialEq,
     Eq,
     Hash,
+    PartialOrd,
+    Ord,
     EnumIter,
     IntoStaticStr,
     AsRefStr,

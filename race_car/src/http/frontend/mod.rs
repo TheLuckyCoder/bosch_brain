@@ -26,7 +26,7 @@ pub fn router() -> Router<Arc<GlobalState>> {
         .nest("/sensors", sensors::sensors_router())
         .nest("/remote", remote::remote_router())
         .nest("/actuators", actuators::actuators_router())
-        .layer(LiveReloadLayer::new())
+        // .layer(LiveReloadLayer::new())
         .route("/config/mock_sensors", post(toggle_mock_sensors))
 }
 

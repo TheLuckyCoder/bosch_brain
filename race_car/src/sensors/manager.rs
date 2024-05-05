@@ -6,11 +6,14 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 use std::{mem, thread};
 
-use crate::sensors::TimedSensorData;
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
+use tracing::{debug, error, info, warn};
+
 use sensors::name::SensorName;
 use sensors::BasicSensor;
-use tracing::{debug, error, info, warn};
+
+use crate::actuators::{Actuator, ActuatorName};
+use crate::sensors::TimedSensorData;
 
 #[derive(Default)]
 struct Shared {
@@ -92,6 +95,13 @@ impl SensorManager {
 
     pub fn get_data_receiver(&self) -> &BroadcastReceiver<TimedSensorData> {
         &self.receiver
+    }
+
+    pub fn get_active_sensors(&self) -> Vec<(SensorName, &Mutex<dyn BasicSensor + Send>)> {
+        self.sensors
+            .iter()
+            .map(|(name, sensor)| (*name, sensor.as_ref()))
+            .collect::<Vec<_>>()
     }
 
     fn spawn_sensor_thread(

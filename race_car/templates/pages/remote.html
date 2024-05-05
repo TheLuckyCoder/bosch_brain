@@ -4,22 +4,30 @@
 
 {% block content %}
 
+{% set actuator_name = main_actuator_name %}
+{% set actuator_paused = main_actuator_paused %}
+
 <div hx-ext="ws" class="relative min-h-screen min-w-screen">
     <canvas id="streamdata" width="{{ config.video.width }}" height="{{ config.video.height }}"
             class="absolute w-screen h-screen"></canvas>
 
-    <div ws-connect="/remote/ws" class="absolute bottom-0 left-0 p-6">
+    <div ws-connect="/remote/ws" class="absolute bottom-0 w-screen p-6 flex flex-row justify-between items-end">
         {% include "../components/joystick.html" %}
+
+        <div class="flex flex-col size-32 md:size-36 lg:size-40 gap-2 md:gap-4 lg:gap-8">
+            {% include "../components/actuators_pause_resume_btn.html" %}
+            {% include "../components/actuators_stop_btn.html" %}
+        </div>
     </div>
 
     <div class="absolute top-0 right-0 m-2" ws-connect="/sensors/ws">
         <div class="bg-base-200 opacity-90 rounded-xl flex flex-col items-end">
             <div class="mt-2 me-1">
-                <button class="btn btn-square btn-outline mx-1"
+                <button id="btn-fullscreen" class="btn btn-square btn-outline mx-1"
                         onclick="document.getElementById('content').requestFullscreen()">
                     <span class="material-symbols-outlined">fullscreen</span>
                 </button>
-                <button class="btn btn-square btn-outline mx-1"
+                <button id="btn-settings" class="btn btn-square btn-outline mx-1"
                         onclick="configure_modal.showModal()">
                     <span class="material-symbols-outlined">settings</span>
                 </button>
@@ -115,6 +123,19 @@
         const end_time = new Date() - start_time;
         // console.log(end_time);
     };
+
+    // Shortcuts
+    document.onkeyup = function (e) {
+        if (e.key === 'f') {
+            document.getElementById("btn-fullscreen").onclick(e)
+        } else if (e.key === 's') {
+            htmx.trigger("#btn-stop-{{ actuator_name }}", "click")
+        } else if (e.key === 'r') {
+            htmx.trigger("#btn-pause-resume-{{ actuator_name }}", "click")
+        }
+    };
+
+    function {{ actuator_name }}ResetValue() {}
 </script>
 
 {% endblock %}

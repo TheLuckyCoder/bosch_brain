@@ -43,29 +43,34 @@ struct RemoteTemplate {
     sensors: Vec<&'static str>,
     actuators: Vec<ActuatorName>,
     config: ServerConfig,
+    main_actuator_name: ActuatorName,
+    main_actuator_paused: bool,
 }
 
 async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
-    let sensor_manager = state.sensor_manager.lock().await;
-
-    let sensors: Vec<_> = SensorName::iter()
-        .filter(|sensor_name| sensor_manager.get_sensor(sensor_name).is_some())
-        .map(|sensor_name| sensor_name.into())
+    let sensors_names = state
+        .sensor_manager
+        .lock()
+        .await
+        .get_active_sensors()
+        .iter()
+        .map(|(name, _)| name.into())
         .collect();
 
-    let actuators = ActuatorName::iter()
-        .filter(|actuator_name| {
-            state
-                .actuator_manager
-                .get_actuator_ref(*actuator_name)
-                .is_some()
-        })
-        .collect();
+    let active_actuators = state.actuator_manager.get_active_actuators();
+    let active_actuators_name: Vec<_> = active_actuators.iter().map(|(name, _)| *name).collect();
+
+    let config = state.server_config.lock().await.clone();
 
     RemoteTemplate {
-        sensors,
-        actuators,
-        config: state.server_config.lock().await.clone(),
+        sensors: sensors_names,
+        actuators: active_actuators_name,
+        main_actuator_name: config.joystick.x_axis,
+        main_actuator_paused: active_actuators
+            .iter()
+            .find(|(name, actuator)| *name == config.joystick.x_axis)
+            .map_or(true, |(_, actuator)| actuator.lock().unwrap().is_paused()),
+        config,
     }
 }
 

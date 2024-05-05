@@ -8,8 +8,7 @@ shared = { path = "../shared" }
 
 ### Sensors
 linux-embedded-hal = { version = "0.4.0", default-features = false, features = ["gpio_cdev", "i2c"] }
-rppal = { version = "0.17.1", features = ["hal"] }
-hc-sr04 = "0.1"
+hc-sr04 = "0.1.2"
 bno055 = { version = "0.4.0", features = ["std"] }
 #htu21df-sensor = { version = "0.1.4", features = ["std"] }
 serialport = { version = "4", default-features = false }

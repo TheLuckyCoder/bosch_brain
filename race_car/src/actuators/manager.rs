@@ -1,21 +1,23 @@
-use std::collections::HashMap;
+use std::collections::btree_map::Iter;
+use std::collections::BTreeMap;
+use std::iter::Map;
 use std::sync::{Arc, Mutex};
 
 use crate::actuators::{Actuator, ActuatorName};
 
 pub struct ActuatorManager {
-    sensors: HashMap<ActuatorName, Arc<Mutex<dyn Actuator + Send>>>,
+    actuators: BTreeMap<ActuatorName, Arc<Mutex<dyn Actuator + Send>>>,
 }
 
 impl ActuatorManager {
     pub fn new() -> Self {
         Self {
-            sensors: Default::default(),
+            actuators: Default::default(),
         }
     }
 
     pub fn add_actuator(&mut self, actuator: impl Actuator) {
-        self.sensors
+        self.actuators
             .insert(actuator.name(), Arc::new(Mutex::new(actuator)));
     }
 
@@ -23,15 +25,22 @@ impl ActuatorManager {
         &self,
         actuator_name: ActuatorName,
     ) -> Option<Arc<Mutex<dyn Actuator + Send>>> {
-        self.sensors.get(&actuator_name).cloned()
+        self.actuators.get(&actuator_name).cloned()
     }
 
     pub fn get_actuator_ref(
         &self,
         actuator_name: ActuatorName,
     ) -> Option<&Mutex<dyn Actuator + Send>> {
-        self.sensors
+        self.actuators
             .get(&actuator_name)
             .map(|actuator| actuator.as_ref())
+    }
+
+    pub fn get_active_actuators(&self) -> Vec<(ActuatorName, &Mutex<dyn Actuator + Send>)> {
+        self.actuators
+            .iter()
+            .map(|(name, actuator)| (*name, actuator.as_ref()))
+            .collect()
     }
 }
