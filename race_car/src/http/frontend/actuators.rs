@@ -7,8 +7,8 @@ use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, Path, State, WebSocketUpgrade};
-use axum::routing::{get, put};
-use axum::Router;
+use axum::routing::{get, post, put};
+use axum::{Form, Router};
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
@@ -24,6 +24,17 @@ pub fn actuators_router() -> Router<Arc<GlobalState>> {
         .route("/pause/:name", put(pause_actuator))
         .route("/resume/:name", put(resume_actuator))
         .route("/stop/:name", put(stop_actuator))
+        .route("/inputs", post(update_inputs))
+}
+
+const VALUE_STEPS: [f32; 6] = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5];
+
+struct InputsParams {
+    value: f64,
+    step_input: u8,
+    step_value: f32,
+    min: f64,
+    max: f64,
 }
 
 struct ActuatorTemplateContent {
@@ -37,6 +48,7 @@ struct ActuatorTemplateContent {
 #[template(path = "pages/actuators.html")]
 struct ActuatorsTemplate {
     actuators: Vec<ActuatorTemplateContent>,
+    inputs: InputsParams,
 }
 
 async fn get_actuators(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
@@ -63,13 +75,23 @@ async fn get_actuators(State(state): State<Arc<GlobalState>>) -> impl IntoRespon
         )
         .collect();
 
-    ActuatorsTemplate { actuators }
+    ActuatorsTemplate {
+        actuators,
+        inputs: InputsParams {
+            value: 0.0,
+            step_input: 0,
+            step_value: VALUE_STEPS[0],
+            min: -1.0,
+            max: 1.0,
+        },
+    }
 }
 
 #[derive(Template)]
 #[template(path = "responses/pause_resume_actuators_response.html")]
 struct PauseResumeResponse {
-    actuator: ActuatorTemplateContent,
+    actuator_name: &'static str,
+    actuator_paused: bool,
 }
 
 async fn pause_actuator(
@@ -82,12 +104,8 @@ async fn pause_actuator(
     actuator.pause();
 
     PauseResumeResponse {
-        actuator: ActuatorTemplateContent {
-            name: actuator.name().into(),
-            active: true,
-            paused: actuator.is_paused(),
-            configuration: actuator.get_config_html(),
-        },
+        actuator_name: actuator.name().into(),
+        actuator_paused: actuator.is_paused(),
     }
 }
 
@@ -101,12 +119,8 @@ async fn resume_actuator(
     actuator.resume();
 
     PauseResumeResponse {
-        actuator: ActuatorTemplateContent {
-            name: actuator.name().into(),
-            active: true,
-            paused: actuator.is_paused(),
-            configuration: actuator.get_config_html(),
-        },
+        actuator_name: actuator.name().into(),
+        actuator_paused: actuator.is_paused(),
     }
 }
 
@@ -120,12 +134,8 @@ async fn stop_actuator(
     actuator.stop();
 
     PauseResumeResponse {
-        actuator: ActuatorTemplateContent {
-            name: actuator.name().into(),
-            active: true,
-            paused: actuator.is_paused(),
-            configuration: actuator.get_config_html(),
-        },
+        actuator_name: actuator.name().into(),
+        actuator_paused: actuator.is_paused(),
     }
 }
 
@@ -135,10 +145,14 @@ async fn actuators_ws(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
     info!("{addr} connected.");
-    ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
+    ws.on_upgrade(move |socket| handle_actuators_socket(socket, addr, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, who: SocketAddr, global_state: Arc<GlobalState>) {
+async fn handle_actuators_socket(
+    mut socket: WebSocket,
+    who: SocketAddr,
+    global_state: Arc<GlobalState>,
+) {
     let actuator_manager = global_state.actuator_manager.clone();
 
     loop {
@@ -209,5 +223,39 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMe
             ControlFlow::Break(())
         }
         _ => ControlFlow::Continue(None),
+    }
+}
+
+#[serde_as]
+#[derive(Deserialize)]
+struct InputsQuery {
+    name: String,
+    #[serde_as(as = "DisplayFromStr")]
+    value: f64,
+    #[serde_as(as = "DisplayFromStr")]
+    step: u8,
+    #[serde_as(as = "DisplayFromStr")]
+    min: f64,
+    #[serde_as(as = "DisplayFromStr")]
+    max: f64,
+}
+
+#[derive(Template)]
+#[template(path = "components/actuators_inputs.html")]
+struct InputsTemplate {
+    actuator_name: String,
+    inputs: InputsParams,
+}
+
+async fn update_inputs(Form(inputs): Form<InputsQuery>) -> impl IntoResponse {
+    InputsTemplate {
+        actuator_name: inputs.name,
+        inputs: InputsParams {
+            value: inputs.value.clamp(inputs.min, inputs.max),
+            step_input: inputs.step,
+            step_value: VALUE_STEPS[(inputs.step as usize).min(VALUE_STEPS.len())],
+            min: inputs.min.min(inputs.max),
+            max: inputs.max.max(inputs.min),
+        },
     }
 }

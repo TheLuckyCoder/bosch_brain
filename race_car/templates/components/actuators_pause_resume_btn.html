@@ -1,7 +1,6 @@
-<button id="btn-pause-resume-{{ actuator.name }}"
+<button id="btn-pause-resume-{{ actuator_name }}"
         class="btn btn-primary grow basis-0"
-        hx-put="/actuators/{% if actuator.paused -%}resume{% else -%}pause{% endif -%}/{{ actuator.name }}"
-        hx-swap="outerHTML"
-        {% if !actuator.active -%} disabled{% endif -%}>
-    {% if actuator.paused -%}Resume{% else -%}Pause{% endif -%}
+        hx-put="/actuators/{% if actuator_paused -%}resume{% else -%}pause{% endif -%}/{{ actuator_name }}"
+        hx-swap="outerHTML">
+    {% if actuator_paused -%}Resume{% else -%}Pause{% endif -%}
 </button>

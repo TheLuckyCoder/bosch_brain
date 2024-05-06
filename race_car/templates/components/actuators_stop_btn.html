@@ -1,7 +1,7 @@
-<button class="btn btn-error grow basis-0"
-        hx-put="/actuators/stop/{{ actuator.name }}"
+<button id="btn-stop-{{ actuator_name }}"
+        class="btn btn-error grow basis-0"
+        hx-put="/actuators/stop/{{ actuator_name }}"
         hx-swap="outerHTML"
-        hx-target="#btn-pause-resume-{{ actuator.name }}"
-        onclick="{{ actuator.name }}ResetValue()"
-        {% if !actuator.active -%}disabled{% endif -%}>Stop
+        hx-target="#btn-pause-resume-{{ actuator_name }}"
+        onclick="{{ actuator_name }}ResetValue()">Stop
 </button>

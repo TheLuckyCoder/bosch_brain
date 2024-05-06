@@ -1,7 +1,7 @@
 mock_sensors = true
 
 [joystick]
-size = 15
+size = 10
 opacity = 82
 x_axis = "SpeedMotor"
 y_axis = "SteeringMotor"

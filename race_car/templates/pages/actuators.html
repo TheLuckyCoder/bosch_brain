@@ -10,39 +10,17 @@
         <div class="card-body" hx-vals='{"name": "{{ actuator.name }}"}'>
             <h2 class="card-title">{{ actuator.name }}</h2>
 
-            <label>
-                <span class="label-text">Step:
-                    <span id="step-value-{{ actuator.name }}">0.001</span>
-                </span>
-                <input id="step-range-{{ actuator.name }}" type="range" min="0" max="5" value="0"
-                       class="range range-accent"
-                       {% if !actuator.active -%} disabled {% endif -%} />
-            </label>
+            {% if actuator.active %}
+                {% set actuator_name = actuator.name %}
+                {% set actuator_paused = actuator.paused %}
+                {% include "../components/actuators_inputs.html" %}
 
-            {% include "../components/actuator_motor_value_input.html" %}
+                <div class="card-actions mt-4">
+                    {% include "../components/actuators_pause_resume_btn.html" %}
+                    {% include "../components/actuators_stop_btn.html" %}
+                </div>
 
-            <div class="flex flex-row gap-4">
-                <label class="grow">
-                    <span class="label-text">Min range:</span>
-                    <input type="number" id="min-value-{{ actuator.name }}"
-                           name="min" min="-1" max="1" value="-1"
-                           class="input input-bordered input-sm w-full">
-                </label>
-                <label class="grow">
-                    <span class="label-text">Max range:</span>
-                    <input type="number" id="max-value-{{ actuator.name }}"
-                           name="max" min="-1" max="1" value="1"
-                           class="input input-bordered input-sm w-full">
-                </label>
-            </div>
-
-            <div class="card-actions mt-4">
-                {% include "../components/actuators_pause_resume_btn.html" %}
-                {% include "../components/actuators_stop_btn.html" %}
-            </div>
-
-            {% if actuator.active -%}
-            {% match actuator.configuration %}
+                {% match actuator.configuration %}
                 {% when Some with (config_str) %}
                 <div class="collapse collapse-arrow">
                     <input type="checkbox"/>
@@ -53,62 +31,26 @@
                     </div>
                 </div>
                 {% when None %}
-            {% endmatch %}
+                {% endmatch %}
+            {% else %}
+                This actuator failed to be activated
             {% endif -%}
-
-            <script>
-                const step_value_{{ actuator.name }} = document.getElementById('step-value-{{ actuator.name }}');
-                const step_range_{{ actuator.name }} = document.getElementById('step-range-{{ actuator.name }}');
-                const value_input_{{ actuator.name }} = document.getElementById('value-{{ actuator.name }}');
-                const range_input_{{ actuator.name }} = document.getElementById('range-{{ actuator.name }}');
-                const min_value_{{ actuator.name }} = document.getElementById('min-value-{{ actuator.name }}');
-                const max_value_{{ actuator.name }} = document.getElementById('max-value-{{ actuator.name }}');
-
-                function {{ actuator.name }}ResetValue() {
-                    value_input_{{ actuator.name }}.innerHTML = "0";
-                    range_input_{{ actuator.name }}.value = 0;
-                    console.log("Value was reset {{ actuator.name }}")
-                }
-
-                function {{ actuator.name }}SaveConfig(data) {
-                    console.log("Value was saved:" + data)
-                }
-
-                step_range_{{ actuator.name }}.addEventListener('input', function () {
-                    const steps = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5];
-                    const step = steps[parseInt(this.value)];
-                    step_value_{{ actuator.name }}.innerHTML = step;
-
-                    range_input_{{ actuator.name }}.step = step;
-                });
-
-                min_value_{{ actuator.name }}.addEventListener('change', function () {
-                    range_input_{{ actuator.name }}.min = this.value;
-                    max_value_{{ actuator.name }}.min = this.value;
-                    const max_value = max_value_{{ actuator.name }}.value;
-                    if (parseInt(this.value) > parseInt(max_value)) {
-                        this.value = max_value;
-                    }
-                });
-
-                max_value_{{ actuator.name }}.addEventListener('change', function () {
-                    range_input_{{ actuator.name }}.max = this.value;
-                    min_value_{{ actuator.name }}.max = this.value;
-                    
-                    const min_value = min_value_{{ actuator.name }}.value;
-                    if (parseInt(this.value) < parseInt(min_value)) {
-                        this.value = min_value;
-                    }
-                });
-
-            </script>
         </div>
     </div>
     {% endfor %}
-
 </div>
 
 <script>
+    {% for actuator in actuators %}
+    {% if actuator.active %}
+        function {{ actuator.name }}ResetValue() {
+            document.getElementById('value-{{ actuator.name }}').innerHTML = "0";
+            document.getElementById('range-{{ actuator.name }}').value = 0;
+            console.log("Value was reset {{ actuator.name }}")
+        }
+    {% endif %}
+    {% endfor %}
+
     document.addEventListener('htmx:wsConfigSend', function (event) {
         if (event.detail.headers["data_type"] === "motor_config") {
             const new_parameters = {

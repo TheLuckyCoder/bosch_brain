@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::TrySendError;
 use std::sync::{Arc, Condvar, Mutex};
@@ -12,7 +12,7 @@ use tracing::{debug, error, info, warn};
 use sensors::name::SensorName;
 use sensors::BasicSensor;
 
-use crate::actuators::{Actuator, ActuatorName};
+use crate::actuators::Actuator;
 use crate::sensors::TimedSensorData;
 
 #[derive(Default)]
@@ -26,7 +26,7 @@ struct Shared {
 /// Manages all the sensor instances
 pub struct SensorManager {
     shared_data: Arc<Shared>,
-    sensors: HashMap<SensorName, Arc<Mutex<dyn BasicSensor + Send>>>,
+    sensors: BTreeMap<SensorName, Arc<Mutex<dyn BasicSensor + Send>>>,
     handles: HashMap<SensorName, JoinHandle<()>>,
     receiver: BroadcastReceiver<TimedSensorData>,
     sender: BroadcastSender<TimedSensorData>,
@@ -37,7 +37,7 @@ impl SensorManager {
         let (sender, receiver) = broadcast_queue(64);
         Self {
             shared_data: Arc::new(Shared::default()),
-            sensors: HashMap::new(),
+            sensors: BTreeMap::new(),
             handles: HashMap::new(),
             receiver,
             sender,

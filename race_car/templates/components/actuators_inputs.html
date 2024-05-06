@@ -1,0 +1,38 @@
+<div id="form-{{ actuator_name }}">
+    <label>
+    <span class="label-text">Value:
+        <span id="value-{{ actuator_name }}">{{ inputs.value }}</span>
+    </span>
+        <input id="range-{{ actuator_name }}" name="value" type="range"
+               min="{{ inputs.min }}" max="{{ inputs.max }}" value="{{ inputs.value }}" step="{{ inputs.step_value }}"
+               class="range range-primary"
+               oninput="document.getElementById('value-{{ actuator_name }}').innerHTML = this.value"
+               hx-trigger="input" ws-send hx-headers='{"data_type": "value"}'/>
+    </label>
+
+    <form hx-post="/actuators/inputs" hx-swap="outerHTML" hx-target="#form-{{ actuator_name }}"
+          hx-trigger="change" hx-vals="js:{value: document.getElementById('value-{{ actuator_name }}').innerHTML}">
+        <label>
+            <span class="label-text">Step:
+                <span id="step-value-{{ actuator_name }}">{{ inputs.step_value }}</span>
+            </span>
+            <input type="range" name="step" min="0" max="5" value="{{ inputs.step_input }}"
+                   class="range range-accent"/>
+        </label>
+
+        <div class="flex flex-row gap-4">
+            <label class="grow basis-0">
+                <span class="label-text">Min range:</span>
+                <input type="number" name="min" min="-1" max="{{ inputs.max }}"
+                       value="{{ inputs.min }}" step="0.0001"
+                       class="input input-bordered input-sm w-full">
+            </label>
+            <label class="grow basis-0">
+                <span class="label-text">Max range:</span>
+                <input type="number" name="max" min="{{ inputs.min }}" max="1"
+                       value="{{ inputs.max }}" step="0.0001"
+                       class="input input-bordered input-sm w-full">
+            </label>
+        </div>
+    </form>
+</div>

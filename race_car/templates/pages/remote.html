@@ -48,8 +48,7 @@
                     {% for sensor in sensors %}
                     <label class="cursor-pointer label">
                         <span class="label-text">{{ sensor }}</span>
-                        <input id="checkbox-{{ sensor }}" name="{{ sensor }}"
-                               type="checkbox" class="toggle toggle-secondary"
+                        <input name="{{ sensor }}" type="checkbox" class="toggle toggle-secondary"
                                ws-send/>
                     </label>
                     {% endfor %}

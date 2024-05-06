@@ -8,6 +8,7 @@ use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::Router;
 use strum::IntoEnumIterator;
+use tower_http::compression::CompressionLayer;
 use tower_livereload::LiveReloadLayer;
 
 use crate::http::config::ServerConfig;
@@ -28,6 +29,7 @@ pub fn router() -> Router<Arc<GlobalState>> {
         .nest("/actuators", actuators::actuators_router())
         // .layer(LiveReloadLayer::new())
         .route("/config/mock_sensors", post(toggle_mock_sensors))
+        .layer(CompressionLayer::new())
 }
 
 struct HomeSensor {
