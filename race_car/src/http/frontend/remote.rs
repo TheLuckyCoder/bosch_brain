@@ -201,7 +201,7 @@ async fn handle_video_socket(socket: WebSocket, who: SocketAddr, video_config: V
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
     // Create a new capture device with a few extra parameters
-    let dev = Device::new(0).expect("Failed to open device");
+    let dev = Device::new(video_config.device_index as usize).expect("Failed to open device");
 
     // Let's say we want to explicitly request another format
     let mut fmt = dev.format().expect("Failed to read format");
@@ -214,7 +214,7 @@ async fn handle_video_socket(socket: WebSocket, who: SocketAddr, video_config: V
     }
 
     let fmt = dev.set_format(&fmt).expect("Failed to write format");
-    let mut stream = UserptrStream::with_buffers(&dev, Type::VideoCapture, 2)
+    let mut stream = UserptrStream::with_buffers(&dev, Type::VideoCapture, 1)
         .expect("Failed to create buffer stream");
     stream.start().unwrap();
     println!("Format in use:\n{}", fmt);

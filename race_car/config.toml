@@ -7,5 +7,6 @@ x_axis = "SpeedMotor"
 y_axis = "SteeringMotor"
 
 [video]
+device_index = 0
 width = 640
-height = 0
+height = 480

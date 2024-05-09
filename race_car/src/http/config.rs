@@ -24,6 +24,7 @@ impl Default for JoystickConfig {
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct VideoConfig {
+    pub device_index: u8,
     pub width: u16,
     pub height: u16,
 }
@@ -31,6 +32,7 @@ pub struct VideoConfig {
 impl Default for VideoConfig {
     fn default() -> Self {
         Self {
+            device_index: 0,
             width: 640,
             height: 480,
         }

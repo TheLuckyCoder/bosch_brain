@@ -113,13 +113,13 @@
     const ws = new WebSocket(window.location.href + "/video");
     ws.binaryType = "arraybuffer";
     ws.onmessage = async function (evt) {
-        const start_time = new Date();
-        const imageBitmap = await createImageBitmap(new Blob([evt.data], {type: 'image/jpeg'}));
+        // const start_time = new Date();
+        const image_bitmap = await createImageBitmap(new Blob([evt.data], {type: 'image/jpeg'}));
 
         // Draw the ImageBitmap directly onto the canvas
-        context.drawImage(imageBitmap, 0, 0);
+        context.drawImage(image_bitmap, 0, 0);
 
-        const end_time = new Date() - start_time;
+        // const end_time = new Date() - start_time;
         // console.log(end_time);
     };
 

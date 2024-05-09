@@ -14,6 +14,7 @@ style="
         var is_dragging = false;
         var x_percent = 0;
         var y_percent = 0;
+        var gamepadIndex = null;
 
         // Function to move the knob
         function moveKnob(x, y) {
@@ -22,25 +23,21 @@ style="
             const half_width = rect.width / 2;
             const half_height = rect.height / 2;
 
-            const dx = x - (rect.left + window.scrollX + half_width);
-            const dy = y - (rect.top + window.scrollY + half_height);
+            let dx = x - (rect.left + window.scrollX + half_width);
+            let dy = y - (rect.top + window.scrollY + half_height);
             const distance = Math.hypot(dx, dy);
 
             if (distance < half_width) {
                 knob.style.transform = `translate(${dx}px, ${dy}px)`;
-
-                x_percent = dx / half_width;
-                y_percent = dy / half_height;
             } else {
                 // Extend the knob to the edge of the joystick circle
                 const angle = Math.atan2(dy, dx);
-                const limitX = Math.cos(angle) * half_width;
-                const limitY = Math.sin(angle) * half_height;
+                dx = Math.cos(angle) * half_width;
+                dy = Math.sin(angle) * half_height;
                 knob.style.transform = `translate(${limitX}px, ${limitY}px)`;
-
-                x_percent = limitX / half_width;
-                y_percent = limitY / half_height;
             }
+            x_percent = dx / half_width;
+            y_percent = dy / half_height;
 
             htmx.trigger("#knob", "knob");
         }
@@ -76,6 +73,52 @@ style="
                 moveKnob(e.touches[0].clientX, e.touches[0].clientY);
             }
         }, {passive: false});
+
+        // Gamepad support
+        window.addEventListener('gamepadconnected', (e) => {
+            const gp = navigator.getGamepads()[e.gamepad.index];
+            console.log(
+                "Gamepad connected at index %d: %s. %d buttons, %d axes.",
+                gp.index,
+                gp.id,
+                gp.buttons.length,
+                gp.axes.length,
+            );
+            gamepadIndex = e.gamepad.index;
+            requestAnimationFrame(pollGamepad);
+        });
+
+        window.addEventListener('gamepaddisconnected', (e) => {
+            if (gamepadIndex === e.gamepad.index) {
+                gamepadIndex = null;
+            }
+        });
+
+        function pollGamepad() {
+            if (gamepadIndex === null) return;
+
+            const gamepad = navigator.getGamepads()[gamepadIndex];
+            if (gamepad) {
+                // Assume that the left stick is at index 0 (axes 0 and 1)
+                let x = gamepad.axes[0];
+                let y = gamepad.axes[1];
+                
+                if (x < 0.1)
+                    x = 0;
+                if (y < 0.1)
+                    y = 0;
+
+                if (gamepad.buttons[0].pressed) {
+                    htmx.trigger("*[id^='btn-stop-']", "click")
+                } else if (x !== x_percent || y !== y_percent) {
+                    x_percent = x;
+                    y_percent = y;
+                    htmx.trigger("#knob", "knob");
+                }
+
+            }
+            requestAnimationFrame(pollGamepad);
+        }
 
     </script>
 </div>
