@@ -16,13 +16,17 @@ pub trait BasicSensor: Send + 'static {
     /// Reads data from the sensor, returning a generic [SensorData] enum
     fn read_data(&mut self) -> SensorData;
 
+    fn start_calibration(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
     /// Allows the sensor to read its debug data, needed for configuration, defaults to [Self::read_data]
     fn read_debug(&mut self) -> String {
         self.read_data().to_string()
     }
 
     /// Allows the sensor to save its current configuration, defaults to doing nothing
-    fn save_config(&mut self) -> anyhow::Result<()> {
+    fn end_calibration(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
 }
@@ -59,11 +63,11 @@ impl Display for SensorData {
                 acceleration,
             } => write!(
                 f,
-                "Quaternion: {:?}, Acceleration: {:?}",
+                "Quaternion: {:.4?}, Acceleration: {:.4?}",
                 quaternion, acceleration
             ),
             SensorData::Ultrasonic(distance) => write!(f, "Ultrasonic: {distance:.4}"),
-            SensorData::Gps(coordinates) => write!(f, "{coordinates:?}"),
+            SensorData::Gps(coordinates) => write!(f, "{coordinates:.4?}"),
             SensorData::Velocity(velocity) => write!(f, "Velocity: {velocity:.4}"),
             SensorData::Ambience {
                 temperature,

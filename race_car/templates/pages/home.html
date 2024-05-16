@@ -9,7 +9,7 @@
         <div>
             <label class="cursor-pointer label">
                 <span class="label-text">Mock Sensors</span>
-                <input type="checkbox" class="toggle toggle-secondary"
+                <input type="checkbox" class="toggle toggle-secondary" autocomplete="off"
                        hx-post="/config/mock_sensors"
                        {% if server_config.mock_sensors %}checked{% endif %}>
             </label>

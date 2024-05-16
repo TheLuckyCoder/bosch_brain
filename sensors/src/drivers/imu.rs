@@ -102,7 +102,7 @@ impl BasicSensor for ImuSensor {
         )
     }
 
-    fn save_config(&mut self) -> anyhow::Result<()> {
+    fn end_calibration(&mut self) -> anyhow::Result<()> {
         let mut delay = Delay {};
 
         let calibration = self

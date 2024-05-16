@@ -110,7 +110,7 @@ impl UdpBroadcast {
 
         let sensor = sensor_manager.get_sensor(active_sensor)?;
 
-        if let Err(e) = sensor.lock().unwrap().save_config() {
+        if let Err(e) = sensor.lock().unwrap().end_calibration() {
             error!("Failed to save error: {e}");
         }
 

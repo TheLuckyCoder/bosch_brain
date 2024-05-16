@@ -18,7 +18,7 @@ use tokio::time::sleep;
 use tracing::{error, info};
 use v4l::buffer::Type;
 use v4l::io::traits::{CaptureStream, Stream};
-use v4l::prelude::UserptrStream;
+use v4l::prelude::{MmapStream, UserptrStream};
 use v4l::video::Capture;
 use v4l::{Device, FourCC};
 
@@ -214,7 +214,7 @@ async fn handle_video_socket(socket: WebSocket, who: SocketAddr, video_config: V
     }
 
     let fmt = dev.set_format(&fmt).expect("Failed to write format");
-    let mut stream = UserptrStream::with_buffers(&dev, Type::VideoCapture, 1)
+    let mut stream = MmapStream::with_buffers(&dev, Type::VideoCapture, 1)
         .expect("Failed to create buffer stream");
     stream.start().unwrap();
     println!("Format in use:\n{}", fmt);

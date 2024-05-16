@@ -9,7 +9,7 @@ pub use pwm::mock::*;
 
 pub mod manager;
 pub mod motor_drivers;
-mod pwm;
+pub mod pwm;
 pub mod pwm_motor_driver;
 
 pub trait Actuator: Send + 'static {

@@ -1,12 +1,15 @@
-use ::sensors::drivers::set_board_led_status;
 use anyhow::Context;
+use pwm_pca9685::Pca9685;
 use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
+use ::sensors::drivers::set_board_led_status;
+
 use crate::actuators::manager::ActuatorManager;
 use crate::actuators::motor_drivers::{SteeringMotorParams, VelocityMotorParams};
+use crate::actuators::pwm::pca9685::Pca9685Pwm;
 use crate::actuators::pwm_motor_driver::PwmMotorDriver;
 use crate::actuators::{ActuatorName, MockPwm};
 use crate::http::config::ServerConfig;
@@ -37,9 +40,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server_config = ServerConfig::read_server_config().unwrap_or_else(|e| {
         error!("Failed to load config.toml: {e}");
-        let default = ServerConfig::default();
-        // let _ = default.save_to_file();
-        default
+        ServerConfig::default()
     });
 
     let mut sensor_manager = SensorManager::new();
@@ -55,6 +56,7 @@ async fn main() -> anyhow::Result<()> {
 
     actuator_manager.add_actuator(PwmMotorDriver::new(
         ActuatorName::SteeringMotor,
+        // Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C1)?,
         MockPwm,
         SteeringMotorParams {
             min: 7.2,
@@ -65,12 +67,13 @@ async fn main() -> anyhow::Result<()> {
     ));
     actuator_manager.add_actuator(PwmMotorDriver::new(
         ActuatorName::SpeedMotor,
+        // Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C0)?,
         MockPwm,
         VelocityMotorParams {
             min: 8.2,
             lower_middle: 8.6,
-            upper_middle: 9.05,
-            max: 9.08,
+            upper_middle: 9.5,
+            max: 9.7,
         },
         true,
     ));
