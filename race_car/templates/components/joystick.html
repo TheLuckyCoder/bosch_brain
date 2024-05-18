@@ -1,7 +1,6 @@
-<div id="joystick" class="m-4 bg-gray-700 rounded-full flex items-center justify-center"
+<div id="joystick" class="md:m-4 bg-gray-700 rounded-full flex items-center justify-center aspect-square"
 style="
     width: {{- config.joystick.size -}}rem;
-    height: {{- config.joystick.size -}}rem;
     --tw-bg-opacity: {{ f32::from(config.joystick.opacity.clone()) / 100f32 -}};
 ">
     <div id="knob" class="size-12 bg-gray-400 rounded-full cursor-pointer"
@@ -16,28 +15,26 @@ style="
         var y_percent = 0;
         var gamepadIndex = null;
 
-        // Function to move the knob
         function moveKnob(x, y) {
             if (!is_dragging) return;
             const rect = joystick.getBoundingClientRect();
-            const half_width = rect.width / 2;
-            const half_height = rect.height / 2;
+            const radius = rect.width / 2;
 
-            let dx = x - (rect.left + window.scrollX + half_width);
-            let dy = y - (rect.top + window.scrollY + half_height);
+            let dx = x - (rect.left + window.scrollX + radius);
+            let dy = y - (rect.top + window.scrollY + radius);
             const distance = Math.hypot(dx, dy);
 
-            if (distance < half_width) {
+            if (distance < radius) {
                 knob.style.transform = `translate(${dx}px, ${dy}px)`;
             } else {
                 // Extend the knob to the edge of the joystick circle
                 const angle = Math.atan2(dy, dx);
-                dx = Math.cos(angle) * half_width;
-                dy = Math.sin(angle) * half_height;
-                knob.style.transform = `translate(${limitX}px, ${limitY}px)`;
+                dx = Math.cos(angle) * radius;
+                dy = Math.sin(angle) * radius;
+                knob.style.transform = `translate(${dx}px, ${dy}px)`;
             }
-            x_percent = dx / half_width;
-            y_percent = dy / half_height;
+            x_percent = dx / radius;
+            y_percent = dy / radius;
 
             htmx.trigger("#knob", "knob");
         }
@@ -61,7 +58,7 @@ style="
         }
 
         knob.addEventListener('mousedown', startDrag);
-        knob.addEventListener('mouseup', stopDrag);
+        document.addEventListener('mouseup', stopDrag);
         document.addEventListener('mousemove', (e) => {
             moveKnob(e.clientX, e.clientY);
         });
@@ -116,8 +113,9 @@ style="
                     htmx.trigger("#knob", "knob");
                 }
 
+                // TODO Check if this needs to be outside the if
+                requestAnimationFrame(pollGamepad);
             }
-            requestAnimationFrame(pollGamepad);
         }
 
     </script>

@@ -2,7 +2,7 @@ const {fontFamily} = require("tailwindcss/defaultTheme");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-    content: ["./templates/**/*.html"],
+    content: ["./race_car/templates/**/*.html"],
     plugins: [require('daisyui')],
     theme: {
         extend: {

@@ -2,14 +2,14 @@
   "name": "race_car",
   "version": "1.0.0",
   "scripts": {
-    "format": "race_car/node_modules/.bin/prettier --write --ignore-unknown .",
-    "dev": "npx tailwindcss -i race_car/templates/inputs.css -o ../assets/css/main.css --watch",
-    "prod": "npx tailwindcss -i race_car/templates/inputs.css -o ../assets/css/main.css --minify"
+    "format": "node_modules/.bin/prettier --write --ignore-unknown .",
+    "dev": "npx tailwindcss -i race_car/templates/inputs.css -o assets/css/main.css --watch",
+    "prod": "npx tailwindcss -i race_car/templates/inputs.css -o assets/css/main.css --minify"
   },
   "devDependencies": {
     "prettier": "3.2.5",
-    "prettier-plugin-tailwindcss": "0.5.13",
+    "prettier-plugin-tailwindcss": "0.5.14",
     "tailwindcss": "3.4.3",
-    "daisyui": "4.10.1"
+    "daisyui": "4.11.1"
   }
 }

@@ -11,7 +11,7 @@
     <canvas id="streamdata" width="{{ config.video.width }}" height="{{ config.video.height }}"
             class="absolute w-screen h-screen"></canvas>
 
-    <div ws-connect="/remote/ws" class="absolute bottom-0 w-screen p-6 flex flex-row justify-between items-end">
+    <div ws-connect="/remote/ws" class="absolute bottom-0 w-screen p-2 md:p-6 gap-2 flex flex-wrap flex-row justify-between items-end">
         {% include "../components/joystick.html" %}
 
         <div class="flex flex-col size-32 md:size-36 lg:size-40 gap-2 md:gap-4 lg:gap-8">
