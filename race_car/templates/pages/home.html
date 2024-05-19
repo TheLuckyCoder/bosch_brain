@@ -5,7 +5,6 @@
 {% block content %}
 <div class="flex flex-col h-screen justify-between">
     <header>
-        <h1 class="w-screen flex justify-center text-4xl">VROOM VROOM</h1>
         <div>
             <label class="cursor-pointer label">
                 <span class="label-text">Mock Sensors</span>
@@ -28,6 +27,7 @@
     </main>
 
     <footer id="menu" class="bg-blue-500 grid grid-flow-col grid-rows-1 justify-evenly rounded-t-3xl">
+        <!--hx-boost="true"-->
         {% let bottom_app_bar_text = "Sensors" %}
         {% let bottom_app_bar_icon = "sensors" %}
         {% let bottom_app_bar_link = "/sensors" %}
