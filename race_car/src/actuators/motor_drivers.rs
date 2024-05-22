@@ -60,7 +60,7 @@ impl PwmMotorDriverParams for VelocityMotorParams {
             .unwrap_or_else(|e| format!("Failed to render config: {e}"))
     }
 
-    fn parse(value: serde_json::Value) -> Result<Self, serde_json::Error> {
+    fn parse_config(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
 }
@@ -115,7 +115,7 @@ impl PwmMotorDriverParams for SteeringMotorParams {
             .unwrap_or_else(|e| format!("Failed to render config: {e}"))
     }
 
-    fn parse(value: serde_json::Value) -> Result<Self, serde_json::Error> {
+    fn parse_config(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
 }

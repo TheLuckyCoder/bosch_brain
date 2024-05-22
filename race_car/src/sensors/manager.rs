@@ -12,7 +12,7 @@ use tracing::{debug, error, info, warn};
 use sensors::name::SensorName;
 use sensors::BasicSensor;
 
-use crate::actuators::Actuator;
+use crate::actuators::ActuatorDriver;
 use crate::sensors::TimedSensorData;
 
 #[derive(Default)]

@@ -1,5 +1,5 @@
-use crate::actuators::pwm::{Percentage, Pwm};
-use crate::actuators::{Actuator, ActuatorName};
+use crate::actuators::pwm::{Percentage, PwmDriver};
+use crate::actuators::{ActuatorDriver, ActuatorName};
 use serde_json::Value;
 use tracing::error;
 
@@ -8,10 +8,10 @@ pub trait PwmMotorDriverParams: Sized + Send + 'static {
 
     fn get_config_html(&self, name: ActuatorName) -> String;
 
-    fn parse(value: Value) -> Result<Self, serde_json::Error>;
+    fn parse_config(value: Value) -> Result<Self, serde_json::Error>;
 }
 
-pub struct PwmMotorDriver<PWM: Pwm, Params: PwmMotorDriverParams> {
+pub struct PwmMotorDriver<PWM: PwmDriver, Params: PwmMotorDriverParams> {
     pwm: PWM,
     params: Params,
     last_value: f64,
@@ -20,7 +20,7 @@ pub struct PwmMotorDriver<PWM: Pwm, Params: PwmMotorDriverParams> {
     inverse_direction: bool,
 }
 
-impl<PWM: Pwm, Params: PwmMotorDriverParams> PwmMotorDriver<PWM, Params> {
+impl<PWM: PwmDriver, Params: PwmMotorDriverParams> PwmMotorDriver<PWM, Params> {
     pub fn new(
         actuator_name: ActuatorName,
         pwm: PWM,
@@ -38,7 +38,7 @@ impl<PWM: Pwm, Params: PwmMotorDriverParams> PwmMotorDriver<PWM, Params> {
     }
 }
 
-impl<PWM: Pwm, Params: PwmMotorDriverParams> Actuator for PwmMotorDriver<PWM, Params> {
+impl<PWM: PwmDriver, Params: PwmMotorDriverParams> ActuatorDriver for PwmMotorDriver<PWM, Params> {
     fn name(&self) -> ActuatorName {
         self.actuator_name
     }
@@ -81,7 +81,7 @@ impl<PWM: Pwm, Params: PwmMotorDriverParams> Actuator for PwmMotorDriver<PWM, Pa
 
     fn save_config(&mut self, data: Value) {
         // let content = data.to_string();
-        let new_params = match Params::parse(data) {
+        let new_params = match Params::parse_config(data) {
             Ok(params) => params,
             Err(e) => {
                 error!("Failed to parse params: {e}");
@@ -93,7 +93,7 @@ impl<PWM: Pwm, Params: PwmMotorDriverParams> Actuator for PwmMotorDriver<PWM, Pa
     }
 }
 
-impl<PWM: Pwm, Params: PwmMotorDriverParams> Drop for PwmMotorDriver<PWM, Params> {
+impl<PWM: PwmDriver, Params: PwmMotorDriverParams> Drop for PwmMotorDriver<PWM, Params> {
     fn drop(&mut self) {
         self.stop()
     }

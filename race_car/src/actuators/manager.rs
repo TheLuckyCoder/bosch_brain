@@ -3,10 +3,10 @@ use std::collections::BTreeMap;
 use std::iter::Map;
 use std::sync::{Arc, Mutex};
 
-use crate::actuators::{Actuator, ActuatorName};
+use crate::actuators::{ActuatorDriver, ActuatorName};
 
 pub struct ActuatorManager {
-    actuators: BTreeMap<ActuatorName, Arc<Mutex<dyn Actuator + Send>>>,
+    actuators: BTreeMap<ActuatorName, Arc<Mutex<dyn ActuatorDriver + Send>>>,
 }
 
 impl ActuatorManager {
@@ -16,7 +16,7 @@ impl ActuatorManager {
         }
     }
 
-    pub fn add_actuator(&mut self, actuator: impl Actuator) {
+    pub fn add_actuator(&mut self, actuator: impl ActuatorDriver) {
         self.actuators
             .insert(actuator.name(), Arc::new(Mutex::new(actuator)));
     }
@@ -24,20 +24,20 @@ impl ActuatorManager {
     pub fn get_actuator(
         &self,
         actuator_name: ActuatorName,
-    ) -> Option<Arc<Mutex<dyn Actuator + Send>>> {
+    ) -> Option<Arc<Mutex<dyn ActuatorDriver + Send>>> {
         self.actuators.get(&actuator_name).cloned()
     }
 
     pub fn get_actuator_ref(
         &self,
         actuator_name: ActuatorName,
-    ) -> Option<&Mutex<dyn Actuator + Send>> {
+    ) -> Option<&Mutex<dyn ActuatorDriver + Send>> {
         self.actuators
             .get(&actuator_name)
             .map(|actuator| actuator.as_ref())
     }
 
-    pub fn get_active_actuators(&self) -> Vec<(ActuatorName, &Mutex<dyn Actuator + Send>)> {
+    pub fn get_active_actuators(&self) -> Vec<(ActuatorName, &Mutex<dyn ActuatorDriver + Send>)> {
         self.actuators
             .iter()
             .map(|(name, actuator)| (*name, actuator.as_ref()))

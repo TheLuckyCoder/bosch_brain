@@ -12,7 +12,7 @@ pub mod motor_drivers;
 pub mod pwm;
 pub mod pwm_motor_driver;
 
-pub trait Actuator: Send + 'static {
+pub trait ActuatorDriver: Send + 'static {
     fn name(&self) -> ActuatorName;
 
     fn set_value(&mut self, value: f64);

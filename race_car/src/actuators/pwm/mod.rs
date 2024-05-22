@@ -24,7 +24,7 @@ impl From<f64> for Percentage {
 //     }
 // }
 
-pub trait Pwm: Send + 'static {
+pub trait PwmDriver: Send + 'static {
     fn set_duty_cycle(&mut self, percentage: Percentage);
 
     fn turn_off(&mut self);
