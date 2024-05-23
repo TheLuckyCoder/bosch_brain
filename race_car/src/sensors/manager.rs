@@ -1,18 +1,17 @@
+use std::{mem, thread};
 use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::TrySendError;
-use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
-use std::{mem, thread};
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{debug, error, info, warn};
 
-use sensors::name::SensorName;
 use sensors::BasicSensor;
+use sensors::name::SensorName;
 
-use crate::actuators::ActuatorDriver;
 use crate::sensors::TimedSensorData;
 
 #[derive(Default)]
@@ -150,5 +149,74 @@ impl SensorManager {
                 }
             }
         })
+    }
+}
+
+impl Drop for SensorManager {
+    fn drop(&mut self) {
+        self.stop_listening_to_sensors();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sensors::SensorData::Velocity;
+
+    use crate::sensors::SensorData;
+
+    use super::*;
+
+    struct TestSensor {
+        name: SensorName,
+        data: Vec<SensorData>,
+        index: usize,
+    }
+
+    impl TestSensor {
+        fn new(name: SensorName, data: Vec<SensorData>) -> Self {
+            Self {
+                name,
+                data,
+                index: 0,
+            }
+        }
+    }
+
+    impl BasicSensor for TestSensor {
+        fn name(&self) -> SensorName {
+            self.name
+        }
+
+        fn read_data(&mut self) -> SensorData {
+            let data = self.data[self.index % self.data.len()].clone();
+            self.index += 1;
+            data
+        }
+    }
+
+    #[test]
+    fn test_sensor_manager() {
+        let data_list = vec![
+            Velocity(10.0),
+            Velocity(20.0),
+            Velocity(30.0),
+            Velocity(40.0),
+        ];
+        let test_sensor = TestSensor::new(SensorName::Velocity, data_list.clone());
+
+        let mut manager = SensorManager::new();
+        manager.add_sensor(test_sensor);
+        manager.start_listening_to_sensors();
+
+        let mut index = 0;
+        while let Ok(data) = manager.get_data_receiver().recv() {
+            assert_eq!(data_list[index], data.data);
+            index += 1;
+            if index == data_list.len() {
+                break;
+            }
+        }
+
+        assert_eq!(index, data_list.len());
     }
 }

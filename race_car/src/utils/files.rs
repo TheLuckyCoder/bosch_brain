@@ -22,3 +22,15 @@ pub fn get_car_file(file_name: impl AsRef<str>) -> PathBuf {
     path.push(file_name.as_ref());
     path
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn car_folder() {
+        let mut path = PathBuf::from(std::env::var("HOME").unwrap());
+        path.push("race_car");
+        assert_eq!(path, get_car_dir());
+    }
+}

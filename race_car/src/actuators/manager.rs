@@ -1,6 +1,4 @@
-use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
-use std::iter::Map;
 use std::sync::{Arc, Mutex};
 
 use crate::actuators::{ActuatorDriver, ActuatorName};

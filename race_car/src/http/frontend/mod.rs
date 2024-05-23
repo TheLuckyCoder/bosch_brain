@@ -9,7 +9,6 @@ use axum::routing::{get, post};
 use axum::Router;
 use strum::IntoEnumIterator;
 use tower_http::compression::CompressionLayer;
-use tower_livereload::LiveReloadLayer;
 
 use crate::http::config::ServerConfig;
 use crate::http::GlobalState;
@@ -41,13 +40,11 @@ struct HomeSensor {
 #[derive(Template)]
 #[template(path = "pages/home.html")]
 struct HomeTemplate {
-    state: &'static str,
     sensors: Vec<HomeSensor>,
     server_config: ServerConfig,
 }
 
 async fn get_home(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
-    let car_state = *state.car_state.lock().await;
     let sensor_manager = state.sensor_manager.lock().await;
 
     let sensors: Vec<_> = SensorName::iter()
@@ -66,7 +63,6 @@ async fn get_home(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
         .collect();
 
     HomeTemplate {
-        state: car_state.into(),
         sensors,
         server_config: state.server_config.lock().await.clone(),
     }

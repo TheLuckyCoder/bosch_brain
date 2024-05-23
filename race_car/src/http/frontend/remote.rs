@@ -18,7 +18,7 @@ use tokio::time::sleep;
 use tracing::{error, info};
 use v4l::buffer::Type;
 use v4l::io::traits::{CaptureStream, Stream};
-use v4l::prelude::{MmapStream, UserptrStream};
+use v4l::prelude::{MmapStream};
 use v4l::video::Capture;
 use v4l::{Device, FourCC};
 

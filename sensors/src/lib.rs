@@ -1,5 +1,5 @@
 use crate::name::SensorName;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 pub mod drivers;
@@ -31,7 +31,7 @@ pub trait BasicSensor: Send + 'static {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct GpsCoordinates {
     pub x: f32,
     pub y: f32,
@@ -40,7 +40,7 @@ pub struct GpsCoordinates {
 }
 
 /// Enum containing all possible sensor data
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SensorData {
     Imu {
         quaternion: [f32; 4],

@@ -34,12 +34,10 @@ pub fn sensors_router() -> Router<Arc<GlobalState>> {
 #[derive(Template)]
 #[template(path = "pages/sensors.html")]
 struct SensorTemplate {
-    state: &'static str,
     sensors: Vec<&'static str>,
 }
 
 async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
-    let car_state = *state.car_state.lock().await;
     let sensor_manager = state.sensor_manager.lock().await;
 
     let sensors: Vec<_> = SensorName::iter()
@@ -48,7 +46,6 @@ async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse
         .collect();
 
     SensorTemplate {
-        state: car_state.into(),
         sensors,
     }
 }

@@ -3,14 +3,15 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::extract::{ConnectInfo, State};
+use axum::{Json, Router};
+use axum::extract::{ConnectInfo, Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use axum::{Json, Router};
-use sensors::name::SensorName;
 use strum::IntoEnumIterator;
 use tracing::info;
+
+use sensors::name::SensorName;
 
 use crate::http::GlobalState;
 
@@ -19,6 +20,17 @@ pub fn router() -> Router<Arc<GlobalState>> {
     Router::new()
         .route("/", get(get_sensors))
         .route("/active_udp", post(set_udp_sensors))
+        .route("/:name/read", get(read_sensor))
+}
+
+async fn read_sensor(
+    State(state): State<Arc<GlobalState>>,
+    Path(name): Path<SensorName>,
+) -> impl IntoResponse {
+    let sensor_manager = state.sensor_manager.lock().await;
+
+    let mut sensor = sensor_manager.get_sensor(&name).unwrap().lock().unwrap();
+    Json(sensor.read_data())
 }
 
 /// Returns a list of all available and initialized sensors
@@ -60,4 +72,63 @@ async fn set_udp_sensors(
     udp_manager.set_active_sensors(sensors, format!("{}:3001", addr.ip()));
 
     StatusCode::OK
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use reqwest;
+
+    use sensors::{BasicSensor, SensorData};
+    use sensors::name::SensorName;
+
+    use crate::actuators::manager::ActuatorManager;
+    use crate::http::{GlobalState, http_server};
+    use crate::http::config::ServerConfig;
+    use crate::sensors::manager::SensorManager;
+
+    struct TestSensor {}
+
+    impl BasicSensor for TestSensor {
+        fn name(&self) -> SensorName {
+            SensorName::Velocity
+        }
+
+        fn read_data(&mut self) -> SensorData {
+            SensorData::Velocity(20.0)
+        }
+    }
+
+    #[tokio::test]
+    async fn read_sensor() {
+        let client = reqwest::Client::new();
+        let mut sensor_manager = SensorManager::new();
+        sensor_manager.add_sensor(TestSensor {});
+
+        tokio::task::spawn(async {
+            http_server(GlobalState::new(
+                sensor_manager,
+                ActuatorManager::new(),
+                ServerConfig::default(),
+            ))
+            .await
+        });
+
+        // Wait for the server to start
+        tokio::time::sleep(Duration::from_millis(1)).await;
+
+        let response = client
+            .get("http://localhost:8080/api/sensors/Velocity/read")
+            .send()
+            .await
+            .unwrap();
+
+        let status_code = response.status();
+        let text = response.text().await.unwrap();
+        println!("Status: {}; {}", status_code, text);
+        let json: SensorData = serde_json::from_str(&text).unwrap();
+
+        assert_eq!(json, SensorData::Velocity(20.0));
+    }
 }
