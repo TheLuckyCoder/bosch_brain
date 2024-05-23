@@ -2,9 +2,8 @@
 resolver = "2"
 members = [
     "shared",
-    "bosch_car",
-    "race_car"
-    , "sensors"]
+    "race_car",
+    "sensors"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread", "sync", "net"] }
