@@ -33,7 +33,7 @@ pub trait ActuatorDriver: Send + 'static {
         false
     }
 
-    fn get_config_json(&self) -> Option<String> {
+    fn get_config(&self) -> Option<String> {
         None
     }
 

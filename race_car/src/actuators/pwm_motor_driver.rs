@@ -87,7 +87,7 @@ impl<PWM: PwmDriver, Params: PwmMotorDriverParams> ActuatorDriver for PwmMotorDr
         self.paused
     }
 
-    fn get_config_json(&self) -> Option<String> {
+    fn get_config(&self) -> Option<String> {
         Some(self.params.get_config_json())
     }
 

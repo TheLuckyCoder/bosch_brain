@@ -5,6 +5,7 @@ use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use axum::http::StatusCode;
 use strum::IntoEnumIterator;
 use tokio::task;
 use tracing::info;
@@ -39,7 +40,10 @@ async fn get_actuator_parameters(
 ) -> impl IntoResponse {
     let actuator = state.actuator_manager.get_actuator_ref(actuator_name).unwrap().lock().unwrap();
 
-    Json(actuator.get_config_json().unwrap_or_else(|| "Not supported for this actuator".to_string()))
+    match actuator.get_config() {
+        None => (StatusCode::NOT_IMPLEMENTED, "Not supported for this actuator".to_string()),
+        Some(config) => (StatusCode::OK, config),
+    }
 }
 
 /// Sets the parameters for the given actuator
