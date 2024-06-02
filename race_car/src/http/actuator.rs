@@ -6,40 +6,11 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use strum::IntoEnumIterator;
+use tokio::task;
+use tracing::info;
 
 use crate::actuators::ActuatorName;
 use crate::http::GlobalState;
-
-/*fn get_actuator_params_file(actuator: Motor) -> PathBuf {
-    let mut path = get_car_dir();
-    path.push(&format!("motor_params_{actuator:?}.json"));
-    path
-}
-
-async fn read_params_from_files(global_state: &Arc<GlobalState>) {
-    for actuator in ALL_actuatorS {
-        let file_path = get_actuator_params_file(actuator);
-        let params_file = match std::fs::File::open(&file_path) {
-            Ok(params_file) => params_file,
-            Err(e) => {
-                log::warn!("Failed to read {} reason: {e}", file_path.display());
-                continue;
-            }
-        };
-        let mut reader = BufReader::new(params_file);
-
-        match serde_json::from_reader(&mut reader) {
-            Ok(params) => global_state
-                .motor_driver
-                .lock()
-                .await
-                .set_params(actuator, params),
-            Err(e) => {
-                log::error!("Failed to deserialize {} reason: {e}", file_path.display());
-            }
-        }
-    }
-}*/
 
 /// Creates an object that manages all the actuator routes
 pub fn router() -> Router<Arc<GlobalState>> {
@@ -52,6 +23,8 @@ pub fn router() -> Router<Arc<GlobalState>> {
         .route("/pause", post(pause_actuator))
         .route("/resume/:actuator", post(resume_actuator))
         .route("/resume", post(resume_actuator))
+        .route("/params/:actuator", get(get_actuator_parameters))
+        .route("/params/:actuator", post(set_actuator_parameters))
 }
 
 /// Returns a list of all motors
@@ -60,39 +33,32 @@ async fn get_actuators() -> impl IntoResponse {
 }
 
 /// Returns the current parameters for the given actuator
-/*async fn get_actuator_parameters(
+async fn get_actuator_parameters(
     State(state): State<Arc<GlobalState>>,
-    Path(actuator): Path<ActuatorName>,
+    Path(actuator_name): Path<ActuatorName>,
 ) -> impl IntoResponse {
-    let motor_driver = state.motor_driver.lock().await;
+    let actuator = state.actuator_manager.get_actuator_ref(actuator_name).unwrap().lock().unwrap();
 
-    Json(motor_driver.get_params(actuator))
-}*/
+    Json(actuator.get_config_json().unwrap_or_else(|| "Not supported for this actuator".to_string()))
+}
 
 /// Sets the parameters for the given actuator
-/*async fn set_actuator_parameters(
+async fn set_actuator_parameters(
     State(state): State<Arc<GlobalState>>,
-    Path(actuator): Path<ActuatorName>,
-    Json(params): Json<MotorParams>,
+    Path(actuator_name): Path<ActuatorName>,
+    Json(params): Json<String>,
 ) {
-    let mut motor_driver = state.motor_driver.lock().await;
-
-    info!("Motor params received: {params:?}");
-    motor_driver.set_params(actuator, params.clone());
-
-    let motor_params_path = get_actuator_params_file(actuator);
+    info!("Motor params received: {params}");
 
     task::spawn_blocking(move || {
-        let file = std::fs::File::create(motor_params_path).unwrap();
-        let mut writer = BufWriter::new(file);
+        let mut actuator = state.actuator_manager.get_actuator_ref(actuator_name).unwrap().lock().unwrap();
 
-        serde_json::to_writer(&mut writer, &params).unwrap();
-        writer.flush().unwrap();
-        writer.get_ref().sync_all().unwrap();
+        actuator.save_config(params)
     })
     .await
+    .unwrap()
     .unwrap();
-}*/
+}
 
 /// Stops the given actuator, or all motors if no actuator is specified
 async fn stop_actuator(

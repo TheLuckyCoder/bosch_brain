@@ -2,12 +2,12 @@ use crate::actuators::pwm::Percentage;
 use crate::actuators::pwm_motor_driver::PwmMotorDriverParams;
 use crate::actuators::ActuatorName;
 use askama::Template;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 
 #[serde_as]
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct VelocityMotorParams {
     #[serde_as(as = "DisplayFromStr")]
     pub min: f64,
@@ -36,6 +36,10 @@ impl PwmMotorDriverParams for VelocityMotorParams {
         percentage.into()
     }
 
+    fn get_config_json(&self) -> String {
+        serde_json::to_string_pretty(self).expect("Serialization should not fail")
+    }
+
     fn get_config_html(&self, name: ActuatorName) -> String {
         #[derive(Template)]
         #[template(path = "components/velocity_motor_config.html")]
@@ -60,13 +64,13 @@ impl PwmMotorDriverParams for VelocityMotorParams {
             .unwrap_or_else(|e| format!("Failed to render config: {e}"))
     }
 
-    fn parse_config(value: serde_json::Value) -> Result<Self, serde_json::Error> {
-        serde_json::from_value(value)
+    fn parse_config(config: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(config)
     }
 }
 
 #[serde_as]
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct SteeringMotorParams {
     #[serde_as(as = "DisplayFromStr")]
     pub min: f64,
@@ -93,6 +97,10 @@ impl PwmMotorDriverParams for SteeringMotorParams {
         percentage.into()
     }
 
+    fn get_config_json(&self) -> String {
+        serde_json::to_string_pretty(self).expect("Serialization should not fail")
+    }
+
     fn get_config_html(&self, name: ActuatorName) -> String {
         #[derive(Template)]
         #[template(path = "components/steering_motor_config.html")]
@@ -115,7 +123,7 @@ impl PwmMotorDriverParams for SteeringMotorParams {
             .unwrap_or_else(|e| format!("Failed to render config: {e}"))
     }
 
-    fn parse_config(value: serde_json::Value) -> Result<Self, serde_json::Error> {
-        serde_json::from_value(value)
+    fn parse_config(config: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(config)
     }
 }

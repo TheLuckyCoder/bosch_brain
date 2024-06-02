@@ -22,8 +22,6 @@ use v4l::prelude::{MmapStream};
 use v4l::video::Capture;
 use v4l::{Device, FourCC};
 
-use sensors::name::SensorName;
-
 use crate::actuators::ActuatorName;
 use crate::http::config::{JoystickConfig, ServerConfig, VideoConfig};
 use crate::http::GlobalState;
@@ -222,10 +220,10 @@ async fn handle_video_socket(socket: WebSocket, who: SocketAddr, video_config: V
     let mut send_task = tokio::spawn(async move {
         loop {
             let capture_instant = Instant::now();
-            let (buf, meta) = stream.next().unwrap();
+            let (buf, _meta) = stream.next().unwrap();
             let capture_ms = capture_instant.elapsed().as_millis();
 
-            let transmission_instant = Instant::now();
+            // let transmission_instant = Instant::now();
             if ws_sender.send(Message::Binary(buf.to_vec())).await.is_err() {
                 println!("client {who} abruptly disconnected");
                 return;

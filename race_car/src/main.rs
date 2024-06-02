@@ -1,17 +1,13 @@
 use anyhow::Context;
-use pwm_pca9685::Pca9685;
 use tracing::{error, info};
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
 
 use ::sensors::drivers::set_board_led_status;
+use crate::actuators::{add_all_actuators, add_all_mock_actuators};
 
 use crate::actuators::manager::ActuatorManager;
-use crate::actuators::motor_drivers::{SteeringMotorParams, VelocityMotorParams};
-use crate::actuators::pwm::pca9685::Pca9685Pwm;
-use crate::actuators::pwm_motor_driver::PwmMotorDriver;
-use crate::actuators::{ActuatorName, MockPwm};
 use crate::http::config::ServerConfig;
 use crate::http::GlobalState;
 use crate::sensors::add_all_sensors;
@@ -44,39 +40,16 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let mut sensor_manager = SensorManager::new();
+    let mut actuator_manager = ActuatorManager::new();
 
     if server_config.mock_sensors {
         info!("Initializing with Mock Sensors");
         add_all_mock_sensors(&mut sensor_manager);
+        add_all_mock_actuators(&mut actuator_manager);
     } else {
         add_all_sensors(&mut sensor_manager);
+        add_all_actuators(&mut actuator_manager);
     }
-
-    let mut actuator_manager = ActuatorManager::new();
-
-    actuator_manager.add_actuator(PwmMotorDriver::new(
-        ActuatorName::SteeringMotor,
-        // Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C1)?,
-        MockPwm,
-        SteeringMotorParams {
-            min: 7.2,
-            middle: 9.07,
-            max: 10.95,
-        },
-        false,
-    ));
-    actuator_manager.add_actuator(PwmMotorDriver::new(
-        ActuatorName::SpeedMotor,
-        // Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C0)?,
-        MockPwm,
-        VelocityMotorParams {
-            min: 8.2,
-            lower_middle: 8.6,
-            upper_middle: 9.5,
-            max: 9.7,
-        },
-        true,
-    ));
 
     let global_state = GlobalState::new(sensor_manager, actuator_manager, server_config);
 

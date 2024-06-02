@@ -172,7 +172,9 @@ async fn handle_actuators_socket(
                     let mut guard = actuator.lock().unwrap();
                     match motor_values.data {
                         WsData::Value(value) => guard.set_value(value),
-                        WsData::Config(config) => guard.save_config(config),
+                        WsData::Config(config) => if let Err(e) = guard.save_config(config) {
+                            error!("Failed saving config: {e}");
+                        },
                     }
                 }
                 ControlFlow::Continue(None) => continue,
@@ -194,7 +196,7 @@ struct WsMessage {
 #[serde(rename_all = "camelCase")]
 enum WsData {
     Value(#[serde_as(as = "DisplayFromStr")] f64),
-    Config(serde_json::Value),
+    Config(String),
 }
 
 fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), Option<WsMessage>> {
