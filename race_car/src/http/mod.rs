@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::Router;
+use axum::routing::get;
 use tokio::sync::Mutex;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
@@ -64,9 +65,10 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
     let global_state = Arc::new(global_state);
 
     let api_router = Router::new()
+        .route("/", get(|| async { "Server is online" }))
         .nest("/actuators", actuator::router())
         .nest("/state", states::router())
-        // .nest("/api/control", control::router(global_state))
+        // .nest("/api/control", control::router())
         .nest("/sensors", sensor::router());
 
     let app = Router::new()

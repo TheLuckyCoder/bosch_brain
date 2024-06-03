@@ -219,9 +219,9 @@ async fn handle_video_socket(socket: WebSocket, who: SocketAddr, video_config: V
 
     let mut send_task = tokio::spawn(async move {
         loop {
-            let capture_instant = Instant::now();
+            // let capture_instant = Instant::now();
             let (buf, _meta) = stream.next().unwrap();
-            let capture_ms = capture_instant.elapsed().as_millis();
+            // let capture_ms = capture_instant.elapsed().as_millis();
 
             // let transmission_instant = Instant::now();
             if ws_sender.send(Message::Binary(buf.to_vec())).await.is_err() {

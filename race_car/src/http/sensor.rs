@@ -9,9 +9,11 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use strum::IntoEnumIterator;
+use tokio::task;
 use tracing::info;
 
 use sensors::name::SensorName;
+use sensors::SensorData;
 
 use crate::http::GlobalState;
 
@@ -19,34 +21,31 @@ use crate::http::GlobalState;
 pub fn router() -> Router<Arc<GlobalState>> {
     Router::new()
         .route("/", get(get_sensors))
+        .route("/active", get(get_active_sensors))
         .route("/active_udp", post(set_udp_sensors))
-        .route("/:name/read", get(read_sensor))
+        .route("/read/:name", get(read_sensor))
+}
+
+/// Returns a list of all registered sensors
+async fn get_sensors() -> impl IntoResponse {
+    Json(SensorName::iter().collect::<Vec<_>>())
+}
+
+/// Returns a list of all active sensors
+async fn get_active_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
+    Json(state.actuator_manager.get_active_actuators().into_iter().map(|(name, _)| name).collect::<Vec<_>>())
 }
 
 async fn read_sensor(
     State(state): State<Arc<GlobalState>>,
     Path(name): Path<SensorName>,
 ) -> impl IntoResponse {
-    let sensor_manager = state.sensor_manager.lock().await;
+    task::spawn_blocking(move || {
+        let sensor_manager = state.sensor_manager.blocking_lock();
 
-    let mut sensor = sensor_manager.get_sensor(&name).unwrap().lock().unwrap();
-    Json(sensor.read_data())
-}
-
-/// Returns a list of all available and initialized sensors
-async fn get_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
-    let sensor_manager = state.sensor_manager.lock().await;
-
-    let sensors: Vec<(&'static str, bool)> = SensorName::iter()
-        .map(|sensor_name| {
-            (
-                sensor_name.into(),
-                sensor_manager.get_sensor(&sensor_name).is_some(),
-            )
-        })
-        .collect();
-
-    Json(sensors)
+        let mut sensor = sensor_manager.get_sensor(&name).unwrap().lock().unwrap();
+        Json(sensor.read_data())
+    }).await.unwrap()
 }
 
 /// Sets the active UDP sensors from which data will be streamed on the UDP port.
