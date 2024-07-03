@@ -19,7 +19,6 @@ use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 use tracing::{error, info};
 
-use crate::http::states::CarStates;
 use crate::http::GlobalState;
 use crate::sensors::TimedSensorData;
 
@@ -189,7 +188,6 @@ async fn configure_sensor(
     State(state): State<Arc<GlobalState>>,
     Path(sensor_name): Path<SensorName>,
 ) {
-    *state.car_state.lock().await = CarStates::Config;
     state
         .sensor_manager
         .lock()

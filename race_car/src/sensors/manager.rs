@@ -4,12 +4,11 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::TrySendError;
 use std::thread::JoinHandle;
-use std::time::Duration;
 
 use multiqueue2::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use tracing::{debug, error, info, warn};
 
-use sensors::BasicSensor;
+use sensors::HardwareSensor;
 use sensors::name::SensorName;
 
 use crate::sensors::TimedSensorData;
@@ -25,7 +24,7 @@ struct Shared {
 /// Manages all the sensor instances
 pub struct SensorManager {
     shared_data: Arc<Shared>,
-    sensors: BTreeMap<SensorName, Arc<Mutex<dyn BasicSensor + Send>>>,
+    sensors: BTreeMap<SensorName, Arc<Mutex<dyn HardwareSensor>>>,
     handles: HashMap<SensorName, JoinHandle<()>>,
     receiver: BroadcastReceiver<TimedSensorData>,
     sender: BroadcastSender<TimedSensorData>,
@@ -43,9 +42,9 @@ impl SensorManager {
         }
     }
 
-    pub fn add_sensor(&mut self, sensor: impl BasicSensor) {
+    pub fn add_sensor(&mut self, sensor: impl HardwareSensor) {
         let sensor_name = sensor.name();
-        let sensor = Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn BasicSensor + Send>>;
+        let sensor = Arc::new(Mutex::new(sensor)) as Arc<Mutex<dyn HardwareSensor>>;
 
         let handle = Self::spawn_sensor_thread(
             sensor_name,
@@ -58,7 +57,7 @@ impl SensorManager {
         self.handles.insert(sensor_name, handle);
     }
 
-    pub fn get_sensor(&self, sensor_name: &SensorName) -> Option<&Mutex<dyn BasicSensor + Send>> {
+    pub fn get_sensor(&self, sensor_name: &SensorName) -> Option<&Mutex<dyn HardwareSensor>> {
         self.sensors.get(sensor_name).map(|sensor| sensor.as_ref())
     }
 
@@ -96,7 +95,7 @@ impl SensorManager {
         &self.receiver
     }
 
-    pub fn get_active_sensors(&self) -> Vec<(SensorName, &Mutex<dyn BasicSensor + Send>)> {
+    pub fn get_active_sensors(&self) -> Vec<(SensorName, &Mutex<dyn HardwareSensor>)> {
         self.sensors
             .iter()
             .map(|(name, sensor)| (*name, sensor.as_ref()))
@@ -105,15 +104,12 @@ impl SensorManager {
 
     fn spawn_sensor_thread(
         sensor_name: SensorName,
-        sensor: Arc<Mutex<dyn BasicSensor + Send>>,
+        sensor: Arc<Mutex<dyn HardwareSensor>>,
         shared_data: Arc<Shared>,
         sender: BroadcastSender<TimedSensorData>,
     ) -> JoinHandle<()> {
         thread::spawn(move || {
-            loop {
-                if shared_data.is_stopped.load(Ordering::Acquire) {
-                    return;
-                }
+            while !shared_data.is_stopped.load(Ordering::Acquire) {
 
                 if !shared_data.should_read.load(Ordering::Acquire) {
                     let mut lock = shared_data.lock.lock().unwrap();
@@ -129,7 +125,7 @@ impl SensorManager {
                     }
                 }
 
-                thread::sleep(Duration::from_millis(50));
+                thread::sleep(std::time::Duration::from_millis(50));
 
                 let sensor_data = TimedSensorData::from(sensor.lock().unwrap().read_data());
 
@@ -182,7 +178,7 @@ mod tests {
         }
     }
 
-    impl BasicSensor for TestSensor {
+    impl HardwareSensor for TestSensor {
         fn name(&self) -> SensorName {
             self.name
         }

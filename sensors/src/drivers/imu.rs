@@ -10,7 +10,7 @@ use tracing::{error, info, warn};
 use shared::math::AlmostEquals;
 
 use crate::name::SensorName;
-use crate::{BasicSensor, SensorData};
+use crate::{HardwareSensor, SensorData};
 
 /// Wrapper for the BNO055 sensor
 pub struct ImuSensor {
@@ -78,7 +78,7 @@ impl ImuSensor {
     }
 }
 
-impl BasicSensor for ImuSensor {
+impl HardwareSensor for ImuSensor {
     fn name(&self) -> SensorName {
         SensorName::Imu
     }

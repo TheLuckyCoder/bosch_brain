@@ -6,7 +6,7 @@ use shared::math::AlmostEquals;
 
 use crate::sensors::TimedSensorData;
 use sensors::name::SensorName;
-use sensors::{BasicSensor, SensorData};
+use sensors::{HardwareSensor, SensorData};
 
 pub struct VelocitySensor {
     receiver: BroadcastReceiver<TimedSensorData>,
@@ -47,7 +47,7 @@ impl VelocitySensor {
     }
 }
 
-impl BasicSensor for VelocitySensor {
+impl HardwareSensor for VelocitySensor {
     fn name(&self) -> SensorName {
         SensorName::Velocity
     }

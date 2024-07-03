@@ -1,5 +1,5 @@
 use crate::name::SensorName;
-use crate::{BasicSensor, SensorData};
+use crate::{HardwareSensor, SensorData};
 
 /// Wrapper for the HTU21DF sensor
 pub struct AmbienceSensor(/*htu21df_sensor::Sensor<I2cdev>*/);
@@ -42,7 +42,7 @@ impl AmbienceSensor {
     }
 }
 
-impl BasicSensor for AmbienceSensor {
+impl HardwareSensor for AmbienceSensor {
     fn name(&self) -> SensorName {
         SensorName::Ambience
     }

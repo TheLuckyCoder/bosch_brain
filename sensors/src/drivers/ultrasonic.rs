@@ -1,5 +1,5 @@
 use crate::name::SensorName;
-use crate::{BasicSensor, SensorData};
+use crate::{HardwareSensor, SensorData};
 use hc_sr04::{HcSr04, Unit};
 
 /// Wrapper for the HC-SR04 sensor
@@ -26,7 +26,7 @@ impl UltrasonicSensor {
     }
 }
 
-impl BasicSensor for UltrasonicSensor {
+impl HardwareSensor for UltrasonicSensor {
     fn name(&self) -> SensorName {
         SensorName::Ultrasonic
     }

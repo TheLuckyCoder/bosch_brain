@@ -5,7 +5,7 @@ use serialport::{DataBits, Parity, SerialPort, StopBits, TTYPort};
 use tracing::error;
 
 use crate::name::SensorName;
-use crate::{BasicSensor, GpsCoordinates, SensorData};
+use crate::{HardwareSensor, GpsCoordinates, SensorData};
 
 /// Data from the GPS sensor
 
@@ -117,7 +117,7 @@ impl GpsSensor {
     }
 }
 
-impl BasicSensor for GpsSensor {
+impl HardwareSensor for GpsSensor {
     fn name(&self) -> SensorName {
         SensorName::Gps
     }

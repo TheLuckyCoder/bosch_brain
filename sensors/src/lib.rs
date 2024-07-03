@@ -6,7 +6,7 @@ pub mod drivers;
 pub mod name;
 
 /// Common set of functions each sensor class should implement
-pub trait BasicSensor: Send + 'static {
+pub trait HardwareSensor: Send + 'static {
     /// Unique name of the sensor
     fn name(&self) -> SensorName;
 

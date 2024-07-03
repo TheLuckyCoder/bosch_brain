@@ -65,7 +65,7 @@ async fn get_remote(State(state): State<Arc<GlobalState>>) -> impl IntoResponse 
         main_actuator_name: config.joystick.x_axis,
         main_actuator_paused: active_actuators
             .iter()
-            .find(|(name, actuator)| *name == config.joystick.x_axis)
+            .find(|(name, _)| *name == config.joystick.x_axis)
             .map_or(true, |(_, actuator)| actuator.lock().unwrap().is_paused()),
         config,
     }

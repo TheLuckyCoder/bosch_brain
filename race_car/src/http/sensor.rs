@@ -3,17 +3,16 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{Json, Router};
 use axum::extract::{ConnectInfo, Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
+use axum::{Json, Router};
 use strum::IntoEnumIterator;
 use tokio::task;
 use tracing::info;
 
 use sensors::name::SensorName;
-use sensors::SensorData;
 
 use crate::http::GlobalState;
 
@@ -24,6 +23,8 @@ pub fn router() -> Router<Arc<GlobalState>> {
         .route("/active", get(get_active_sensors))
         .route("/active_udp", post(set_udp_sensors))
         .route("/read/:name", get(read_sensor))
+        .route("/start_reading", post(start_reading))
+        .route("/stop_reading", post(stop_reading))
 }
 
 /// Returns a list of all registered sensors
@@ -33,7 +34,16 @@ async fn get_sensors() -> impl IntoResponse {
 
 /// Returns a list of all active sensors
 async fn get_active_sensors(State(state): State<Arc<GlobalState>>) -> impl IntoResponse {
-    Json(state.actuator_manager.get_active_actuators().into_iter().map(|(name, _)| name).collect::<Vec<_>>())
+    Json(
+        state
+            .sensor_manager
+            .lock()
+            .await
+            .get_active_sensors()
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect::<Vec<_>>(),
+    )
 }
 
 async fn read_sensor(
@@ -45,7 +55,9 @@ async fn read_sensor(
 
         let mut sensor = sensor_manager.get_sensor(&name).unwrap().lock().unwrap();
         Json(sensor.read_data())
-    }).await.unwrap()
+    })
+    .await
+    .unwrap()
 }
 
 /// Sets the active UDP sensors from which data will be streamed on the UDP port.
@@ -73,23 +85,39 @@ async fn set_udp_sensors(
     StatusCode::OK
 }
 
+async fn start_reading(State(state): State<Arc<GlobalState>>) {
+    state
+        .sensor_manager
+        .lock()
+        .await
+        .start_listening_to_sensors();
+}
+
+async fn stop_reading(State(state): State<Arc<GlobalState>>) {
+    state
+        .sensor_manager
+        .lock()
+        .await
+        .stop_listening_to_sensors();
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
     use reqwest;
 
-    use sensors::{BasicSensor, SensorData};
     use sensors::name::SensorName;
+    use sensors::{HardwareSensor, SensorData};
 
     use crate::actuators::manager::ActuatorManager;
-    use crate::http::{GlobalState, http_server};
     use crate::http::config::ServerConfig;
+    use crate::http::{http_server, GlobalState};
     use crate::sensors::manager::SensorManager;
 
     struct TestSensor {}
 
-    impl BasicSensor for TestSensor {
+    impl HardwareSensor for TestSensor {
         fn name(&self) -> SensorName {
             SensorName::Velocity
         }

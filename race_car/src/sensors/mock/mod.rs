@@ -1,6 +1,6 @@
 use crate::sensors::manager::SensorManager;
 use sensors::name::SensorName;
-use sensors::{BasicSensor, GpsCoordinates, SensorData};
+use sensors::{HardwareSensor, GpsCoordinates, SensorData};
 
 pub fn add_all_mock_sensors(sensor_manager: &mut SensorManager) {
     sensor_manager.add_sensor(MockImuSensor);
@@ -11,7 +11,7 @@ pub fn add_all_mock_sensors(sensor_manager: &mut SensorManager) {
 
 struct MockImuSensor;
 
-impl BasicSensor for MockImuSensor {
+impl HardwareSensor for MockImuSensor {
     fn name(&self) -> SensorName {
         SensorName::Imu
     }
@@ -26,7 +26,7 @@ impl BasicSensor for MockImuSensor {
 
 struct MockGps;
 
-impl BasicSensor for MockGps {
+impl HardwareSensor for MockGps {
     fn name(&self) -> SensorName {
         SensorName::Gps
     }
@@ -43,7 +43,7 @@ impl BasicSensor for MockGps {
 
 struct MockUltrasonicSensor;
 
-impl BasicSensor for MockUltrasonicSensor {
+impl HardwareSensor for MockUltrasonicSensor {
     fn name(&self) -> SensorName {
         SensorName::Ultrasonic
     }
@@ -55,7 +55,7 @@ impl BasicSensor for MockUltrasonicSensor {
 
 struct MockVelocitySensor;
 
-impl BasicSensor for MockVelocitySensor {
+impl HardwareSensor for MockVelocitySensor {
     fn name(&self) -> SensorName {
         SensorName::Velocity
     }

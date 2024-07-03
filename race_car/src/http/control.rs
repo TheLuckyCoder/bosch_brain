@@ -1,58 +1,51 @@
 //! HTTP routes for controlling the car's PIDs.
-/*
 use std::sync::Arc;
 use std::thread::JoinHandle;
-use std::time::Duration;
 
 use axum::extract::{Path, Query, State};
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Router;
+use axum::routing::post;
 use serde::Deserialize;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{error, info};
 
+use sensors::SensorData;
 use shared::math::pid::PidController;
 
+use crate::actuators::ActuatorName;
 use crate::http::GlobalState;
-use crate::sensors::motor_driver::Motor;
-use crate::sensors::SensorData;
 
 /// Holds the PID controllers for the car.
+#[derive(Default)]
 pub struct PidManager {
-    pub acceleration: Mutex<PidController>,
-    pub steering: Mutex<PidController>,
+    pub velocity: Mutex<Option<(ActuatorName, PidController)>>,
+    pub steering: Mutex<Option<(ActuatorName, PidController)>>,
     pub acceleration_thread: Mutex<Option<JoinHandle<()>>>,
 }
 
-drivers PidManager {
+impl PidManager {
     pub async fn reset(&self) {
-        self.acceleration.lock().await.reset();
-        self.steering.lock().await.reset();
+        if let Some((_, pid)) = self.velocity.lock().await.as_mut() {
+            pid.reset();
+        }
+        if let Some((_, pid)) = self.steering.lock().await.as_mut() {
+            pid.reset();
+        }
         *self.acceleration_thread.lock().await = None;
     }
 }
 
-drivers PidManager {
-    pub fn new(acceleration: PidController, steering: PidController) -> Self {
-        Self {
-            acceleration: Mutex::new(acceleration),
-            steering: Mutex::new(steering),
-            acceleration_thread: Mutex::default(),
-        }
-    }
-}
-
 /// Creates an object that manages all the PID routes
-pub fn router(state: Arc<GlobalState>) -> Router {
+pub fn router() -> Router<Arc<GlobalState>> {
     Router::new()
-        .route("/", post(set_control_data))
-        .route("/velocity_pid/:value", post(velocity_pid))
-        .route("/steering_pid", get(steering_pid_coeff))
-        .route("/steering_pid/:value", post(steering_pid))
-        .with_state(state)
+        // .route("/", post(set_control_data))
+        .route("/velocity_pid/coeff/:actuator", post(velocity_pid_coeff))
+        .route("/velocity_pid/target/:value", post(velocity_pid))
+        .route("/steering_pid/coeff/:actuator", post(steering_pid_coeff))
+        .route("/steering_pid/target/:value", post(steering_pid))
 }
 
-#[derive(Debug, Deserialize)]
+/*#[derive(Debug, Deserialize)]
 enum ControlAction {
     LaneKeeping,
     Pause,
@@ -128,48 +121,55 @@ async fn set_control_data(State(state): State<Arc<GlobalState>>, Json(data): Jso
         ControlAction::RightTurn => {}
         ControlAction::LeftTurn => {}
     }
-}
+}*/
 
 /// Sets the target value for the acceleration PID controller.
 async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocity): Path<f64>) {
-    {
-        let mut thread = state.pids.acceleration_thread.lock().await;
-        if thread.is_none() {
-            let receiver = state
-                .sensor_manager
-                .lock()
-                .await
-                .get_data_receiver()
-                .add_stream();
+    let mut thread = state.pids.acceleration_thread.lock().await;
+    if thread.is_none() {
+        let receiver = state
+            .sensor_manager
+            .lock()
+            .await
+            .get_data_receiver()
+            .add_stream();
 
-            let pids = state.pids.clone();
-            let motor_driver = state.motor_driver.clone();
+        let pids = state.pids.clone();
+        let actuator_manager = state.actuator_manager.clone();
 
-            let _ = thread.insert(std::thread::spawn(move || loop {
-                let mut current_velocity = None;
+        let _ = thread.insert(std::thread::spawn(move || loop {
+            let mut current_velocity = None;
 
-                while let Ok(sensor_data) = receiver.try_recv() {
-                    if let SensorData::Velocity(velocity) = sensor_data.data {
-                        current_velocity = Some(velocity)
-                    }
+            while let Ok(sensor_data) = receiver.try_recv() {
+                if let SensorData::Velocity(velocity) = sensor_data.data {
+                    current_velocity = Some(velocity)
                 }
+            }
 
-                if let Some(velocity) = current_velocity {
-                    let value = {
-                        let mut pid = pids.acceleration.blocking_lock();
-                        pid.compute(velocity)
-                    };
+            if let Some(velocity) = current_velocity {
+                let mut guard = pids.velocity.blocking_lock();
+                let Some((actuator_name, pid)) = guard.as_mut() else {
+                    break;
+                };
+                let value = pid.compute(velocity);
 
-                    info!("Setting Motor Value: {value}");
-                    motor_driver
-                        .blocking_lock()
-                        .set_motor_value(Motor::Speed, value);
-                }
-            }));
-        }
+                info!("Setting Motor Value: {value}");
+                actuator_manager
+                    .get_actuator_ref(*actuator_name)
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .set_value(value);
+            }
+        }));
     }
+    drop(thread);
 
-    let mut pid = state.pids.acceleration.lock().await;
+    let mut guard = state.pids.velocity.lock().await;
+    let Some((_, pid)) = guard.as_mut() else {
+        error!("Velocity Pid has not been set up");
+        return;
+    };
     pid.target_value = target_velocity;
 }
 
@@ -180,23 +180,39 @@ struct PidCoeff {
     d: f64,
 }
 
-async fn steering_pid_coeff(State(state): State<Arc<GlobalState>>, Query(coeff): Query<PidCoeff>) {
-    let mut pid = state.pids.steering.lock().await;
-    pid.k_p = coeff.p;
-    pid.k_i = coeff.i;
-    pid.k_d = coeff.d;
-    pid.reset();
+async fn velocity_pid_coeff(
+    State(state): State<Arc<GlobalState>>,
+    Query(coeff): Query<PidCoeff>,
+    Path(actuator_name): Path<ActuatorName>,
+) {
+    let mut guard = state.pids.velocity.lock().await;
+    let _ = guard.insert((actuator_name, PidController::new(coeff.p, coeff.i, coeff.d)));
+}
+
+async fn steering_pid_coeff(
+    State(state): State<Arc<GlobalState>>,
+    Query(coeff): Query<PidCoeff>,
+    Path(actuator_name): Path<ActuatorName>,
+) {
+    let mut guard = state.pids.steering.lock().await;
+    let _ = guard.insert((actuator_name, PidController::new(coeff.p, coeff.i, coeff.d)));
 }
 
 /// Sets the target value for the steering PID controller.
 async fn steering_pid(State(state): State<Arc<GlobalState>>, Path(angle): Path<f64>) {
-    let mut motor = state.motor_driver.lock().await;
+    let mut guard = state.pids.velocity.blocking_lock();
+    let Some((actuator_name, pid)) = guard.as_mut() else {
+        return;
+    };
 
-    // let mut pid = state.pids.steering.lock().await;
-    // let angle = pid.compute(-value);
-    let motor_value = (-angle / 30.0f64).clamp(-1.0, 1.0);
+    let motor_value = pid.compute((-angle / 30.0f64).clamp(-1.0, 1.0));
 
     info!("Receiving steering: {angle} ; Motor Value: {motor_value}");
-    motor.set_motor_value(Motor::Steering, motor_value);
+    state
+        .actuator_manager
+        .get_actuator_ref(*actuator_name)
+        .unwrap()
+        .lock()
+        .unwrap()
+        .set_value(motor_value);
 }
-*/

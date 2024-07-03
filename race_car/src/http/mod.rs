@@ -12,7 +12,7 @@ use tracing::Level;
 
 use crate::actuators::manager::ActuatorManager;
 use crate::http::config::ServerConfig;
-use crate::http::states::CarStates;
+use crate::http::control::PidManager;
 use crate::http::udp_broadcast::UdpBroadcast;
 use crate::sensors::manager::SensorManager;
 
@@ -21,17 +21,15 @@ pub mod config;
 mod control;
 mod frontend;
 mod sensor;
-mod states;
 mod udp_broadcast;
 
 /// Global state for the HTTP server
 /// This is used to share state between the different routes
 pub struct GlobalState {
-    pub car_state: Mutex<CarStates>,
     pub udp_manager: Arc<Mutex<UdpBroadcast>>,
     pub sensor_manager: Arc<Mutex<SensorManager>>,
     pub actuator_manager: Arc<ActuatorManager>,
-    // pub pids: Arc<PidManager>,
+    pub pids: Arc<PidManager>,
     pub server_config: Arc<Mutex<ServerConfig>>,
 }
 
@@ -43,19 +41,12 @@ impl GlobalState {
     ) -> Self {
         let sensor_manager = Arc::new(Mutex::new(sensor_manager));
         Self {
-            car_state: Mutex::default(),
             udp_manager: UdpBroadcast::new(sensor_manager.clone())
                 .expect("Failed to initialize UDP Manager"),
             sensor_manager,
             actuator_manager: Arc::new(actuator_manager),
             server_config: Arc::new(Mutex::new(server_config)),
-            // motor_driver: Arc::new(Mutex::new(motor_driver)),
-            // pids: Arc::new(PidManager::new(
-            //     PidController::new(1.0, 0.0, 0.0),
-            //     PidController::new(1.0, 0.0, 0.3)
-            //         .set_input_range(-1.0, 1.0)
-            //         .set_output_range(-0.9, 0.9),
-            // )),
+            pids: Arc::new(PidManager::default()),
         }
     }
 }
@@ -67,8 +58,7 @@ pub async fn http_server(global_state: GlobalState) -> std::io::Result<()> {
     let api_router = Router::new()
         .route("/", get(|| async { "Server is online" }))
         .nest("/actuators", actuator::router())
-        .nest("/state", states::router())
-        // .nest("/api/control", control::router())
+        .nest("/control", control::router())
         .nest("/sensors", sensor::router());
 
     let app = Router::new()

@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use crate::actuators::{ActuatorDriver, ActuatorName};
 
 pub struct ActuatorManager {
-    actuators: BTreeMap<ActuatorName, Arc<Mutex<dyn ActuatorDriver + Send>>>,
+    actuators: BTreeMap<ActuatorName, Arc<Mutex<dyn ActuatorDriver>>>,
 }
 
 impl ActuatorManager {
@@ -22,20 +22,20 @@ impl ActuatorManager {
     pub fn get_actuator(
         &self,
         actuator_name: ActuatorName,
-    ) -> Option<Arc<Mutex<dyn ActuatorDriver + Send>>> {
+    ) -> Option<Arc<Mutex<dyn ActuatorDriver>>> {
         self.actuators.get(&actuator_name).cloned()
     }
 
     pub fn get_actuator_ref(
         &self,
         actuator_name: ActuatorName,
-    ) -> Option<&Mutex<dyn ActuatorDriver + Send>> {
+    ) -> Option<&Mutex<dyn ActuatorDriver>> {
         self.actuators
             .get(&actuator_name)
             .map(|actuator| actuator.as_ref())
     }
 
-    pub fn get_active_actuators(&self) -> Vec<(ActuatorName, &Mutex<dyn ActuatorDriver + Send>)> {
+    pub fn get_active_actuators(&self) -> Vec<(ActuatorName, &Mutex<dyn ActuatorDriver>)> {
         self.actuators
             .iter()
             .map(|(name, actuator)| (*name, actuator.as_ref()))
