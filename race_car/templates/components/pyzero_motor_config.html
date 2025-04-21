@@ -1,0 +1,86 @@
+<form ws-send>
+    <!-- Step value display (used by increment/decrement buttons) -->
+    <input id="step-value-{{ name }}" type="hidden" value="0.1" />
+
+    <!-- Supply Voltage -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Supply Voltage (V):</span>
+            <input id="config-{{ name }}-supply-voltage" type="number" value="{{ supply_voltage }}" step="0.1" name="supply_voltage"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-supply-voltage")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-supply-voltage")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Target Max Voltage -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Target Max Voltage (V):</span>
+            <input id="config-{{ name }}-target-max-voltage" type="number" value="{{ target_max_voltage }}" step="0.1" name="target_max_voltage"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-target-max-voltage")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-target-max-voltage")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- PWM Resolution -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">PWM Resolution (bits):</span>
+            <input id="config-{{ name }}-pwm-resolution" type="number" value="{{ pwm_resolution }}" step="1" name="pwm_resolution"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-pwm-resolution")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-pwm-resolution")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- PWM Frequency -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">PWM Frequency (Hz):</span>
+            <input id="config-{{ name }}-pwm-freq-hz" type="number" value="{{ pwm_freq_hz }}" step="0.1" name="pwm_freq_hz"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-pwm-freq-hz")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-pwm-freq-hz")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+</form>
+
+<script>
+    function config_{{ name }}_decrement(field_id) {
+        const field = document.getElementById(field_id);
+        const step  = parseFloat(document.getElementById(`step-value-{{ name }}`).value);
+        field.value = (parseFloat(field.value) - step).toFixed(3);
+    }
+
+    function config_{{ name }}_increment(field_id) {
+        const field = document.getElementById(field_id);
+        const step  = parseFloat(document.getElementById(`step-value-{{ name }}`).value);
+        field.value = (parseFloat(field.value) + step).toFixed(3);
+    }
+</script>

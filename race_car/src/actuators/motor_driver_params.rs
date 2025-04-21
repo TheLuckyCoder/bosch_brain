@@ -9,6 +9,13 @@ use serde_with::DisplayFromStr;
 #[serde_as]
 #[derive(Serialize, Deserialize)]
 pub struct VelocityMotorParams {
+    /// Represents the duty cycle percentages for PWM control of a motor:
+    /// - `min`: Full speed in the negative direction.
+    /// - `(min, lower_middle)`: Speed range in the negative direction; below `lower_middle`, the motor is off.
+    /// - `(lower_middle, upper_middle)`: Motor is off; no movement.
+    /// - `(upper_middle, max)`: Speed range in the positive direction; above `upper_middle`, the motor is off.
+    /// - `max`: Full speed in the positive direction.
+    /// Some motors may have a very small off range or even a single value for the off state.
     #[serde_as(as = "DisplayFromStr")]
     pub min: f64,
     #[serde_as(as = "DisplayFromStr")]
@@ -21,8 +28,15 @@ pub struct VelocityMotorParams {
 
 impl PwmMotorDriverParams for VelocityMotorParams {
     fn value_to_percentage(&self, value: f64) -> Percentage {
-        // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
-        // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
+        /// Converts a value in the range of -1 to 1 (inclusive) into a percentage.
+        ///
+        /// The output percentage is constrained to be no less than `min` and no greater than `max`.
+        /// If the input value is outside the range of -1 to 1, it will be mapped to the corresponding
+        /// `min` or `max` value.
+        ///
+        /// - If the input value is positive, it calculates the percentage based on the upper range.
+        /// - If the input value is negative, it calculates the percentage based on the lower range.
+        /// - If the input value is zero, it returns the average of `lower_middle` and `upper_middle`.
         let percentage = if value != 0.0 {
             if value > 0.0 {
                 self.upper_middle + value * (self.max - self.upper_middle)

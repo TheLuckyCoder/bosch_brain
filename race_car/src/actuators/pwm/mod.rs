@@ -1,15 +1,24 @@
 pub mod mock;
 pub mod pca9685;
+pub mod lego_servo;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Percentage {
     value: f64,
+    is_positive: bool,
 }
 
 impl From<f64> for Percentage {
     fn from(value: f64) -> Self {
+        if value < 0.0 {
+            return Self {
+                value: (-value).clamp(0.0, 100.0),
+                is_positive: false,
+            };
+        }
         Self {
             value: value.clamp(0.0, 100.0),
+            is_positive: true,
         }
     }
 }

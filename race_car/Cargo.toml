@@ -42,6 +42,7 @@ rand = { workspace = true }
 toml = "0.8.12"
 
 # Motors
+rppal = "0.22.1"
 pwm-pca9685 = "1.0.0"
 linux-embedded-hal = "0.4.0"
 

@@ -21,7 +21,7 @@ pub struct PwmMotorDriver<PWM: PwmDriver, Params: PwmMotorDriverParams> {
     actuator_name: ActuatorName,
     params_file_path: std::path::PathBuf,
     paused: bool,
-    inverse_direction: bool,
+    reverse_direction: bool,
 }
 
 impl<PWM: PwmDriver, Params: PwmMotorDriverParams> PwmMotorDriver<PWM, Params> {
@@ -36,12 +36,12 @@ impl<PWM: PwmDriver, Params: PwmMotorDriverParams> PwmMotorDriver<PWM, Params> {
             last_value: f64::INFINITY,
             params_file_path,
             paused: false,
-            inverse_direction: false,
+            reverse_direction: false,
         }
     }
 
     pub fn set_inverse_direction(&mut self, inverse_direction: bool) {
-        self.inverse_direction = inverse_direction;
+        self.reverse_direction = inverse_direction;
     }
 
     fn read_params(params_file_path: &std::path::Path) -> Option<Params> {
@@ -57,7 +57,7 @@ impl<PWM: PwmDriver, Params: PwmMotorDriverParams> ActuatorDriver for PwmMotorDr
 
     fn set_value(&mut self, value: f64) {
         // Steering motor should turn right when given a positive value
-        let input = value.clamp(-1.0, 1.0) * if self.inverse_direction { -1.0 } else { 1.0 };
+        let input = value.clamp(-1.0, 1.0) * if self.reverse_direction { -1.0 } else { 1.0 };
 
         if self.paused || (input - self.last_value).abs() < 10e-6 {
             return;
@@ -68,6 +68,7 @@ impl<PWM: PwmDriver, Params: PwmMotorDriverParams> ActuatorDriver for PwmMotorDr
         let duty_cycle = self.params.value_to_percentage(value);
 
         self.pwm.set_duty_cycle(duty_cycle);
+        println!("Setting {} to {:?}%", self.actuator_name, duty_cycle);
     }
 
     fn stop(&mut self) {

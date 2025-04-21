@@ -1,0 +1,154 @@
+<form ws-send>
+    <!-- Step value display (used by increment/decrement buttons) -->
+    <input id="step-value-{{ name }}" type="hidden" value="0.1" />
+
+    <!-- Physical Min Angle -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Physical Min Angle:</span>
+            <input id="config-{{ name }}-physical-min-angle" type="number" value="{{ physical_min_angle }}" step="0.1" name="physical_min_angle"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-physical-min-angle")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-physical-min-angle")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Physical Max Angle -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Physical Max Angle:</span>
+            <input id="config-{{ name }}-physical-max-angle" type="number" value="{{ physical_max_angle }}" step="0.1" name="physical_max_angle"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-physical-max-angle")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-physical-max-angle")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Angle Offset -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Angle Offset:</span>
+            <input id="config-{{ name }}-angle-offset" type="number" value="{{ angle_offset }}" step="0.1" name="angle_offset"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-angle-offset")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-angle-offset")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Control Min Angle -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Control Min Angle:</span>
+            <input id="config-{{ name }}-control-min-angle" type="number" value="{{ control_min_angle }}" step="0.1" name="control_min_angle"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-control-min-angle")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-control-min-angle")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Control Max Angle -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Control Max Angle:</span>
+            <input id="config-{{ name }}-control-max-angle" type="number" value="{{ control_max_angle }}" step="0.1" name="control_max_angle"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-control-max-angle")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-control-max-angle")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Servo Min Pulse -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Servo Min Pulse (µs):</span>
+            <input id="config-{{ name }}-servo-min-pulse" type="number" value="{{ servo_min_pulse }}" step="1" name="servo_min_pulse"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-servo-min-pulse")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-servo-min-pulse")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Servo Max Pulse -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Servo Max Pulse (µs):</span>
+            <input id="config-{{ name }}-servo-max-pulse" type="number" value="{{ servo_max_pulse }}" step="1" name="servo_max_pulse"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-servo-max-pulse")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-servo-max-pulse")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+
+    <!-- Servo Frequency -->
+    <div class="flex flex-row items-end gap-2">
+        <label class="grow">
+            <span class="label-text">Servo Frequency (Hz):</span>
+            <input id="config-{{ name }}-servo-freq-hz" type="number" value="{{ servo_freq_hz }}" step="0.1" name="servo_freq_hz"
+                   class="input input-bordered w-full"/>
+        </label>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_decrement("config-{{ name }}-servo-freq-hz")'>
+            <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button type="button" class="btn btn-square btn-outline"
+                onclick='config_{{ name }}_increment("config-{{ name }}-servo-freq-hz")'>
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    </div>
+</form>
+
+<script>
+    function config_{{ name }}_decrement(field_id) {
+        const field = document.getElementById(field_id);
+        const step  = parseFloat(document.getElementById(`step-value-{{ name }}`).value);
+        field.value = (parseFloat(field.value) - step).toFixed(3);
+    }
+
+    function config_{{ name }}_increment(field_id) {
+        const field = document.getElementById(field_id);
+        const step  = parseFloat(document.getElementById(`step-value-{{ name }}`).value);
+        field.value = (parseFloat(field.value) + step).toFixed(3);
+    }
+</script>
