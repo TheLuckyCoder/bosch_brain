@@ -1,11 +1,21 @@
 pub mod mock;
 pub mod pca9685;
 pub mod lego_servo;
+mod software_pwm;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Percentage {
     value: f64,
     is_positive: bool,
+}
+
+impl Default for Percentage {
+    fn default() -> Self {
+        Self {
+            value: 0.0,
+            is_positive: true,
+        }
+    }
 }
 
 impl From<f64> for Percentage {
@@ -20,6 +30,12 @@ impl From<f64> for Percentage {
             value: value.clamp(0.0, 100.0),
             is_positive: true,
         }
+    }
+}
+
+impl Percentage {
+    pub fn zero() -> Self {
+        Percentage::default()
     }
 }
 

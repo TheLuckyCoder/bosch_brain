@@ -4,8 +4,6 @@ use rppal::pwm::Channel;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use strum::{AsRefStr, EnumIter, IntoStaticStr};
 
-pub use pwm::mock::*;
-
 use crate::actuators::manager::ActuatorManager;
 use crate::actuators::motor_driver_params::{SteeringMotorParams, VelocityMotorParams};
 use crate::actuators::pwm::pca9685::Pca9685Pwm;
@@ -139,7 +137,6 @@ pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
     //     },
     // ));
 
-    // let servo_pwm = PiZeroPwm::new(Channel::Pwm0, 50.0).unwrap();
     let servo_params = ServoParams {
         physical_min_angle: -180.0,
         physical_max_angle:  180.0,
@@ -163,14 +160,14 @@ pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
         supply_voltage: 12.0,
         target_max_voltage: 7.5,
         pwm_resolution: 10,
-        pwm_freq_hz: 5000.0,
+        pwm_freq_hz: 5001.0,
     };
     manager.add_actuator(PwmMotorDriver::new(
         ActuatorName::SpeedMotor,
         PiZeroMotorPwm::new(
-            Channel::Pwm1,
-            26,
-            motor_params.pwm_freq_hz,
+            23,
+            22,
+            motor_params.pwm_freq_hz as u32,
         ).unwrap(),
         motor_params,
     ))
