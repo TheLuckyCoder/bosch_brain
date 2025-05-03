@@ -49,6 +49,9 @@ impl PwmMotorDriverParams for ServoParams {
         // Clamp input to [-1.0, 1.0]
         let v = value.clamp(-1.0, 1.0);
 
+        // reverse direction
+        let v = -v;
+
         // Map control value to physical angle
         let phys_angle = if v >= 0.0 {
             map_range(v, 0.0, 1.0, self.angle_offset, self.control_max_angle)
@@ -137,6 +140,8 @@ pub struct DcMotorParams {
 impl PwmMotorDriverParams for DcMotorParams {
     fn value_to_percentage(&self, value: f64) -> Percentage {
         let v = value.clamp(-1.0, 1.0);
+
+        let v = -v;
 
         let max_voltage_max_duty = (1 << self.pwm_resolution) - 1;
         let scaled_max_duty = (self.target_max_voltage / self.supply_voltage) * max_voltage_max_duty as f64;

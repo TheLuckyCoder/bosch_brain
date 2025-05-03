@@ -160,13 +160,13 @@ pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
         supply_voltage: 12.0,
         target_max_voltage: 7.5,
         pwm_resolution: 10,
-        pwm_freq_hz: 5001.0,
+        pwm_freq_hz: 5000.0,
     };
     manager.add_actuator(PwmMotorDriver::new(
         ActuatorName::SpeedMotor,
         PiZeroMotorPwm::new(
+            24,
             23,
-            22,
             motor_params.pwm_freq_hz as u32,
         ).unwrap(),
         motor_params,
