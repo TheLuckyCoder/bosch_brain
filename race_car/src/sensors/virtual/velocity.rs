@@ -49,7 +49,7 @@ impl VelocitySensor {
 
 impl HardwareSensor for VelocitySensor {
     fn name(&self) -> SensorName {
-        SensorName::Velocity
+        SensorName::VirtualVelocity
     }
 
     fn prepare_read(&mut self) {
@@ -74,6 +74,6 @@ impl HardwareSensor for VelocitySensor {
             self.update_velocity(acceleration, timestamp);
         }
 
-        SensorData::Velocity(self.last_velocity)
+        SensorData::VirtualVelocity(self.last_velocity)
     }
 }

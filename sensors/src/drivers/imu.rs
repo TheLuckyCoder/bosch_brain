@@ -21,20 +21,22 @@ pub struct ImuSensor {
 impl ImuSensor {
     const BNO_FILE: &'static str = "bno.bin";
 
-    pub fn new(mut calibration_folder: PathBuf) -> anyhow::Result<Self> {
+    pub fn new(mut calibration_folder: PathBuf, use_alt_address: bool) -> anyhow::Result<Self> {
         calibration_folder.push(Self::BNO_FILE);
 
         let i2c = I2cdev::new("/dev/i2c-1").context("Failed to open I2C device")?;
 
-        let mut imu = Bno055::new(i2c).with_alternative_address();
-        let mut delay = Delay {};
+        let mut imu = if use_alt_address {
+            Bno055::new(i2c).with_alternative_address()
+        } else {
+            Bno055::new(i2c)
+        };
 
+        let mut delay = Delay {};
         imu.init(&mut delay).context("Failed to init IMU")?;
 
         if let Ok(file_buffer) = std::fs::read(calibration_folder.as_path()) {
             let buffer: [u8; BNO055_CALIB_SIZE] = vec_to_array(file_buffer);
-
-            // Apply calibration profile
             let calib = BNO055Calibration::from_buf(&buffer);
             imu.set_calibration_profile(calib, &mut delay)
                 .context("Failed to load calibration profile")?;
@@ -49,6 +51,7 @@ impl ImuSensor {
             calibration_file_path: calibration_folder,
         })
     }
+
 
     pub fn get_acceleration(&mut self) -> Vector3<f32> {
         self.imu.linear_acceleration().unwrap_or_else(|e| {

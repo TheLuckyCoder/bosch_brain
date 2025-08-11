@@ -147,10 +147,6 @@ impl UdpBroadcast {
             // udp_data.gps = None;
         }
 
-        if !active_sensors.contains(&SensorName::Ambience) {
-            // udp_data.ambience = None;
-        }
-
         if !udp_data.is_empty() {
             Some(serde_json::to_string(&udp_data).expect("Failed to serialize UDP data"))
         } else {

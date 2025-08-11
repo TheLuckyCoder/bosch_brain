@@ -1,4 +1,4 @@
-mock_sensors = true
+mock_sensors = false
 
 [joystick]
 size = 19

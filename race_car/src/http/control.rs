@@ -141,7 +141,7 @@ async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocit
             let mut current_velocity = None;
 
             while let Ok(sensor_data) = receiver.try_recv() {
-                if let SensorData::Velocity(velocity) = sensor_data.data {
+                if let SensorData::OpticalVelocity(velocity) = sensor_data.data {
                     current_velocity = Some(velocity)
                 }
             }

@@ -129,8 +129,6 @@ impl SensorManager {
 
                 let sensor_data = TimedSensorData::from(sensor.lock().unwrap().read_data());
 
-                // println!("{:?}: {}", sensor_data.data, sensor_name);
-
                 if let Err(e) = sender.try_send(sensor_data) {
                     match e {
                         TrySendError::Full(_) => {
@@ -156,7 +154,7 @@ impl Drop for SensorManager {
 
 #[cfg(test)]
 mod tests {
-    use sensors::SensorData::Velocity;
+    use sensors::SensorData::VirtualVelocity;
 
     use crate::sensors::SensorData;
 
@@ -193,12 +191,12 @@ mod tests {
     #[test]
     fn test_sensor_manager() {
         let data_list = vec![
-            Velocity(10.0),
-            Velocity(20.0),
-            Velocity(30.0),
-            Velocity(40.0),
+            VirtualVelocity(10.0),
+            VirtualVelocity(20.0),
+            VirtualVelocity(30.0),
+            VirtualVelocity(40.0),
         ];
-        let test_sensor = TestSensor::new(SensorName::Velocity, data_list.clone());
+        let test_sensor = TestSensor::new(SensorName::VirtualVelocity, data_list.clone());
 
         let mut manager = SensorManager::new();
         manager.add_sensor(test_sensor);

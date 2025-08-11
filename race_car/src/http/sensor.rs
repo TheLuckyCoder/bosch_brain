@@ -119,11 +119,11 @@ mod tests {
 
     impl HardwareSensor for TestSensor {
         fn name(&self) -> SensorName {
-            SensorName::Velocity
+            SensorName::VirtualVelocity
         }
 
         fn read_data(&mut self) -> SensorData {
-            SensorData::Velocity(20.0)
+            SensorData::VirtualVelocity(20.0)
         }
     }
 
@@ -156,6 +156,6 @@ mod tests {
         println!("Status: {}; {}", status_code, text);
         let json: SensorData = serde_json::from_str(&text).unwrap();
 
-        assert_eq!(json, SensorData::Velocity(20.0));
+        assert_eq!(json, SensorData::VirtualVelocity(20.0));
     }
 }

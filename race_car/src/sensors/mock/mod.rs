@@ -57,10 +57,10 @@ struct MockVelocitySensor;
 
 impl HardwareSensor for MockVelocitySensor {
     fn name(&self) -> SensorName {
-        SensorName::Velocity
+        SensorName::VirtualVelocity
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::Velocity(rand::random())
+        SensorData::VirtualVelocity(rand::random())
     }
 }

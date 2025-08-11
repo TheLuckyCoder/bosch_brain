@@ -21,3 +21,4 @@ serde_with = { workspace = true }
 strum = "0.26.2"
 tracing = { workspace = true }
 mint = { workspace = true }
+tokio = "1.47.1"

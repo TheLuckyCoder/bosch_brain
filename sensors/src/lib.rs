@@ -48,11 +48,8 @@ pub enum SensorData {
     },
     Ultrasonic(f32),
     Gps(GpsCoordinates),
-    Velocity(f64),
-    Ambience {
-        temperature: f32,
-        humidity: f32,
-    },
+    VirtualVelocity(f64),
+    OpticalVelocity(f64),
 }
 
 impl Display for SensorData {
@@ -68,11 +65,8 @@ impl Display for SensorData {
             ),
             SensorData::Ultrasonic(distance) => write!(f, "Ultrasonic: {distance:.4}"),
             SensorData::Gps(coordinates) => write!(f, "{coordinates:.4?}"),
-            SensorData::Velocity(velocity) => write!(f, "Velocity: {velocity:.4}"),
-            SensorData::Ambience {
-                temperature,
-                humidity,
-            } => write!(f, "Ambience: {temperature:.4}, {humidity:.4}"),
+            SensorData::VirtualVelocity(velocity) => write!(f, "velocity: {velocity:.4}"),
+            SensorData::OpticalVelocity(velocity) => write!(f, "Opt Velocity: {velocity:.4?}"),
         }
     }
 }
@@ -83,8 +77,8 @@ impl SensorData {
             SensorData::Imu { .. } => SensorName::Imu,
             SensorData::Ultrasonic(_) => SensorName::Ultrasonic,
             SensorData::Gps(_) => SensorName::Gps,
-            SensorData::Velocity(_) => SensorName::Velocity,
-            SensorData::Ambience { .. } => SensorName::Ambience,
+            SensorData::VirtualVelocity(_) => SensorName::VirtualVelocity,
+            SensorData::OpticalVelocity(_) => SensorName::OpticalVelocity,
         }
     }
 }

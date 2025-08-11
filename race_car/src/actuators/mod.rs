@@ -90,53 +90,6 @@ impl Display for ActuatorName {
 }
 
 pub fn add_all_actuators(manager: &mut ActuatorManager) {
-    let steering_motor= PwmMotorDriver::new(
-        ActuatorName::SteeringMotor,
-        Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C1).unwrap(),
-        SteeringMotorParams {
-            min: 7.2,
-            middle: 9.07,
-            max: 10.95,
-        },
-    );
-    manager.add_actuator(steering_motor);
-
-
-    let mut speed_motor = PwmMotorDriver::new(
-        ActuatorName::SpeedMotor,
-        Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C0).unwrap(),
-        VelocityMotorParams {
-            min: 8.2,
-            lower_middle: 8.6,
-            upper_middle: 9.5,
-            max: 9.7,
-        },
-    );
-    speed_motor.set_inverse_direction(true);
-    manager.add_actuator(speed_motor);
-}
-
-pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
-    // manager.add_actuator(PwmMotorDriver::new(
-    //     ActuatorName::SteeringMotor,
-    //     MockPwm,
-    //     SteeringMotorParams {
-    //         min: 7.2,
-    //         middle: 9.07,
-    //         max: 10.95,
-    //     },
-    // ));
-    // manager.add_actuator(PwmMotorDriver::new(
-    //     ActuatorName::SpeedMotor,
-    //     MockPwm,
-    //     VelocityMotorParams {
-    //         min: 8.2,
-    //         lower_middle: 8.6,
-    //         upper_middle: 9.5,
-    //         max: 9.7,
-    //     },
-    // ));
-
     let servo_params = ServoParams {
         physical_min_angle: -180.0,
         physical_max_angle:  180.0,
@@ -171,6 +124,52 @@ pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
         ).unwrap(),
         motor_params,
     ))
+    // let steering_motor= PwmMotorDriver::new(
+    //     ActuatorName::SteeringMotor,
+    //     Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C1).unwrap(),
+    //     SteeringMotorParams {
+    //         min: 7.2,
+    //         middle: 9.07,
+    //         max: 10.95,
+    //     },
+    // );
+    // manager.add_actuator(steering_motor);
+    //
+    //
+    // let mut speed_motor = PwmMotorDriver::new(
+    //     ActuatorName::SpeedMotor,
+    //     Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C0).unwrap(),
+    //     VelocityMotorParams {
+    //         min: 8.2,
+    //         lower_middle: 8.6,
+    //         upper_middle: 9.5,
+    //         max: 9.7,
+    //     },
+    // );
+    // speed_motor.set_inverse_direction(true);
+    // manager.add_actuator(speed_motor);
+}
+
+pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
+    // manager.add_actuator(PwmMotorDriver::new(
+    //     ActuatorName::SteeringMotor,
+    //     MockPwm,
+    //     SteeringMotorParams {
+    //         min: 7.2,
+    //         middle: 9.07,
+    //         max: 10.95,
+    //     },
+    // ));
+    // manager.add_actuator(PwmMotorDriver::new(
+    //     ActuatorName::SpeedMotor,
+    //     MockPwm,
+    //     VelocityMotorParams {
+    //         min: 8.2,
+    //         lower_middle: 8.6,
+    //         upper_middle: 9.5,
+    //         max: 9.7,
+    //     },
+    // ));
 }
 
 pub fn add_pi_zero_actuators(manager: &mut ActuatorManager) -> anyhow::Result<()> {

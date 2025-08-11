@@ -2,7 +2,8 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use serde_with::{DeserializeFromStr, SerializeDisplay};
-use strum::{AsRefStr, EnumIter, IntoStaticStr};
+use strum::{AsRefStr, EnumIter, IntoEnumIterator, IntoStaticStr};
+use tracing::info;
 
 #[derive(
     Debug,
@@ -20,25 +21,23 @@ use strum::{AsRefStr, EnumIter, IntoStaticStr};
     AsRefStr,
 )]
 pub enum SensorName {
-    Ambience,
     Gps,
     Imu,
     Ultrasonic,
-    Velocity,
+    VirtualVelocity,
+    OpticalVelocity,
 }
 
 impl FromStr for SensorName {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "imu" => Ok(SensorName::Imu),
-            "ultrasonic" => Ok(SensorName::Ultrasonic),
-            "gps" => Ok(SensorName::Gps),
-            "velocity" => Ok(SensorName::Velocity),
-            "ambience" => Ok(SensorName::Ambience),
-            _ => Err("No such Sensor exists"),
-        }
+        SensorName::iter()
+            .find(|v| v.as_ref().eq_ignore_ascii_case(s))
+            .ok_or_else(|| {
+                info!("Unknown sensor name: {}", s);
+                "No such Sensor exists"
+            })
     }
 }
 
