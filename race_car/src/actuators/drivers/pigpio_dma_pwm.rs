@@ -1,58 +1,91 @@
-use crate::actuators::pwm::Percentage;
+use crate::actuators::drivers::{DutyCycle, PwmDriver};
 use std::io;
 
 use std::net::TcpStream;
 use tracing::info;
 
-const PWM_MAX_RANGE: u32 = 40000; // duty cycle will be in the range of 0-40000
+const PWM_MAX_RANGE: u32 = 100;
 
 pub struct PiGpioDmaPwm {
-    period: f64,
     gpio_pin: u8,
     max_duty_cycle: u32,
     tcp_stream: TcpStream,
 }
 
 impl PiGpioDmaPwm {
-    /// Creates a new PiGpioDmaPwm instance.
-    /// frequency is expected to be in the range of 50Hz to 50kHz.
-    /// Hobby servos typically use 50Hz, while motor controllers can use up to 50kHz.
+    /// Creates a new `PiGpioDmaPwm` instance.
+    ///
+    /// # Parameters
+    /// - `gpio_pin`: The GPIO pin to output PWM on.
+    /// - `pi_gpio_daemon_port`: The port where the PiGPIO daemon is listening (usually 8888).
+    /// - `frequency`: The desired PWM frequency in Hz. Valid range is 50–50,000 Hz.
+    ///
+    /// # Returns
+    /// Returns an `io::Result` containing the initialized `PiGpioDmaPwm`.
+    ///
+    /// # Notes
+    /// - Hobby servos typically use 50 Hz.
+    /// - Motor controllers can use frequencies up to 50 kHz.
+    /// - The actual PWM frequency returned by the daemon may differ slightly from the requested value.
     pub fn new(gpio_pin: u8, pi_gpio_daemon_port: u16, frequency: u32) -> io::Result<Self> {
-        let frequency = frequency.clamp(50, 50000);
+        // Clamp frequency to safe range
+        let frequency = frequency.clamp(50, 50_000);
 
+        // Connect to the PiGPIO daemon
         let mut tcp_stream = TcpStream::connect(("127.0.0.1", pi_gpio_daemon_port))?;
-        pi_gpio::set_mode(&mut tcp_stream, gpio_pin, pi_gpio::Mode::Output)?;
-        let max_duty_cycle = pi_gpio::set_pwm_range(&mut tcp_stream, gpio_pin, PWM_MAX_RANGE)?;
-        info!("Set duty cycle range to {}", max_duty_cycle);
-        let frequency = pi_gpio::set_pwm_frequency(&mut tcp_stream, gpio_pin, frequency)?;
-        info!("Set frequency to {}", frequency);
 
-        let result = Self {
-            period: 1.0 / frequency as f64,
+        // Set GPIO pin mode to output
+        pi_gpio::set_mode(&mut tcp_stream, gpio_pin, pi_gpio::Mode::Output)?;
+
+        // Set PWM range and get the actual max duty cycle
+        let max_duty_cycle = pi_gpio::set_pwm_range(&mut tcp_stream, gpio_pin, PWM_MAX_RANGE)?;
+        info!("Set duty cycle range for GPIO {} to {}", gpio_pin, max_duty_cycle);
+
+
+        // Set PWM frequency and get the actual frequency applied
+        let actual_frequency = pi_gpio::set_pwm_frequency(&mut tcp_stream, gpio_pin, frequency)?;
+        info!("Set PWM frequency for GPIO {} to {} Hz", gpio_pin, actual_frequency);
+
+
+        pi_gpio::set_pwm_duty_cycle(&mut tcp_stream, gpio_pin, 0)?;
+
+        Ok(Self {
             gpio_pin,
             max_duty_cycle,
             tcp_stream,
-        };
-
-        Ok(result)
-    }
-
-    pub fn set_duty_cycle(&mut self, percentage: Percentage) -> io::Result<()> {
-        let duty_cycle = ((percentage.value / 100.0) * (PWM_MAX_RANGE as f64)) as u32;
-        info!("duty cycle set to {}", duty_cycle);
-        pi_gpio::set_pwm_duty_cycle(
-            &mut self.tcp_stream,
-            self.gpio_pin,
-            duty_cycle.min(PWM_MAX_RANGE),
-        ).map(|_| ())
+        })
     }
 }
+
+impl PwmDriver for PiGpioDmaPwm {
+    fn set_duty_cycle(&mut self, duty_cycle: DutyCycle) {
+        let fraction = duty_cycle.as_fraction(); // 0.0–1.0
+        let duty = (fraction * self.max_duty_cycle as f64) as u32;
+
+        info!("Set PWM duty cycle for GPIO {} to {} (fraction: {})", self.gpio_pin, duty, fraction);
+
+        if let Err(e) = pi_gpio::set_pwm_duty_cycle(
+            &mut self.tcp_stream,
+            self.gpio_pin,
+            duty.min(self.max_duty_cycle),
+        ) {
+            eprintln!("Failed to set PWM duty cycle for GPIO {}: {}", self.gpio_pin, e);
+            // optionally: return early or handle differently
+        }
+    }
+
+    fn turn_off(&mut self) {
+        if let Err(e) = pi_gpio::set_pwm_duty_cycle(&mut self.tcp_stream, self.gpio_pin, 0) {
+            eprintln!("Failed to turn off PWM for GPIO {}: {}", self.gpio_pin, e);
+        }
+    }
+}
+
 
 mod pi_gpio {
     use std::io;
     use std::io::{Read, Write};
     use std::net::TcpStream;
-    use tracing::info;
 
     #[repr(u32)]
     pub enum Mode {
@@ -101,9 +134,19 @@ mod pi_gpio {
     #[derive(Debug, Copy, Clone, PartialEq)]
     enum PwmCommand {
         SetMode = 0,
+        Write = 4,
         SetDutyCycle = 5,
         SetPwmRange = 6,
         SetFrequency = 7,
+    }
+
+    pub fn write(stream: &mut TcpStream, gpio_pin: u8, level: bool) -> io::Result<()> {
+        send_pigpio_command(
+            stream,
+            PwmCommand::Write,
+            gpio_pin as u32,
+            if level { 1 } else { 0 },
+        ).map(|_| ())
     }
 
     fn send_pigpio_command(
@@ -120,12 +163,10 @@ mod pi_gpio {
 
         // Send command
         stream.write_all(&packet)?;
-        info!("Sent packet");
 
         // Read 4-byte response
         let mut response = [0u8; 16];
         stream.read_exact(&mut response)?;
-        info!("Got {:?}", &response);
 
         let result = i32::from_le_bytes([response[12], response[13], response[14], response[15]]);
         if result < 0 {

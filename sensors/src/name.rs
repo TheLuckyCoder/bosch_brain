@@ -23,9 +23,11 @@ use tracing::info;
 pub enum SensorName {
     Gps,
     Imu,
+    Bno085,
     Ultrasonic,
     VirtualVelocity,
-    OpticalVelocity,
+    OpticalRotaryEncoder,
+    QuadratureEncoder,
 }
 
 impl FromStr for SensorName {

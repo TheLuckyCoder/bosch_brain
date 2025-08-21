@@ -8,14 +8,14 @@ use tokio::time::sleep;
 
 use crate::{HardwareSensor, SensorData, name::SensorName};
 
-pub struct OpticalVelocitySensor {
+pub struct OpticalRotaryEncoderSensor {
     count: Arc<AtomicUsize>,
     last_time: Instant,
-    chip: Chip,
+    chip: Chip, // keep the chip alive for the lifetime of the line handle
 }
 
-impl OpticalVelocitySensor {
-    /// Create a new VelocitySensor on the given GPIO chip and line
+impl OpticalRotaryEncoderSensor {
+    /// Create a new sensor on the given GPIO chip and line
     pub fn new(gpio_chip_path: &str, line: u32) -> anyhow::Result<Self> {
         let mut chip = Chip::new(gpio_chip_path).context("Failed to open GPIO chip")?;
         let input_line = chip
@@ -26,7 +26,7 @@ impl OpticalVelocitySensor {
 
         let count = Arc::new(AtomicUsize::new(0));
 
-        // Spawn polling loop to count beam interruptions
+        // Spawn polling loop to count beam interruptions (rising edge)
         {
             let count_clone = count.clone();
             tokio::spawn(async move {
@@ -37,6 +37,7 @@ impl OpticalVelocitySensor {
                         count_clone.fetch_add(1, Ordering::Relaxed);
                     }
                     last_state = current_state;
+                    // ~1 kHz polling. Tune for your hardware latency vs. CPU budget.
                     sleep(Duration::from_millis(1)).await;
                 }
             });
@@ -49,44 +50,47 @@ impl OpticalVelocitySensor {
         })
     }
 
-    /// Calculate linear velocity (m/s) of the car
-    fn calculate_velocity(&mut self) -> f64 {
+    /// Calculate shaft speed in revolutions per second (RPS)
+    fn calculate_shaft_rps(&mut self) -> f64 {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_time).as_secs_f64();
         self.last_time = now;
 
+        // number of pulses since last read
         let pulses = self.count.swap(0, Ordering::Relaxed) as f64;
-        // Convert pulses to shaft rotations
-        let shaft_rotations = pulses / PULSES_PER_ROTATION;
-        // Convert shaft rotations to wheel rotations via gear ratio
-        let wheel_rotations = shaft_rotations / GEAR_RATIO;
-        // Linear distance traveled by the car
-        let distance = wheel_rotations * WHEEL_CIRCUMFERENCE;
 
-        // Velocity in meters per second
-        distance / elapsed
+        if elapsed <= f64::EPSILON {
+            return 0.0; // avoid divide-by-zero on very fast successive calls
+        }
+
+        // pulses -> shaft revolutions in the measurement window
+        let shaft_revs = pulses / PULSES_PER_ROTATION;
+
+        // revolutions per second
+        shaft_revs / elapsed
     }
 }
 
-// Number of interruptions (holes) per one full shaft rotation
-const PULSES_PER_ROTATION: f64 = 20.0; // adjust to your encoder
-// Gear ratio: motor shaft rotations per one wheel rotation
-const GEAR_RATIO: f64 = 1.0; // adjust based on your drivetrain
-// Circumference of the actual ground-contacting wheel, in meters
-const WHEEL_CIRCUMFERENCE: f64 = 0.21; // car wheel circumference
+// Number of interruptions (holes/slots) per one full shaft rotation
+const PULSES_PER_ROTATION: f64 = 20.0; // ← adjust to your encoder
 
-impl HardwareSensor for OpticalVelocitySensor {
+impl HardwareSensor for OpticalRotaryEncoderSensor {
     fn name(&self) -> SensorName {
-        SensorName::OpticalVelocity
+        // Keeping the same name to avoid downstream changes; update if you have a dedicated RPM variant
+        SensorName::OpticalRotaryEncoder
     }
 
     fn read_data(&mut self) -> SensorData {
-        let v = self.calculate_velocity();
-        SensorData::OpticalVelocity(v)
+        let rpm = self.calculate_shaft_rps();
+        SensorData::MotorRPS(rpm)
     }
 
     fn read_debug(&mut self) -> String {
-        format!("Velocity pulses counted: {}", self.count.load(Ordering::Relaxed))
+        format!(
+            "Pulses since last read: {} (PPR={})",
+            self.count.load(Ordering::Relaxed),
+            PULSES_PER_ROTATION
+        )
     }
 
     fn end_calibration(&mut self) -> anyhow::Result<()> {

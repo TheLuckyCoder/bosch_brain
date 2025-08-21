@@ -1,13 +1,13 @@
 use askama::Template;
-use crate::actuators::pwm::{Percentage};
-use crate::actuators::pwm_motor_driver::PwmMotorDriverParams;
 use crate::actuators::ActuatorName;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
+use crate::actuators::configs::actuator_input_types::{DualChannelDuty, DutyCycle};
+use crate::actuators::configs::actuator_config::ActuatorConfig;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone)]
-pub struct ServoParams {
+pub struct GeekServoConfig {
     /// Physical minimum rotation angle of the servo (degrees).
     #[serde_as(as = "DisplayFromStr")]
     pub physical_min_angle: f64,
@@ -44,13 +44,12 @@ pub struct ServoParams {
 fn map_range(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64 {
     (x - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 }
-impl PwmMotorDriverParams for ServoParams {
-    fn value_to_percentage(&self, value: f64) -> Percentage {
-        // Clamp input to [-1.0, 1.0]
-        let v = value.clamp(-1.0, 1.0);
+impl ActuatorConfig<DutyCycle> for GeekServoConfig {
+    fn command_to_actuator_input(&self, command: f64) -> DutyCycle {
+        let norm_command = command.clamp(-1.0, 1.0);
 
         // reverse direction
-        let v = -v;
+        let v = -norm_command;
 
         // Map control value to physical angle
         let phys_angle = if v >= 0.0 {
@@ -71,9 +70,9 @@ impl PwmMotorDriverParams for ServoParams {
 
         // Convert pulse to duty cycle percentage
         let period_us = 1_000_000.0 / self.servo_freq_hz;
-        let duty_cycle_percentage = (pulse / period_us) * 100.0;
-        println!("Input: {value}, Pulse: {pulse}, Duty cycle: {duty_cycle_percentage}%");
-        Percentage::from(duty_cycle_percentage)
+        let duty_cycle = (pulse / period_us) * 100.0;
+        println!("Input: {command}, Pulse: {pulse}, Duty cycle: {duty_cycle}%");
+        duty_cycle.into()
     }
 
     fn get_config_json(&self) -> String {
@@ -118,7 +117,7 @@ impl PwmMotorDriverParams for ServoParams {
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone)]
-pub struct DcMotorParams {
+pub struct LegoDcMotorConfig {
     /// Input supply voltage (V)
     #[serde_as(as = "DisplayFromStr")]
     pub supply_voltage: f64,
@@ -137,20 +136,27 @@ pub struct DcMotorParams {
     pub pwm_freq_hz: f64,
 }
 
-impl PwmMotorDriverParams for DcMotorParams {
-    fn value_to_percentage(&self, value: f64) -> Percentage {
-        let v = value.clamp(-1.0, 1.0);
+impl ActuatorConfig<DualChannelDuty> for LegoDcMotorConfig {
+    fn command_to_actuator_input(&self, command: f64) -> DualChannelDuty {
+        let norm_command = command.clamp(-1.0, 1.0);
 
-        let v = -v;
+        // Map normalized command to scaled PWM value
+        let max_duty = (1 << self.pwm_resolution) - 1;
+        let scaled_duty = (norm_command.abs() * self.target_max_voltage / self.supply_voltage) * (max_duty as f64);
 
-        let max_voltage_max_duty = (1 << self.pwm_resolution) - 1;
-        let scaled_max_duty = (self.target_max_voltage / self.supply_voltage) * max_voltage_max_duty as f64;
-        let duty = v * scaled_max_duty;
+        let duty_percent = (scaled_duty / max_duty as f64) * 100.0;
+        println!("Input: {command}, Scaled duty: {scaled_duty}, Duty %: {duty_percent}");
 
-        let duty_cycle_percentage = (duty / max_voltage_max_duty as f64) * 100.0;
-        println!("Input: {value}, Duty (scaled): {duty}, %: {duty_cycle_percentage}");
+        let (channel_a, channel_b) = if norm_command >= 0.0 {
+            (DutyCycle::from(duty_percent), DutyCycle::zero())
+        } else {
+            (DutyCycle::zero(), DutyCycle::from(duty_percent))
+        };
 
-        Percentage::from(duty_cycle_percentage)
+        DualChannelDuty {
+            channel_a,
+            channel_b,
+        }
     }
 
     fn get_config_json(&self) -> String {

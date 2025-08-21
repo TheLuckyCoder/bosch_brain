@@ -61,6 +61,10 @@ impl HardwareSensor for MockVelocitySensor {
     }
 
     fn read_data(&mut self) -> SensorData {
-        SensorData::VirtualVelocity(rand::random())
+        SensorData::VirtualVelocity {
+            imu: rand::random::<f64>() * 10.0,
+            rot_encoder: rand::random::<f64>() * 10.0,
+            fusion: rand::random::<f64>() * 10.0,
+        }
     }
 }

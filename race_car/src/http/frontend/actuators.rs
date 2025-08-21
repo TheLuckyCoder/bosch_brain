@@ -169,13 +169,21 @@ async fn handle_actuators_socket(
                         continue;
                     };
 
-                    let mut guard = actuator.lock().unwrap();
-                    match motor_values.data {
-                        WsData::Value(value) => guard.set_value(value),
-                        WsData::Config(config) => if let Err(e) = guard.save_config(config) {
-                            error!("Failed saving config: {e}");
-                        },
+                    match actuator.lock() {
+                        Ok(mut guard) => {
+                            match motor_values.data {
+                                WsData::Value(value) => guard.set_command(value),
+                                WsData::Config(config) => if let Err(e) = guard.save_config(config) {
+                                    error!("Failed saving config: {e}");
+                                },
+                            }
+                        }
+                        Err(poisoned) => {
+                            // Log the underlying cause
+                            error!("Mutex poisoned: {:?}", poisoned);
+                        }
                     }
+
                 }
                 ControlFlow::Continue(None) => continue,
                 ControlFlow::Break(_) => return,

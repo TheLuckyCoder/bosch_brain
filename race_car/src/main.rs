@@ -5,7 +5,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use ::sensors::drivers::set_board_led_status;
-use crate::actuators::{add_all_actuators, add_all_mock_actuators};
+use crate::actuators::{add_all_lego_actuators, add_all_mock_actuators};
 
 use crate::actuators::manager::ActuatorManager;
 use crate::http::config::ServerConfig;
@@ -48,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
         add_all_mock_actuators(&mut actuator_manager);
     } else {
         add_all_sensors(&mut sensor_manager);
-        add_all_actuators(&mut actuator_manager);
+        add_all_lego_actuators(&mut actuator_manager);
     }
 
     let global_state = GlobalState::new(sensor_manager, actuator_manager, server_config);

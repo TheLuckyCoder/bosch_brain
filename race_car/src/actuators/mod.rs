@@ -1,33 +1,40 @@
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
 use rppal::pwm::Channel;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use strum::{AsRefStr, EnumIter, IntoStaticStr};
 
+use crate::actuators::drivers::pca9685_pwm::Pca9685Pwm;
+use crate::actuators::drivers::pigpio_dma_pwm::PiGpioDmaPwm;
+use crate::actuators::drivers::RppalPwmDriver;
+use crate::actuators::dual_channel_pwm_actuator::DualChannelPwmActuator;
 use crate::actuators::manager::ActuatorManager;
-use crate::actuators::motor_driver_params::{SteeringMotorParams, VelocityMotorParams};
-use crate::actuators::pwm::pca9685::Pca9685Pwm;
-use crate::actuators::pwm_motor_driver::PwmMotorDriver;
-use crate::actuators::pwm::lego_servo::{PiZeroMotorPwm, PiZeroServoPwm};
-use crate::actuators::pizero_params::{DcMotorParams, ServoParams};
+use crate::actuators::single_channel_pwm_actuator::SingleChannelPwmActuator;
+use configs::lego_car_config::{GeekServoConfig, LegoDcMotorConfig};
+use configs::rc_car_driver_config::{EscMotorConfig, SteeringMotorConfig};
 
 pub mod manager;
-pub mod motor_driver_params;
-pub mod pwm;
-pub mod pwm_motor_driver;
-pub mod pizero_params;
+pub mod drivers;
+mod configs;
 
-pub trait ActuatorDriver: Send + 'static {
+mod single_channel_pwm_actuator;
+
+mod dual_channel_pwm_actuator;
+
+pub trait Actuator: Send + 'static {
     fn name(&self) -> ActuatorName;
 
-    fn set_value(&mut self, value: f64);
+    fn set_command(&mut self, value: f64);
 
+    /// Stops the actuator from moving until the next command is set.
     fn stop(&mut self) {
-        self.set_value(0.0);
+        self.set_command(0.0);
     }
 
+    /// Sets the actuator to a paused state, where it will not respond to commands until resumed.
     fn pause(&mut self) {}
 
+    /// Resumes the actuator from a paused state, allowing it to respond to commands again.
     fn resume(&mut self) {}
 
     fn is_paused(&self) -> bool {
@@ -89,8 +96,8 @@ impl Display for ActuatorName {
     }
 }
 
-pub fn add_all_actuators(manager: &mut ActuatorManager) {
-    let servo_params = ServoParams {
+pub fn add_all_lego_actuators(manager: &mut ActuatorManager) {
+    let servo_params = GeekServoConfig {
         physical_min_angle: -180.0,
         physical_max_angle:  180.0,
         angle_offset:          0.0,
@@ -100,54 +107,48 @@ pub fn add_all_actuators(manager: &mut ActuatorManager) {
         servo_max_pulse:    2500.0,
         servo_freq_hz:        50.0,
     };
-    manager.add_actuator(PwmMotorDriver::new(
+
+    manager.add_actuator(SingleChannelPwmActuator::new(
         ActuatorName::SteeringMotor,
-        PiZeroServoPwm::new(
-            Channel::Pwm0,
-            50.0,
-        ).unwrap(),
+        RppalPwmDriver::new(Channel::Pwm0, servo_params.servo_freq_hz).unwrap(),
         servo_params,
     ));
 
-    let motor_params = DcMotorParams {
+    let motor_params = LegoDcMotorConfig {
         supply_voltage: 12.0,
-        target_max_voltage: 7.5,
+        target_max_voltage: 9.5,
         pwm_resolution: 10,
-        pwm_freq_hz: 5000.0,
+        pwm_freq_hz: 4000.0,
     };
-    manager.add_actuator(PwmMotorDriver::new(
+    manager.add_actuator(DualChannelPwmActuator::new(
         ActuatorName::SpeedMotor,
-        PiZeroMotorPwm::new(
-            24,
-            23,
-            motor_params.pwm_freq_hz as u32,
-        ).unwrap(),
+        PiGpioDmaPwm::new(23, 8888, motor_params.pwm_freq_hz as u32).unwrap(),
+        PiGpioDmaPwm::new(17, 8888, motor_params.pwm_freq_hz as u32).unwrap(),
         motor_params,
-    ))
-    // let steering_motor= PwmMotorDriver::new(
-    //     ActuatorName::SteeringMotor,
-    //     Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C1).unwrap(),
-    //     SteeringMotorParams {
-    //         min: 7.2,
-    //         middle: 9.07,
-    //         max: 10.95,
-    //     },
-    // );
-    // manager.add_actuator(steering_motor);
-    //
-    //
-    // let mut speed_motor = PwmMotorDriver::new(
-    //     ActuatorName::SpeedMotor,
-    //     Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C0).unwrap(),
-    //     VelocityMotorParams {
-    //         min: 8.2,
-    //         lower_middle: 8.6,
-    //         upper_middle: 9.5,
-    //         max: 9.7,
-    //     },
-    // );
-    // speed_motor.set_inverse_direction(true);
-    // manager.add_actuator(speed_motor);
+    ));
+}
+
+pub fn add_all_rc_car_actuators(manager: &mut ActuatorManager) {
+    (*manager).add_actuator(SingleChannelPwmActuator::new(
+        ActuatorName::SpeedMotor,
+        Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C0).unwrap(),
+        EscMotorConfig {
+            min: 8.2,
+            lower_middle: 8.6,
+            upper_middle: 9.5,
+            max: 9.7,
+        },
+    ));
+
+    (*manager).add_actuator(SingleChannelPwmActuator::new(
+        ActuatorName::SteeringMotor,
+        Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C1).unwrap(),
+        SteeringMotorConfig {
+            min: 7.2,
+            middle: 9.07,
+            max: 10.95,
+        },
+    ));
 }
 
 pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
@@ -170,27 +171,4 @@ pub fn add_all_mock_actuators(manager: &mut ActuatorManager) {
     //         max: 9.7,
     //     },
     // ));
-}
-
-pub fn add_pi_zero_actuators(manager: &mut ActuatorManager) -> anyhow::Result<()> {
-    // steering‐servo driver just needs a generic PWM at 50 Hz
-    let servo_pwm = PiZeroServoPwm::new(Channel::Pwm0, 50.0)?;
-    let servo_params = ServoParams {
-        physical_min_angle: -180.0,
-        physical_max_angle:  180.0,
-        angle_offset:          0.0,
-        control_min_angle:    -90.0,
-        control_max_angle:     90.0,
-        servo_min_pulse:     500.0,
-        servo_max_pulse:    2500.0,
-        servo_freq_hz:        50.0,
-    };
-    manager.add_actuator(PwmMotorDriver::new(
-        ActuatorName::SteeringMotor,
-        servo_pwm,
-        servo_params,
-    ));
-
-    // …and similarly for your DRV8871 motor (you can factor accel, maxDuty into a MotorParams)
-    Ok(())
 }

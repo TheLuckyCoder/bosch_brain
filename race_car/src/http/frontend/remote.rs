@@ -144,10 +144,10 @@ async fn handle_joystick_socket(
             let joystick_config = global_state.server_config.lock().await.joystick;
 
             if let Some(motor) = actuator_manager.get_actuator(joystick_config.x_axis) {
-                motor.lock().unwrap().set_value(message.x)
+                motor.lock().unwrap().set_command(message.x)
             }
             if let Some(motor) = actuator_manager.get_actuator(joystick_config.y_axis) {
-                motor.lock().unwrap().set_value(message.y)
+                motor.lock().unwrap().set_command(message.y)
             }
         }
     }

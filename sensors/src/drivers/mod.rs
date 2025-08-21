@@ -4,12 +4,16 @@ use linux_embedded_hal::gpio_cdev::{Chip, LineRequestFlags};
 mod gps;
 mod imu;
 mod ultrasonic;
-mod velocity;
+mod opt_rotary_encoder;
+mod quadrature_encoder;
+mod bno085;
 
 pub use gps::*;
 pub use imu::*;
 pub use ultrasonic::*;
-pub use velocity::*;
+pub use opt_rotary_encoder::*;
+pub use quadrature_encoder::*;
+pub use bno085::*;
 
 /// Helper function to set the board LED status
 pub fn set_board_led_status(on: bool) -> anyhow::Result<()> {

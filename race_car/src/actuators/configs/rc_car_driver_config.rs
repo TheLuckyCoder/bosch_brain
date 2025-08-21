@@ -1,14 +1,14 @@
-use crate::actuators::pwm::Percentage;
-use crate::actuators::pwm_motor_driver::PwmMotorDriverParams;
+use crate::actuators::configs::actuator_config::ActuatorConfig;
 use crate::actuators::ActuatorName;
 use askama::Template;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
+use crate::actuators::configs::actuator_input_types::DutyCycle;
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
-pub struct VelocityMotorParams {
+pub struct EscMotorConfig {
     /// Represents the duty cycle percentages for PWM control of a motor:
     /// - `min`: Full speed in the negative direction.
     /// - `(min, lower_middle)`: Speed range in the negative direction; below `lower_middle`, the motor is off.
@@ -26,8 +26,8 @@ pub struct VelocityMotorParams {
     pub max: f64,
 }
 
-impl PwmMotorDriverParams for VelocityMotorParams {
-    fn value_to_percentage(&self, value: f64) -> Percentage {
+impl ActuatorConfig<DutyCycle> for EscMotorConfig {
+    fn command_to_actuator_input(&self, command: f64) -> DutyCycle {
         /// Converts a value in the range of -1 to 1 (inclusive) into a percentage.
         ///
         /// The output percentage is constrained to be no less than `min` and no greater than `max`.
@@ -37,17 +37,20 @@ impl PwmMotorDriverParams for VelocityMotorParams {
         /// - If the input value is positive, it calculates the percentage based on the upper range.
         /// - If the input value is negative, it calculates the percentage based on the lower range.
         /// - If the input value is zero, it returns the average of `lower_middle` and `upper_middle`.
-        let percentage = if value != 0.0 {
-            if value > 0.0 {
-                self.upper_middle + value * (self.max - self.upper_middle)
+
+        let norm_command = command.clamp(-1.0, 1.0);
+
+        let duty_cycle = if norm_command != 0.0 {
+            if norm_command > 0.0 {
+                self.upper_middle + norm_command * (self.max - self.upper_middle)
             } else {
-                self.lower_middle + -value * (self.min - self.lower_middle)
+                self.lower_middle + -norm_command * (self.min - self.lower_middle)
             }
         } else {
             (self.lower_middle + self.upper_middle) / 2.0
         };
 
-        percentage.into()
+        duty_cycle.into()
     }
 
     fn get_config_json(&self) -> String {
@@ -85,7 +88,7 @@ impl PwmMotorDriverParams for VelocityMotorParams {
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
-pub struct SteeringMotorParams {
+pub struct SteeringMotorConfig {
     #[serde_as(as = "DisplayFromStr")]
     pub min: f64,
     #[serde_as(as = "DisplayFromStr")]
@@ -94,21 +97,21 @@ pub struct SteeringMotorParams {
     pub max: f64,
 }
 
-impl PwmMotorDriverParams for SteeringMotorParams {
-    fn value_to_percentage(&self, value: f64) -> Percentage {
-        // Maps an input number that is between -1 and 1 (float) to a percentage than can't be smaller than percentage_minimum and bigger than percentage_maximum
-        // If the input is smaller than -1 or bigger than 1 it gives equivalent to it (percentage_minimum/maximum)
-        let percentage = if value != 0.0 {
-            if value > 0.0 {
-                self.middle + value * (self.max - self.middle)
+impl ActuatorConfig<DutyCycle> for SteeringMotorConfig {
+    fn command_to_actuator_input(&self, command: f64) -> DutyCycle {
+        let norm_command = command.clamp(-1.0, 1.0);
+
+        let duty_cycle = if norm_command != 0.0 {
+            if norm_command > 0.0 {
+                self.middle + norm_command * (self.max - self.middle)
             } else {
-                self.middle + -value * (self.min - self.middle)
+                self.middle + -norm_command * (self.min - self.middle)
             }
         } else {
             self.middle
         };
 
-        percentage.into()
+        duty_cycle.into()
     }
 
     fn get_config_json(&self) -> String {

@@ -141,7 +141,7 @@ async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocit
             let mut current_velocity = None;
 
             while let Ok(sensor_data) = receiver.try_recv() {
-                if let SensorData::OpticalVelocity(velocity) = sensor_data.data {
+                if let SensorData::MotorRPS(velocity) = sensor_data.data {
                     current_velocity = Some(velocity)
                 }
             }
@@ -159,7 +159,7 @@ async fn velocity_pid(State(state): State<Arc<GlobalState>>, Path(target_velocit
                     .unwrap()
                     .lock()
                     .unwrap()
-                    .set_value(value);
+                    .set_command(value);
             }
         }));
     }
@@ -214,5 +214,5 @@ async fn steering_pid(State(state): State<Arc<GlobalState>>, Path(angle): Path<f
         .unwrap()
         .lock()
         .unwrap()
-        .set_value(motor_value);
+        .set_command(motor_value);
 }

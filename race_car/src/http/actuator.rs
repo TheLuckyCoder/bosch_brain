@@ -101,7 +101,7 @@ async fn set_actuator_value(
         .unwrap()
         .lock()
         .unwrap()
-        .set_value(value);
+        .set_command(value);
 }
 
 /// Pauses the given actuator, or all motors if no actuator is specified
