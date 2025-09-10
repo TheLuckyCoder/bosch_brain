@@ -45,10 +45,10 @@ pub fn add_all_sensors(sensor_manager: &mut SensorManager) {
     //     .map(|sensor| sensor_manager.add_sensor(sensor))
     //     .map_err(|e| error!("IMU failed to initialize: {e:?}"))
     //     .ok();
-    Bno085RvcSensor::new("/dev/serial0")
-        .map(|sensor| sensor_manager.add_sensor(sensor))
-        .map_err(|e| error!("BNO085 RVC Sensor failed to initialize: {e:?}"))
-        .ok();
+    // Bno085RvcSensor::new("/dev/serial0")
+    //     .map(|sensor| sensor_manager.add_sensor(sensor))
+    //     .map_err(|e| error!("BNO085 RVC Sensor failed to initialize: {e:?}"))
+    //     .ok();
     // UltrasonicSensor::new(21f32)
     //     .map(|sensor| sensor_manager.add_sensor(sensor))
     //     .map_err(|e| error!("Ultrasonic Sensor failed to initialize: {e:?}"))

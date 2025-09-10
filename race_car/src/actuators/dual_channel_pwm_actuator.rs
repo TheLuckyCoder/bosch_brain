@@ -6,9 +6,9 @@ use crate::actuators::configs::actuator_input_types::{DualChannelDuty};
 use crate::actuators::drivers::PwmDriver;
 use crate::utils::files::get_car_file;
 
-pub struct DualChannelPwmActuator<PWM: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> {
-    pwm_a: PWM,
-    pwm_b: PWM,
+pub struct DualChannelPwmActuator<PWM1: PwmDriver, PWM2: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> {
+    pwm_a: PWM1,
+    pwm_b: PWM2,
     config: Config,
     last_command: f64,
     actuator_name: ActuatorName,
@@ -17,22 +17,22 @@ pub struct DualChannelPwmActuator<PWM: PwmDriver, Config: ActuatorConfig<DualCha
     reverse_direction: bool,
 }
 
-impl<PWM: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> DualChannelPwmActuator<PWM, Config> {
+impl<PWM1: PwmDriver, PWM2: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> DualChannelPwmActuator<PWM1, PWM2, Config>
+{
     pub fn new(
         actuator_name: ActuatorName,
-        pwm_a: PWM,
-        pwm_b: PWM,
+        pwm_a: PWM1,
+        pwm_b: PWM2,
         default_config: Config,
     ) -> Self {
         let params_file_path = get_car_file(format!("motor_params_{actuator_name:?}.json"));
         let config = Self::read_params(params_file_path.as_path()).unwrap_or(default_config);
-
         Self {
             pwm_a,
             pwm_b,
-            actuator_name,
             config,
-            last_command: f64::INFINITY,
+            last_command: 0.0,
+            actuator_name,
             params_file_path,
             paused: false,
             reverse_direction: false,
@@ -49,8 +49,7 @@ impl<PWM: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> DualChannelPwmActu
     }
 }
 
-impl<PWM: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> Actuator
-for DualChannelPwmActuator<PWM, Config>
+impl<PWM1: PwmDriver, PWM2: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> Actuator for DualChannelPwmActuator<PWM1, PWM2, Config>
 {
     fn name(&self) -> ActuatorName {
         self.actuator_name
@@ -68,21 +67,8 @@ for DualChannelPwmActuator<PWM, Config>
 
         let duty = self.config.command_to_actuator_input(command);
 
-        self.pwm_a.set_duty_cycle(duty.channel_a);
+        // self.pwm_a.set_duty_cycle(duty.channel_a);
         self.pwm_b.set_duty_cycle(duty.channel_b);
-        // if duty.channel_a.as_fraction() > 0.0 {
-        //     // Forward: A = PWM, B = LOW
-        //     self.pwm_a.set_duty_cycle(duty.channel_a);
-        //     self.pwm_b.force_low();
-        // } else if duty.channel_b.as_fraction() > 0.0 {
-        //     // Reverse: B = PWM, A = LOW
-        //     self.pwm_b.set_duty_cycle(duty.channel_b);
-        //     self.pwm_a.force_low();
-        // } else {
-        //     // Stopped: both LOW
-        //     self.pwm_a.force_low();
-        //     self.pwm_b.force_low();
-        // }
 
         println!(
             "Setting {} to A: {:?}%, B: {:?}%",
@@ -130,8 +116,7 @@ for DualChannelPwmActuator<PWM, Config>
     }
 }
 
-impl<PWM: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> Drop
-for DualChannelPwmActuator<PWM, Config>
+impl<PWM1: PwmDriver, PWM2: PwmDriver, Config: ActuatorConfig<DualChannelDuty>> Drop for DualChannelPwmActuator<PWM1, PWM2, Config>
 {
     fn drop(&mut self) {
         self.stop()

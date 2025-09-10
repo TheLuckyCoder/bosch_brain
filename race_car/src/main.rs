@@ -24,6 +24,7 @@ mod utils;
 /// Initializes the logging system, creates the GlobalState object and starts the HTTP server
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    println!("Starting up...");
     std::env::set_var("RUST_LOG", "info");
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().compact())

@@ -71,7 +71,6 @@ impl ActuatorConfig<DutyCycle> for GeekServoConfig {
         // Convert pulse to duty cycle percentage
         let period_us = 1_000_000.0 / self.servo_freq_hz;
         let duty_cycle = (pulse / period_us) * 100.0;
-        println!("Input: {command}, Pulse: {pulse}, Duty cycle: {duty_cycle}%");
         duty_cycle.into()
     }
 
@@ -145,7 +144,6 @@ impl ActuatorConfig<DualChannelDuty> for LegoDcMotorConfig {
         let scaled_duty = (norm_command.abs() * self.target_max_voltage / self.supply_voltage) * (max_duty as f64);
 
         let duty_percent = (scaled_duty / max_duty as f64) * 100.0;
-        println!("Input: {command}, Scaled duty: {scaled_duty}, Duty %: {duty_percent}");
 
         let (channel_a, channel_b) = if norm_command >= 0.0 {
             (DutyCycle::from(duty_percent), DutyCycle::zero())
@@ -156,6 +154,57 @@ impl ActuatorConfig<DualChannelDuty> for LegoDcMotorConfig {
         DualChannelDuty {
             channel_a,
             channel_b,
+        }
+    }
+
+    fn get_config_json(&self) -> String {
+        serde_json::to_string_pretty(self).unwrap()
+    }
+
+    fn get_config_html(&self, name: ActuatorName) -> String {
+        #[derive(Template)]
+        #[template(path = "components/pyzero_motor_config.html")]
+        struct ConfigTemplate {
+            name: ActuatorName,
+            target_max_voltage: f64,
+            supply_voltage: f64,
+            pwm_resolution: u8,
+            pwm_freq_hz: f64,
+        }
+
+        let template = ConfigTemplate {
+            name,
+            target_max_voltage: self.target_max_voltage,
+            supply_voltage: self.supply_voltage,
+            pwm_resolution: self.pwm_resolution,
+            pwm_freq_hz: self.pwm_freq_hz,
+        };
+
+        template
+            .render()
+            .unwrap_or_else(|e| format!("Failed to render config: {e}"))
+    }
+
+    fn parse_config(config: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(config)
+    }
+}
+
+impl ActuatorConfig<DutyCycle> for LegoDcMotorConfig {
+    fn command_to_actuator_input(&self, command: f64) -> DutyCycle {
+        let norm_command = command.clamp(-1.0, 1.0);
+
+        // Map normalized command to scaled PWM value
+        let max_duty = (1 << self.pwm_resolution) - 1;
+        let scaled_duty = (norm_command.abs() * self.target_max_voltage / self.supply_voltage) * (max_duty as f64);
+
+        let duty_percent = (scaled_duty / max_duty as f64) * 100.0;
+
+        let sign = if norm_command >= 0.0 { 1 } else { -1 };
+
+        DutyCycle {
+            magnitude: duty_percent.clamp(0.0, 100.0) as u32,
+            sign,
         }
     }
 

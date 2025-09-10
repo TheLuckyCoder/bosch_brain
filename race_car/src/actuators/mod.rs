@@ -6,7 +6,6 @@ use strum::{AsRefStr, EnumIter, IntoStaticStr};
 
 use crate::actuators::drivers::pca9685_pwm::Pca9685Pwm;
 use crate::actuators::drivers::pigpio_dma_pwm::PiGpioDmaPwm;
-use crate::actuators::drivers::RppalPwmDriver;
 use crate::actuators::dual_channel_pwm_actuator::DualChannelPwmActuator;
 use crate::actuators::manager::ActuatorManager;
 use crate::actuators::single_channel_pwm_actuator::SingleChannelPwmActuator;
@@ -107,23 +106,37 @@ pub fn add_all_lego_actuators(manager: &mut ActuatorManager) {
         servo_max_pulse:    2500.0,
         servo_freq_hz:        50.0,
     };
+    //
+    // manager.add_actuator(SingleChannelPwmActuator::new(
+    //     ActuatorName::SteeringMotor,
+    //     RppalPwmDriver::new(Channel::Pwm1, servo_params.servo_freq_hz).unwrap(),
+    //     servo_params,
+    // ));
 
-    manager.add_actuator(SingleChannelPwmActuator::new(
+    (*manager).add_actuator(SingleChannelPwmActuator::new(
         ActuatorName::SteeringMotor,
-        RppalPwmDriver::new(Channel::Pwm0, servo_params.servo_freq_hz).unwrap(),
+        Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C0).unwrap(),
         servo_params,
     ));
 
     let motor_params = LegoDcMotorConfig {
         supply_voltage: 12.0,
-        target_max_voltage: 9.5,
+        target_max_voltage: 8.5,
         pwm_resolution: 10,
         pwm_freq_hz: 4000.0,
     };
+    // manager.add_actuator(SingleChannelPwmActuator::new(
+    //     ActuatorName::SpeedMotor,
+    //     // PiGpioDmaPwm::new(23, 8888, motor_params.pwm_freq_hz as u32).unwrap(),
+    //     // PiGpioDmaPwm::new(17, 8888, motor_params.pwm_freq_hz as u32).unwrap(),
+    //     // RppalPwmDriver::new(Channel::Pwm0, motor_params.pwm_freq_hz).unwrap(),
+    //     RppalWithDirPwmDriver::new(Channel::Pwm0, motor_params.pwm_freq_hz,23).unwrap(),
+    //     motor_params,
+    // ));
     manager.add_actuator(DualChannelPwmActuator::new(
         ActuatorName::SpeedMotor,
-        PiGpioDmaPwm::new(23, 8888, motor_params.pwm_freq_hz as u32).unwrap(),
-        PiGpioDmaPwm::new(17, 8888, motor_params.pwm_freq_hz as u32).unwrap(),
+        Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C1).unwrap(),
+        Pca9685Pwm::new("/dev/i2c-1", pwm_pca9685::Channel::C2).unwrap(),
         motor_params,
     ));
 }

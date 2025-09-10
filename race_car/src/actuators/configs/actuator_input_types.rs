@@ -2,20 +2,22 @@
 /// Range: 0..=100 (%)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DutyCycle {
-    pub magnitude: u32, // 0..=100
+    pub magnitude: u32, // 0..=100]
+    pub sign : i8,    // -1, 1
 }
 
 impl From<f64> for DutyCycle {
     fn from(value: f64) -> Self {
         Self {
             magnitude: value.clamp(0.0, 100.0) as u32,
+            sign: if value < 0.0 { -1 } else { 1 },
         }
     }
 }
 
 impl From<&DutyCycle> for f64 {
     fn from(d: &DutyCycle) -> Self {
-        d.magnitude as f64
+        d.magnitude as f64 * d.sign as f64
     }
 }
 
@@ -27,7 +29,7 @@ impl From<&DutyCycle> for u32 {
 
 impl Default for DutyCycle {
     fn default() -> Self {
-        DutyCycle { magnitude: 0 }
+        DutyCycle { magnitude: 0 , sign: 1}
     }
 }
 
@@ -36,8 +38,12 @@ impl DutyCycle {
         DutyCycle::default()
     }
 
-    pub fn as_fraction(&self) -> f64 {
+    pub fn as_unsigned_fraction(&self) -> f64 {
         self.magnitude as f64 / 100.0
+    }
+
+    pub fn as_signed_fraction(&self) -> f64 {
+        (self.magnitude as f64 / 100.0) * (self.sign as f64)
     }
 }
 

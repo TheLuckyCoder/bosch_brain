@@ -4,7 +4,7 @@ use std::io;
 use std::net::TcpStream;
 use tracing::info;
 
-const PWM_MAX_RANGE: u32 = 100;
+const PWM_MAX_RANGE: u32 = 40000;
 
 pub struct PiGpioDmaPwm {
     gpio_pin: u8,
@@ -59,25 +59,21 @@ impl PiGpioDmaPwm {
 
 impl PwmDriver for PiGpioDmaPwm {
     fn set_duty_cycle(&mut self, duty_cycle: DutyCycle) {
-        let fraction = duty_cycle.as_fraction(); // 0.0–1.0
+        let fraction = duty_cycle.as_unsigned_fraction(); // 0.0–1.0
         let duty = (fraction * self.max_duty_cycle as f64) as u32;
-
         info!("Set PWM duty cycle for GPIO {} to {} (fraction: {})", self.gpio_pin, duty, fraction);
 
-        if let Err(e) = pi_gpio::set_pwm_duty_cycle(
-            &mut self.tcp_stream,
-            self.gpio_pin,
-            duty.min(self.max_duty_cycle),
-        ) {
-            eprintln!("Failed to set PWM duty cycle for GPIO {}: {}", self.gpio_pin, e);
-            // optionally: return early or handle differently
-        }
+        pi_gpio::set_pwm_duty_cycle( &mut self.tcp_stream, self.gpio_pin, duty.min(self.max_duty_cycle), ).expect("Failed to set PWM duty cycle"); }
+    fn turn_off(&mut self) {
+        pi_gpio::set_pwm_duty_cycle(&mut self.tcp_stream, self.gpio_pin, 0)
+            .expect("Failed to turn off PWM");
     }
 
-    fn turn_off(&mut self) {
-        if let Err(e) = pi_gpio::set_pwm_duty_cycle(&mut self.tcp_stream, self.gpio_pin, 0) {
-            eprintln!("Failed to turn off PWM for GPIO {}: {}", self.gpio_pin, e);
-        }
+    fn force_low(&mut self) {
+        pi_gpio::set_mode(&mut self.tcp_stream, self.gpio_pin, pi_gpio::Mode::Output).unwrap();
+        use std::io::Write;
+        // send a pigpio command to write 0 (we need a simple wrapper, same style as set_mode)
+        pi_gpio::write(&mut self.tcp_stream, self.gpio_pin, false).unwrap();
     }
 }
 
